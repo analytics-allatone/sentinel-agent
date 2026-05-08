@@ -29,7 +29,7 @@ except ImportError:
 
 import sys
 sys.path.insert(0, str(Path(__file__).parent.parent))
-from src.schema.event_schema import (
+from src.agent.schema.event_schema import (
     SentinelEvent, FileInfo, UserInfo, ProcessInfo,
     EventCategory, EventAction, EventOutcome, Severity,
     hash_file, get_host_info
