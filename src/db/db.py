@@ -101,6 +101,7 @@ async def create_db_and_tables():
     
     
     print(f"Running with Database ..")
+    print(dbname , dbendpoint , dbpassword , dbuser)
     async with async_engine.begin() as conn:
         try:        
             await conn.run_sync(Base.metadata.create_all)
