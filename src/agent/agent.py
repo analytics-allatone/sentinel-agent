@@ -1,0 +1,199 @@
+import time
+import platform
+
+from .config import SEVERITY_ORDER 
+from .logger import Logger
+
+from .output.writer import EventDispatcher
+from .collectors.file_collector import FileCollector
+from .collectors.auth_collector import create_auth_collector
+from .collectors.network_collector import NetworkCollector
+from .collectors.process_collector import ProcessCollector
+from .collectors.usb_collector import USBCollector
+from .collectors.harddisk_collector import HardDiskCollector
+
+
+logger = Logger.get_logger(__name__)
+
+
+
+
+
+
+class SentinelAgent:
+    def __init__(self, config: dict):
+        self.config     = config
+        self._collectors = []
+        self._dispatcher = None
+        self._running   = False
+
+    def _build_dispatcher(self):
+        cfg = self.config["output"]
+        return EventDispatcher(
+            jsonl_dir      = cfg["log_dir"],
+            stdout         = cfg.get("stdout", False),
+            category_split = cfg.get("category_split", True),
+        )
+
+    def _make_dispatch(self):
+        """Returns a filtered dispatch function."""
+        cfg          = self.config.get("filters", {})
+        min_sev_str  = cfg.get("min_severity", "info")
+        min_sev_idx  = SEVERITY_ORDER.index(min_sev_str) if min_sev_str in SEVERITY_ORDER else 0
+        excl_cats    = set(cfg.get("exclude_categories", []))
+        excl_actions = set(cfg.get("exclude_actions", []))
+
+        def dispatch(event_dict: dict):
+            sev = event_dict.get("severity", "info")
+            if SEVERITY_ORDER.index(sev) < min_sev_idx:
+                return
+            if event_dict.get("category") in excl_cats:
+                return
+            if event_dict.get("action") in excl_actions:
+                return
+            self._dispatcher.push(event_dict)
+
+        return dispatch
+
+    def start(self):
+        logger.info("=" * 60)
+        logger.info("  Sentinel Security Log Agent")
+        logger.info(f"  Host: {platform.node()} | OS: {platform.system()}")
+        logger.info("=" * 60)
+
+        self._dispatcher = self._build_dispatcher()
+        dispatch = self._make_dispatch()
+        col_cfg  = self.config["collectors"]
+
+        # File Collector
+        if col_cfg["file"]["enabled"]:
+            try:
+                
+                fc_cfg = col_cfg["file"]
+                fc = FileCollector(
+                    dispatch    = dispatch,
+                    watch_paths = fc_cfg.get("watch_paths"),
+                    ignore_dirs = fc_cfg.get("ignore_dirs"),
+                    recursive   = fc_cfg.get("recursive", True),
+                    use_polling = fc_cfg.get("use_polling", False),
+                )
+                fc.start()
+                self._collectors.append(fc)
+                logger.info("✓ File Collector started")
+            except ImportError as e:
+                logger.warning(f"File collector unavailable: {e}")
+            except Exception as e:
+                logger.error(f"File collector error: {e}")
+
+        # Auth collector
+        if col_cfg["auth"]["enabled"]:
+            try:
+                
+                ac = create_auth_collector(
+                    dispatch       = dispatch,
+                    log_path       = col_cfg["auth"].get("log_path"),
+                    parse_history  = col_cfg["auth"].get("parse_history", False),
+                )
+                ac.start()
+                self._collectors.append(ac)
+                logger.info("Auth Collector started")
+            except Exception as e:
+                logger.error(f"Auth collector error: {e}")
+
+        # Network collector 
+        if col_cfg["network"]["enabled"]:
+            try:
+                
+                nc = NetworkCollector(
+                    dispatch        = dispatch,
+                    poll_interval   = col_cfg["network"].get("poll_interval", 2.0),
+                    track_bandwidth = col_cfg["network"].get("track_bandwidth", True),
+                )
+                nc.start()
+                self._collectors.append(nc)
+                logger.info(" Network Collector started")
+            except Exception as e:
+                logger.error(f"Network collector error: {e}")
+
+        # Process collector 
+        if col_cfg["process"]["enabled"]:
+            try:
+               
+                pc = ProcessCollector(
+                    dispatch          = dispatch,
+                    poll_interval     = col_cfg["process"].get("poll_interval", 1.5),
+                    resource_interval = col_cfg["process"].get("resource_interval", 30.0),
+                    hash_executables  = col_cfg["process"].get("hash_executables", True),
+                )
+                pc.start()
+                self._collectors.append(pc)
+                logger.info("Process Collector started")
+            except Exception as e:
+                logger.error(f"Process collector error: {e}")
+
+
+        # USB / Pendrive collector
+        usb_cfg = col_cfg.get("usb", {})
+        if usb_cfg.get("enabled", True):
+            try:
+                uc = USBCollector(
+                    dispatch                 = dispatch,
+                    poll_interval            = usb_cfg.get("poll_interval", 3.0),
+                    scan_on_connect          = usb_cfg.get("scan_on_connect", True),
+                    transfer_threshold_bytes = usb_cfg.get("transfer_threshold_bytes", 524288000),
+                )
+                uc.start()
+                self._collectors.append(uc)
+                logger.info("USB Collector started")
+            except Exception as e:
+                logger.error(f"USB collector error: {e}")
+
+        # Hard Disk collector
+        hd_cfg = col_cfg.get("harddisk", {})
+        if hd_cfg.get("enabled", True):
+            try:
+                hc = HardDiskCollector(
+                    dispatch         = dispatch,
+                    poll_interval    = hd_cfg.get("poll_interval", 30.0),
+                    smart_interval   = hd_cfg.get("smart_interval", 300.0),
+                    warn_percent     = hd_cfg.get("warn_percent", 85.0),
+                    critical_percent = hd_cfg.get("critical_percent", 95.0),
+                    enable_smart     = hd_cfg.get("enable_smart", True),
+                )
+                hc.start()
+                self._collectors.append(hc)
+                logger.info("HardDisk Collector started")
+            except Exception as e:
+                logger.error(f"HardDisk collector error: {e}")
+        self._running = True
+        logger.info(f"Agent running. Logs → {self.config['output']['log_dir']}")
+        logger.info("Press Ctrl+C to stop.")
+
+    def stop(self):
+        logger.info("Stopping collectors...")
+        for c in self._collectors:
+            try:
+                c.stop()
+            except Exception:
+                pass
+        if self._dispatcher:
+            self._dispatcher.flush_and_stop()
+        logger.info("Sentinel Agent stopped.")
+
+    def wait(self):
+        try:
+            while self._running:
+                time.sleep(1)
+        except KeyboardInterrupt:
+            self.stop()
+
+
+
+def deep_merge(base: dict, override: dict) -> dict:
+    result = base.copy()
+    for k, v in override.items():
+        if k in result and isinstance(result[k], dict) and isinstance(v, dict):
+            result[k] = deep_merge(result[k], v)
+        else:
+            result[k] = v
+    return result

@@ -1,0 +1,49 @@
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual environments
+venv/
+env/
+.venv/
+
+# Environment files (VERY IMPORTANT - avoid leaking secrets)
+.env
+.env.*
+
+# Git
+.git/
+.gitignore
+
+# IDEs
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Tests and docs (optional)
+tests/
+docs/
+
+# Node (if ever present in repo)
+node_modules/
+
+# Docker
+Dockerfile
+docker-compose.yml
+
+# Cache/build artifacts
+*.egg-info/
+dist/
+build/
+
+# Kafka / runtime dumps (optional safety)
+*.dump
