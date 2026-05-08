@@ -122,6 +122,12 @@ class EventDispatcher:
         if category_split:
             for cat in ("file", "authentication", "network", "process", "system"):
                 self._cat_writers[cat] = RotatingJSONLWriter(jsonl_dir, f"sentinel-{cat}")
+        # Dedicated per-collector writers (keyed on event["collector"] field)
+        # This gives us e.g. sentinel-usb.jsonl, sentinel-harddisk.jsonl independently
+        self._collector_writers: dict = {
+            "usb_monitor":      RotatingJSONLWriter(jsonl_dir, "sentinel-usb"),
+            "harddisk_monitor": RotatingJSONLWriter(jsonl_dir, "sentinel-harddisk"),
+        }
 
         # The worker thread owns its own event loop AND creates DBWriter inside it
         self._loop: asyncio.AbstractEventLoop = None
@@ -193,6 +199,12 @@ class EventDispatcher:
         if cat in self._cat_writers:
             self._cat_writers[cat].write(event)
 
+        # Collector-specific JSONL (e.g. sentinel-usb.jsonl, sentinel-harddisk.jsonl) 
+        collector = event.get("collector", "")
+        if collector in self._collector_writers:
+            self._collector_writers[collector].write(event)
+
+
         # Stdout
         if self._stdout:
             print(json.dumps(event, default=str), flush=True)
@@ -203,3 +215,5 @@ class EventDispatcher:
         self._main_writer.close()
         for w in self._cat_writers.values():
             w.close()
+        for w in self._collector_writers.values():
+            w.close()  

@@ -65,6 +65,20 @@ DEFAULT_CONFIG = {
             "resource_interval": 30.0,
             "hash_executables":  True,
         },
+        "usb": {
+            "enabled": True,
+            "poll_interval": 3.0,
+            "scan_on_connect": True,
+            "transfer_threshold_bytes": 524288000,
+        },
+        "harddisk": {
+            "enabled": True,
+            "poll_interval": 30.0,
+            "smart_interval": 300.0,
+            "warn_percent": 85.0,
+            "critical_percent": 95.0,
+            "enable_smart": True,
+        },
     },
     "filters": {
         "min_severity": "info",         # info | low | medium | high | critical
