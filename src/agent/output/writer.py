@@ -13,8 +13,9 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 from queue import Queue
-from ..db.db import DBWriter
+# from ..db.db import DBWriter
 from ..logger import Logger
+from .raw_writer import RawLogWriter
 import asyncio
 
 logger = Logger.get_logger(__name__)
@@ -119,6 +120,8 @@ class EventDispatcher:
 
         # Per-category writers
         self._cat_writers: dict = {}
+        self._raw_writer = RawLogWriter(jsonl_dir, "sentinel-raw")
+
         if category_split:
             for cat in ("file", "authentication", "network", "process", "system"):
                 self._cat_writers[cat] = RotatingJSONLWriter(jsonl_dir, f"sentinel-{cat}")
@@ -131,7 +134,7 @@ class EventDispatcher:
 
         # The worker thread owns its own event loop AND creates DBWriter inside it
         self._loop: asyncio.AbstractEventLoop = None
-        self._db_writer: DBWriter = None
+        # self._db_writer: DBWriter = None
         self._loop_ready = threading.Event()
 
         self._thread = threading.Thread(
@@ -148,9 +151,9 @@ class EventDispatcher:
 
         # Init DBWriter here so its engine/pool belong to THIS loop
         async def _init():
-            self._db_writer = DBWriter()   # asyncio.run inside __init__ is gone (see db.py fix below)
-            await self._db_writer.init()
-
+            # self._db_writer = DBWriter()   # asyncio.run inside __init__ is gone (see db.py fix below)
+            # await self._db_writer.init()
+            pass
         self._loop.run_until_complete(_init())
         self._loop_ready.set()
 
@@ -191,9 +194,9 @@ class EventDispatcher:
             try:
                 await self._db_writer.write_into_db_batch(batch)
             except Exception as ex:
-                logger.error(f"Batch DB write failed, dropping {len(batch)} events: {ex}")
+                # logger.error(f"Batch DB write failed, dropping {len(batch)} events: {ex}")
                 # optionally: write failed batch to a dead-letter JSONL here
-
+                pass
         # Category-split JSONL
         cat = event.get("category", "system")
         if cat in self._cat_writers:
@@ -208,11 +211,14 @@ class EventDispatcher:
         # Stdout
         if self._stdout:
             print(json.dumps(event, default=str), flush=True)
+        # Raw human-readable log
+        self._raw_writer.write(event)
 
     def flush_and_stop(self):
         self._stop.set()
         self._thread.join(timeout=10)
         self._main_writer.close()
+        self._raw_writer.close()
         for w in self._cat_writers.values():
             w.close()
         for w in self._collector_writers.values():
