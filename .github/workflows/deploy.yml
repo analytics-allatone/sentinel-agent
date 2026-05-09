@@ -1,0 +1,61 @@
+name: Build & Deploy on Oracle VM
+
+on:
+  push:
+    branches:
+      - development
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # Copy project files to Oracle VM
+      - name: Copy source to Oracle VM
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.OCI_HOST }}
+          username: ${{ secrets.OCI_USER }}
+          key: ${{ secrets.OCI_SSH_KEY }}
+          source: "."
+          target: "/home/opc/sentinel-application"
+
+      # SSH into Oracle VM and deploy
+      - name: Build and Deploy
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.OCI_HOST }}
+          username: ${{ secrets.OCI_USER }}
+          key: ${{ secrets.OCI_SSH_KEY }}
+          script: |
+            cd /home/opc/sentinel-application
+
+            echo "Building Docker image..."
+
+            docker build -t sentinel-application:latest .
+
+            echo "Stopping old container..."
+
+            docker stop sentinel-application || true
+            docker rm sentinel-application || true
+
+            echo "Starting new container..."
+
+            docker run -d \
+              --name sentinel \
+              --restart always \
+              -p 8000:8000 \
+              -e AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }} \
+              -e AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }} \
+              -e DB_ENDPOINT=${{ secrets.DB_ENDPOINT }} \
+              -e DB_NAME=${{ secrets.DB_NAME }} \
+              -e DB_USER=${{ secrets.DB_USER }} \
+              -e DB_PASSWORD=${{ secrets.DB_PASSWORD }} \
+              sentinel-application:latest
+
+            echo "Cleaning unused Docker images..."
+
+            docker image prune -f
