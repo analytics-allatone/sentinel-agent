@@ -39,8 +39,8 @@ jobs:
 
             echo "Stopping old container..."
 
-            docker stop sentinel-application || true
-            docker rm sentinel-application || true
+            docker stop sentinel || true
+            docker rm sentinel || true
 
             echo "Starting new container..."
 

@@ -8,7 +8,6 @@ Hashes: SHA256, SHA1, MD5 for every file touched.
 import os
 import stat
 import time
-import logging
 import platform
 import threading
 from pathlib import Path
@@ -30,14 +29,15 @@ except ImportError:
 
 import sys
 sys.path.insert(0, str(Path(__file__).parent.parent))
+<<<<<<< HEAD:src/agent/collectors/file_collector.py
 from src.agent.schema.event_schema import (
+=======
+from schema.event_schema import (
+>>>>>>> 054876c48453f3eef355b7426b79420d85c45659:agent/collectors/file_collector.py
     SentinelEvent, FileInfo, UserInfo, ProcessInfo,
     EventCategory, EventAction, EventOutcome, Severity,
     hash_file, get_host_info
 )
-
-logger = logging.getLogger("sentinel.file")
-
 
 # ─────────────────────────────────────────────
 #  HELPERS
@@ -175,6 +175,7 @@ class SentinelFileHandler(FileSystemEventHandler):
             user       = _get_current_user(),
             tags       = ["filesystem"],
         )
+        print(event.to_dict())
         self._dispatch(event.to_dict())
 
     def on_created(self, event):
@@ -224,7 +225,7 @@ class FileCollector:
         self._observer    = None
         self._use_polling = use_polling
 
-        logger.info(f"FileCollector watching: {self._watch_paths}")
+        print(f"FileCollector watching: {self._watch_paths}")
 
     @staticmethod
     def _default_paths() -> List[str]:
@@ -245,14 +246,14 @@ class FileCollector:
         for path in self._watch_paths:
             if Path(path).exists():
                 self._observer.schedule(handler, path, recursive=self._recursive)
-                logger.info(f"Watching {path}")
+                print(f"Watching {path}")
             else:
-                logger.warning(f"Path not found, skipping: {path}")
+                print(f"Path not found, skipping: {path}")
         self._observer.start()
-        logger.info("FileCollector started")
+        print("FileCollector started")
 
     def stop(self):
         if self._observer:
             self._observer.stop()
             self._observer.join()
-        logger.info("FileCollector stopped")
+        print("FileCollector stopped")

@@ -1,19 +1,15 @@
 import time
 import platform
 
-from .config import SEVERITY_ORDER 
-from .logger import Logger
+from config.config import SEVERITY_ORDER 
 
-from .output.writer import EventDispatcher
-from .collectors.file_collector import FileCollector
-from .collectors.auth_collector import create_auth_collector
-from .collectors.network_collector import NetworkCollector
-from .collectors.process_collector import ProcessCollector
-from .collectors.usb_collector import USBCollector
-from .collectors.harddisk_collector import HardDiskCollector
-
-
-logger = Logger.get_logger(__name__)
+from output.writer import EventDispatcher
+from collectors.file_collector import FileCollector
+from collectors.auth_collector import create_auth_collector
+from collectors.network_collector import NetworkCollector
+from collectors.process_collector import ProcessCollector
+from collectors.usb_collector import USBCollector
+from collectors.harddisk_collector import HardDiskCollector
 
 
 
@@ -56,11 +52,6 @@ class SentinelAgent:
         return dispatch
 
     def start(self):
-        logger.info("=" * 60)
-        logger.info("  Sentinel Security Log Agent")
-        logger.info(f"  Host: {platform.node()} | OS: {platform.system()}")
-        logger.info("=" * 60)
-
         self._dispatcher = self._build_dispatcher()
         dispatch = self._make_dispatch()
         col_cfg  = self.config["collectors"]
@@ -79,11 +70,11 @@ class SentinelAgent:
                 )
                 fc.start()
                 self._collectors.append(fc)
-                logger.info("✓ File Collector started")
+                print("✓ File Collector started")
             except ImportError as e:
-                logger.warning(f"File collector unavailable: {e}")
+                print(f"File collector unavailable: {e}")
             except Exception as e:
-                logger.error(f"File collector error: {e}")
+                print(f"File collector error: {e}")
 
         # Auth collector
         if col_cfg["auth"]["enabled"]:
@@ -96,9 +87,9 @@ class SentinelAgent:
                 )
                 ac.start()
                 self._collectors.append(ac)
-                logger.info("Auth Collector started")
+                print("Auth Collector started")
             except Exception as e:
-                logger.error(f"Auth collector error: {e}")
+                print(f"Auth collector error: {e}")
 
         # Network collector 
         if col_cfg["network"]["enabled"]:
@@ -111,9 +102,9 @@ class SentinelAgent:
                 )
                 nc.start()
                 self._collectors.append(nc)
-                logger.info(" Network Collector started")
+                print(" Network Collector started")
             except Exception as e:
-                logger.error(f"Network collector error: {e}")
+                print(f"Network collector error: {e}")
 
         # Process collector 
         if col_cfg["process"]["enabled"]:
@@ -127,9 +118,9 @@ class SentinelAgent:
                 )
                 pc.start()
                 self._collectors.append(pc)
-                logger.info("Process Collector started")
+                print("Process Collector started")
             except Exception as e:
-                logger.error(f"Process collector error: {e}")
+                print(f"Process collector error: {e}")
 
 
         # USB / Pendrive collector
@@ -144,9 +135,9 @@ class SentinelAgent:
                 )
                 uc.start()
                 self._collectors.append(uc)
-                logger.info("USB Collector started")
+                print("USB Collector started")
             except Exception as e:
-                logger.error(f"USB collector error: {e}")
+                print(f"USB collector error: {e}")
 
         # Hard Disk collector
         hd_cfg = col_cfg.get("harddisk", {})
@@ -162,15 +153,15 @@ class SentinelAgent:
                 )
                 hc.start()
                 self._collectors.append(hc)
-                logger.info("HardDisk Collector started")
+                print("HardDisk Collector started")
             except Exception as e:
-                logger.error(f"HardDisk collector error: {e}")
+                print(f"HardDisk collector error: {e}")
         self._running = True
-        logger.info(f"Agent running. Logs → {self.config['output']['log_dir']}")
-        logger.info("Press Ctrl+C to stop.")
+        print(f"Agent running. Logs → {self.config['output']['log_dir']}")
+        print("Press Ctrl+C to stop.")
 
     def stop(self):
-        logger.info("Stopping collectors...")
+        print("Stopping collectors...")
         for c in self._collectors:
             try:
                 c.stop()
@@ -178,7 +169,7 @@ class SentinelAgent:
                 pass
         if self._dispatcher:
             self._dispatcher.flush_and_stop()
-        logger.info("Sentinel Agent stopped.")
+        print("Sentinel Agent stopped.")
 
     def wait(self):
         try:

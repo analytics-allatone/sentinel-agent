@@ -21,8 +21,6 @@ import platform
 import threading
 import subprocess
 import json
-import logging
-from datetime import datetime, timezone
 from typing import Callable, Dict, Optional, Set, Tuple
 from pathlib import Path
 
@@ -30,15 +28,15 @@ import psutil
 
 import sys
 sys.path.insert(0, str(Path(__file__).parent.parent))
+<<<<<<< HEAD:src/agent/collectors/harddisk_collector.py
 from src.agent.schema.event_schema import (
+=======
+from schema.event_schema import (
+>>>>>>> 054876c48453f3eef355b7426b79420d85c45659:agent/collectors/harddisk_collector.py
     SentinelEvent, FileInfo,
     EventCategory, EventAction, EventOutcome, Severity,
     get_host_info,
 )
-from ..logger import Logger
-
-logger = Logger.get_logger(__name__)
-
 
 # ─────────────────────────────────────────────
 #  THRESHOLDS & CONSTANTS
@@ -68,7 +66,11 @@ INSECURE_OPTS = {"exec", "suid", "dev"}   # if these appear where they shouldn't
 #  HELPERS
 # ─────────────────────────────────────────────
 
+<<<<<<< HEAD:src/agent/collectors/harddisk_collector.py
 def _is_fixed_partition(part: psutil.disk_partitions()) -> bool:
+=======
+def _is_fixed_partition(part) -> bool:
+>>>>>>> 054876c48453f3eef355b7426b79420d85c45659:agent/collectors/harddisk_collector.py
     """Return True for internal fixed disks (skip pseudo-fs, tmpfs, removable)."""
     skip_fs = {
         "tmpfs", "devtmpfs", "squashfs", "overlay", "aufs",
@@ -94,7 +96,11 @@ def _is_fixed_partition(part: psutil.disk_partitions()) -> bool:
     return True
 
 
+<<<<<<< HEAD:src/agent/collectors/harddisk_collector.py
 def _disk_snapshot(part: psutil.disk_partitions()) -> Optional[dict]:
+=======
+def _disk_snapshot(part) -> Optional[dict]:
+>>>>>>> 054876c48453f3eef355b7426b79420d85c45659:agent/collectors/harddisk_collector.py
     try:
         usage = psutil.disk_usage(part.mountpoint)
         return {

@@ -23,7 +23,8 @@ class Machines(Base):
     region = Column(String, nullable=True)
     os_type = Column(String, nullable=True)
 
-    status = Column(String, default="active")
+    is_active = Column(Boolean, default=True)
+    user_id = Column(Integer , nullable = False)
 
     created_at = Column(TIMESTAMP, nullable=False, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
     last_updated_at = Column(TIMESTAMP, nullable=False, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), onupdate=lambda: datetime.now(timezone.utc).replace(tzinfo=None))

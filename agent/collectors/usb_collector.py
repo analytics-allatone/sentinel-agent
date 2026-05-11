@@ -37,12 +37,20 @@ import psutil
 
 import sys
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
+<<<<<<< HEAD:src/agent/collectors/usb_collector.py
 from src.agent.schema.event_schema import (
+=======
+from schema.event_schema import (
+>>>>>>> 054876c48453f3eef355b7426b79420d85c45659:agent/collectors/usb_collector.py
     SentinelEvent, FileInfo,
     EventCategory, EventOutcome, Severity,
     get_host_info,
 )
+<<<<<<< HEAD:src/agent/collectors/usb_collector.py
 from src.agent.logger import Logger
+=======
+from logger import Logger
+>>>>>>> 054876c48453f3eef355b7426b79420d85c45659:agent/collectors/usb_collector.py
 
 logger = Logger.get_logger(__name__)
 
@@ -248,7 +256,11 @@ def _macos_disk_info(mountpoint: str) -> dict:
 #  PARTITION FILTER  (the critical fix)
 # ──────────────────────────────────────────────────────────────
 
+<<<<<<< HEAD:src/agent/collectors/usb_collector.py
 def _is_removable_partition(part: psutil.disk_partitions()) -> bool:
+=======
+def _is_removable_partition(part) -> bool:
+>>>>>>> 054876c48453f3eef355b7426b79420d85c45659:agent/collectors/usb_collector.py
     """
     Comprehensive removable-media check for all three platforms.
     Uses ALL=True partitions so exFAT/NTFS pendrives are not filtered out.
@@ -310,7 +322,11 @@ def _is_removable_partition(part: psutil.disk_partitions()) -> bool:
 #  SNAPSHOT
 # ──────────────────────────────────────────────────────────────
 
+<<<<<<< HEAD:src/agent/collectors/usb_collector.py
 def _build_snapshot(part: psutil.disk_partitions()) -> dict:
+=======
+def _build_snapshot(part) -> dict:
+>>>>>>> 054876c48453f3eef355b7426b79420d85c45659:agent/collectors/usb_collector.py
     """Build a full device snapshot at connect time."""
     mp  = part.mountpoint
     dev = part.device

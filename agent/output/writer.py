@@ -13,12 +13,15 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 from queue import Queue
+<<<<<<< HEAD:src/agent/output/writer.py
 # from ..db.db import DBWriter
 from ..logger import Logger
 from .raw_writer import RawLogWriter
 import asyncio
+=======
+>>>>>>> 054876c48453f3eef355b7426b79420d85c45659:agent/output/writer.py
 
-logger = Logger.get_logger(__name__)
+import asyncio
 
 
 # ─────────────────────────────────────────────
@@ -134,7 +137,10 @@ class EventDispatcher:
 
         # The worker thread owns its own event loop AND creates DBWriter inside it
         self._loop: asyncio.AbstractEventLoop = None
+<<<<<<< HEAD:src/agent/output/writer.py
         # self._db_writer: DBWriter = None
+=======
+>>>>>>> 054876c48453f3eef355b7426b79420d85c45659:agent/output/writer.py
         self._loop_ready = threading.Event()
 
         self._thread = threading.Thread(
@@ -150,11 +156,19 @@ class EventDispatcher:
         asyncio.set_event_loop(self._loop)
 
         # Init DBWriter here so its engine/pool belong to THIS loop
+<<<<<<< HEAD:src/agent/output/writer.py
         async def _init():
             # self._db_writer = DBWriter()   # asyncio.run inside __init__ is gone (see db.py fix below)
             # await self._db_writer.init()
             pass
         self._loop.run_until_complete(_init())
+=======
+        # async def _init():
+        #     self._db_writer = DBWriter()   # asyncio.run inside __init__ is gone (see db.py fix below)
+        #     await self._db_writer.init()
+
+        # self._loop.run_until_complete(_init())
+>>>>>>> 054876c48453f3eef355b7426b79420d85c45659:agent/output/writer.py
         self._loop_ready.set()
 
         # Drain the queue until stopped
@@ -172,14 +186,14 @@ class EventDispatcher:
                     continue
                 await self._write(event)
             except Exception as ex:
-                logger.error(f"Dispatcher error: {ex}")
+                print(f"Dispatcher error: {ex}")
 
     # ── public API ──────────────────────────────────────────────────────────
     def push(self, event_dict: dict):
         try:
             self._queue.put_nowait(event_dict)
         except Exception:
-            logger.warning("Event queue full, dropping event")
+            print("Event queue full, dropping event")
 
     async def _write(self, event: dict):
         # Main JSONL
@@ -187,14 +201,21 @@ class EventDispatcher:
 
         # Batch accumulation
         self.event_list.append(event)
-        logger.info(f"len of events {len(self.event_list)}")
+        print(f"len of events {len(self.event_list)}")
         if len(self.event_list) >= 30:
             batch = self.event_list[:]      # snapshot
             self.event_list = []            # clear BEFORE await, so failures don't re-queue
+<<<<<<< HEAD:src/agent/output/writer.py
             try:
                 await self._db_writer.write_into_db_batch(batch)
             except Exception as ex:
                 # logger.error(f"Batch DB write failed, dropping {len(batch)} events: {ex}")
+=======
+            # try:
+            #     await self._db_writer.write_into_db_batch(batch)
+            # except Exception as ex:
+            #     logger.error(f"Batch DB write failed, dropping {len(batch)} events: {ex}")
+>>>>>>> 054876c48453f3eef355b7426b79420d85c45659:agent/output/writer.py
                 # optionally: write failed batch to a dead-letter JSONL here
                 pass
         # Category-split JSONL

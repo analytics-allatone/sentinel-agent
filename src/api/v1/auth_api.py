@@ -35,9 +35,9 @@ auth_router = APIRouter()
 
 
 @auth_router.post("/login" , response_model = standard_success_response[LoginResponse] , status_code=200)
-async def login(data: LoginRequest , db: AsyncSession = Depends(get_async_db)):
-    email = data.email
-    password = data.password
+async def login(req: LoginRequest , db: AsyncSession = Depends(get_async_db)):
+    email = req.email
+    password = req.password
 
     result = await db.execute(select(Users).where(Users.email == email))
     user = result.scalars().first()
@@ -66,23 +66,23 @@ async def login(data: LoginRequest , db: AsyncSession = Depends(get_async_db)):
 
 
 @auth_router.post("/signup" , response_model = standard_success_response[SignupResponse] , status_code=201)
-async def signup(data: SignupRequest , db: AsyncSession = Depends(get_async_db)):
+async def signup(req: SignupRequest , db: AsyncSession = Depends(get_async_db)):
 
-    result = await db.execute(select(Users).where(Users.email == data.email))
+    result = await db.execute(select(Users).where(Users.email == req.email))
     existing_user = result.scalars().first()
     
     if existing_user:
         raise HTTPException(status_code=401, detail="User already exists with this email, please login")
     
 
-    hashed_password = hash_password(data.password)
+    hashed_password = hash_password(req.password)
 
     new_user = Users(
-        first_name = data.first_name,
-        last_name = data.last_name,
-        email = data.email,
-        country_code = data.country_code,
-        phone_number = data.phone_number,
+        first_name = req.first_name,
+        last_name = req.last_name,
+        email = req.email,
+        country_code = req.country_code,
+        phone_number = req.phone_number,
         password = hashed_password
     )
     db.add(new_user)
@@ -108,9 +108,9 @@ async def signup(data: SignupRequest , db: AsyncSession = Depends(get_async_db))
 
 
 @auth_router.post("/refresh-access-token" , response_model = standard_success_response[RefreshAccessTokenResponse] , status_code=200)
-async def refreshAccessToken(data: RefreshAccessTokenRequest):
+async def refreshAccessToken(req: RefreshAccessTokenRequest):
 
-    payload = verify_token(data.refresh_token)
+    payload = verify_token(req.refresh_token)
     
     token_data = {
         "id" : payload["id"],

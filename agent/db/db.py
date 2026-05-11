@@ -6,8 +6,7 @@ import json
 from .base import Base
 from .tables import *
 
-from ..config import DB_ENDPOINT , DB_NAME , DB_PASSWORD , DB_USER
-from ..logger import Logger
+from config.config import DB_ENDPOINT , DB_NAME , DB_PASSWORD , DB_USER
 
 
 
@@ -17,8 +16,7 @@ class DBWriter:
         self._dbpassword = DB_PASSWORD
         self._dbendpoint = DB_ENDPOINT
         self._dbname     = DB_NAME
-        self._logger     = Logger.get_logger(__name__)
-
+        
         self._DATABASE_URL = (
             f"postgresql+asyncpg://{self._dbuser}:{self._dbpassword}"
             f"@{self._dbendpoint}:5432/{self._dbname}"

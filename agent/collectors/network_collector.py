@@ -4,20 +4,21 @@ import socket
 import ipaddress
 import threading
 from typing import Callable, Dict, Tuple, Optional
-from ..logger import Logger
 
 import psutil
 
 import sys
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
+<<<<<<< HEAD:src/agent/collectors/network_collector.py
 from src.agent.schema.event_schema import (
+=======
+from schema.event_schema import (
+>>>>>>> 054876c48453f3eef355b7426b79420d85c45659:agent/collectors/network_collector.py
     SentinelEvent, NetworkInfo, ProcessInfo, UserInfo,
     EventCategory, EventAction, EventOutcome, Severity,
     get_host_info
 )
-
-logger = Logger.get_logger(__name__)
 
 
 # ─────────────────────────────────────────────
