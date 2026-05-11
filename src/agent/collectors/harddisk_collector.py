@@ -68,7 +68,7 @@ INSECURE_OPTS = {"exec", "suid", "dev"}   # if these appear where they shouldn't
 #  HELPERS
 # ─────────────────────────────────────────────
 
-def _is_fixed_partition(part: psutil.sdiskpart) -> bool:
+def _is_fixed_partition(part: psutil.disk_partitions()) -> bool:
     """Return True for internal fixed disks (skip pseudo-fs, tmpfs, removable)."""
     skip_fs = {
         "tmpfs", "devtmpfs", "squashfs", "overlay", "aufs",
@@ -94,7 +94,7 @@ def _is_fixed_partition(part: psutil.sdiskpart) -> bool:
     return True
 
 
-def _disk_snapshot(part: psutil.sdiskpart) -> Optional[dict]:
+def _disk_snapshot(part: psutil.disk_partitions()) -> Optional[dict]:
     try:
         usage = psutil.disk_usage(part.mountpoint)
         return {

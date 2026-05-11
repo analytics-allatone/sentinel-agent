@@ -91,7 +91,7 @@ class SentinelAgent:
                 
                 ac = create_auth_collector(
                     dispatch       = dispatch,
-                    log_path       = col_cfg["auth"].get("log_path"),
+                    log_path       = col_cfg["auth"].get("log_path",None),
                     parse_history  = col_cfg["auth"].get("parse_history", False),
                 )
                 ac.start()

@@ -14,6 +14,7 @@ import threading
 from pathlib import Path
 from datetime import datetime, timezone
 from typing import List, Optional, Callable
+from watchdog.events import FileSystemEventHandler
 
 try:
     from watchdog.observers import Observer
