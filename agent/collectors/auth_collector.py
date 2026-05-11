@@ -2,7 +2,6 @@ import re
 import os
 import time
 import platform
-import logging
 import threading
 from datetime import datetime, timezone
 from pathlib import Path
@@ -10,13 +9,11 @@ from typing import Callable
 
 import sys
 sys.path.insert(0, str(Path(__file__).parent.parent))
-from src.schema.event_schema import (
+from schema.event_schema import (
     SentinelEvent, AuthInfo, UserInfo, ProcessInfo,
     EventCategory, EventAction, EventOutcome, Severity,
     get_host_info
 )
-
-logger = logging.getLogger("sentinel.auth")
 
 # ─────────────────────────────────────────────
 #  LINUX AUTH LOG PARSER
@@ -104,6 +101,7 @@ def _parse_timestamp(ts_str: str) -> str:
 
 def parse_auth_line(line: str, dispatch: Callable):
     """Parse a single auth log line and emit a SentinelEvent if matched."""
+    print(f"[RAW AUTH LOG] {line.rstrip()}")
     line = line.strip()
     if not line:
         return
@@ -287,11 +285,11 @@ class LinuxAuthCollector:
         for p in self.AUTH_LOG_CANDIDATES:
             if Path(p).exists():
                 return p
-        logger.warning("No auth log found. Checked: " + str(self.AUTH_LOG_CANDIDATES))
+        print("No auth log found. Checked: " + str(self.AUTH_LOG_CANDIDATES))
         return self.AUTH_LOG_CANDIDATES[0]
 
     def _tail(self):
-        logger.info(f"Tailing auth log: {self._log_path}")
+        print(f"Tailing auth log: {self._log_path}")
         try:
             with open(self._log_path, "r", errors="replace") as f:
                 if not self._parse_history:
@@ -305,14 +303,14 @@ class LinuxAuthCollector:
                         # Handle log rotation
                         try:
                             if Path(self._log_path).stat().st_ino != os.fstat(f.fileno()).st_ino:
-                                logger.info("Auth log rotated, reopening...")
+                                print("Auth log rotated, reopening...")
                                 break
                         except Exception:
                             break
         except PermissionError:
-            logger.error(f"Permission denied reading {self._log_path}. Run as root.")
+            print(f"Permission denied reading {self._log_path}. Run as root.")
         except FileNotFoundError:
-            logger.error(f"Auth log not found: {self._log_path}")
+            print(f"Auth log not found: {self._log_path}")
 
     def start(self):
         self._thread = threading.Thread(target=self._tail, daemon=True, name="auth-tail")
@@ -367,7 +365,7 @@ class WindowsAuthCollector:
         try:
             import win32evtlog, win32con, win32evtlogutil, winerror
         except ImportError:
-            logger.error("pywin32 not installed. Run: pip install pywin32")
+            print("pywin32 not installed. Run: pip install pywin32")
             return
 
         server   = None
@@ -386,7 +384,7 @@ class WindowsAuthCollector:
                     if eid in self.EVENT_MAP:
                         self._process_event(ev, eid)
             except Exception as ex:
-                logger.debug(f"Windows event read: {ex}")
+                print(f"Windows event read: {ex}")
             time.sleep(self._poll_interval)
 
     def _process_event(self, ev, eid: int):
@@ -424,7 +422,7 @@ class WindowsAuthCollector:
 
             self._dispatch(event.to_dict())
         except Exception as ex:
-            logger.debug(f"Event parse error: {ex}")
+            print(f"Event parse error: {ex}")
 
     def start(self):
         self._thread = threading.Thread(target=self._read_events, daemon=True, name="win-evtlog")

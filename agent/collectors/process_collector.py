@@ -6,25 +6,21 @@ Detects: suspicious names, LOLBins, high CPU, hidden processes.
 """
 
 import time
-import logging
 import platform
 import threading
 from datetime import datetime, timezone
 from typing import Callable, Dict, Optional
-from ..logger import Logger
 
 import psutil
 
 import sys
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
-from src.schema.event_schema import (
+from schema.event_schema import (
     SentinelEvent, ProcessInfo, UserInfo,
     EventCategory, EventAction, EventOutcome, Severity,
     hash_file, get_host_info
 )
-
-logger = Logger.get_logger(__name__)
 
 
 

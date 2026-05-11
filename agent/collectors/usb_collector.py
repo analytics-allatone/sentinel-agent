@@ -37,12 +37,12 @@ import psutil
 
 import sys
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
-from src.schema.event_schema import (
+from schema.event_schema import (
     SentinelEvent, FileInfo,
     EventCategory, EventOutcome, Severity,
     get_host_info,
 )
-from src.logger import Logger
+from logger import Logger
 
 logger = Logger.get_logger(__name__)
 
@@ -248,7 +248,7 @@ def _macos_disk_info(mountpoint: str) -> dict:
 #  PARTITION FILTER  (the critical fix)
 # ──────────────────────────────────────────────────────────────
 
-def _is_removable_partition(part: psutil.sdiskpart) -> bool:
+def _is_removable_partition(part) -> bool:
     """
     Comprehensive removable-media check for all three platforms.
     Uses ALL=True partitions so exFAT/NTFS pendrives are not filtered out.
@@ -310,7 +310,7 @@ def _is_removable_partition(part: psutil.sdiskpart) -> bool:
 #  SNAPSHOT
 # ──────────────────────────────────────────────────────────────
 
-def _build_snapshot(part: psutil.sdiskpart) -> dict:
+def _build_snapshot(part) -> dict:
     """Build a full device snapshot at connect time."""
     mp  = part.mountpoint
     dev = part.device
