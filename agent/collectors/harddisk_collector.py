@@ -104,7 +104,7 @@ def _disk_snapshot(part) -> Optional[dict]:
     except PermissionError:
         return None
     except Exception as exc:
-        logger.debug(f"disk snapshot error on {part.mountpoint}: {exc}")
+        print(f"disk snapshot error on {part.mountpoint}: {exc}")
         return None
 
 
@@ -280,7 +280,7 @@ class HardDiskCollector:
                         f"({free_mb:.0f} MB free) — potential DoS or log-flood risk"
                     ),
                 )
-                logger.warning(f"Disk CRITICAL on {mp}: {pct:.1f}% used")
+                print(f"Disk CRITICAL on {mp}: {pct:.1f}% used")
 
         elif pct >= self._warn_pct:
             if f"{mp}:warn" not in self._warned:
@@ -295,7 +295,7 @@ class HardDiskCollector:
                         f"({free_gb:.1f} GB free)"
                     ),
                 )
-                logger.info(f"Disk WARN on {mp}: {pct:.1f}% used")
+                print(f"Disk WARN on {mp}: {pct:.1f}% used")
         else:
             # Usage dropped back below warn threshold – reset so future alerts fire
             self._warned.discard(f"{mp}:warn")
@@ -316,7 +316,7 @@ class HardDiskCollector:
                     f"in one poll cycle — possible mass file deletion or ransomware wipe"
                 ),
             )
-            logger.warning(
+            print(
                 f"Rapid free-space increase on {snap['mountpoint']}: {gb:.2f} GB freed"
             )
 
@@ -342,12 +342,12 @@ class HardDiskCollector:
                     f"added={added_insecure or added} removed={removed_secure or removed}"
                 ),
             )
-            logger.info(f"Mount opts changed on {snap['mountpoint']}")
+            print(f"Mount opts changed on {snap['mountpoint']}")
 
     # ── SMART polling ────────────────────────
 
     def _poll_smart(self):
-        logger.info("HardDiskCollector SMART polling started")
+        print("HardDiskCollector SMART polling started")
         os_name = platform.system()
 
         while not self._stop.is_set():
@@ -367,7 +367,7 @@ class HardDiskCollector:
                                     + "; ".join(result["alerts"])
                                 ),
                             )
-                            logger.warning(f"SMART failure on {dev}: {result['alerts']}")
+                            print(f"SMART failure on {dev}: {result['alerts']}")
 
                 elif os_name == "Darwin":
                     # Check the primary disk only (/dev/disk0)
@@ -402,14 +402,14 @@ class HardDiskCollector:
                         pass   # wmi not installed – skip silently
 
             except Exception as exc:
-                logger.debug(f"SMART poll error: {exc}")
+                print(f"SMART poll error: {exc}")
 
             self._stop.wait(self._smart_interval)
 
     # ── main polling loop ────────────────────
 
     def _poll(self):
-        logger.info("HardDiskCollector disk-space polling started")
+        print("HardDiskCollector disk-space polling started")
 
         # Seed initial state silently
         try:
@@ -418,12 +418,12 @@ class HardDiskCollector:
                     snap = _disk_snapshot(part)
                     if snap:
                         self._known[part.mountpoint] = snap
-            logger.debug(
+            print(
                 f"HardDiskCollector seeded {len(self._known)} partition(s): "
                 + ", ".join(self._known.keys())
             )
         except Exception as exc:
-            logger.debug(f"Disk seed error: {exc}")
+            print(f"Disk seed error: {exc}")
 
         while not self._stop.is_set():
             try:
@@ -438,7 +438,7 @@ class HardDiskCollector:
                 # New partitions
                 for mp, snap in current.items():
                     if mp not in self._known:
-                        logger.info(f"New partition appeared: {snap['device']} → {mp}")
+                        print(f"New partition appeared: {snap['device']} → {mp}")
                         self._emit(
                             "disk_partition_new", snap,
                             severity = Severity.MEDIUM,
@@ -452,7 +452,7 @@ class HardDiskCollector:
                 # Removed partitions
                 for mp, snap in self._known.items():
                     if mp not in current:
-                        logger.info(f"Partition disappeared: {snap['device']} ← {mp}")
+                        print(f"Partition disappeared: {snap['device']} ← {mp}")
                         self._emit(
                             "disk_partition_removed", snap,
                             severity = Severity.LOW,
@@ -470,7 +470,7 @@ class HardDiskCollector:
                 self._known = current
 
             except Exception as exc:
-                logger.debug(f"Disk poll error: {exc}")
+                print(f"Disk poll error: {exc}")
 
             time.sleep(self._interval)
 

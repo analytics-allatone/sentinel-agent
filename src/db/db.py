@@ -3,6 +3,7 @@ from sqlalchemy.orm import sessionmaker
 from db.base import Base
 from models.user_model import Users
 from models.machines_model import Machines
+from models.data_log_model import MachineLogs
 from sqlalchemy.exc import SQLAlchemyError
 from dotenv import load_dotenv
 import os

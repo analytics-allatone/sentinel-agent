@@ -12,6 +12,7 @@ from datetime import datetime, timezone
 from dataclasses import dataclass, field, asdict
 from typing import Optional, List, Dict, Any
 from enum import Enum
+from config.unique_info import MACHINE_ID
 
 
 # ─────────────────────────────────────────────
@@ -189,6 +190,7 @@ class SentinelEvent:
     Every collector outputs this exact structure.
     """
     # Core identity
+    machine_id:     int = MACHINE_ID
     event_id:       str  = field(default_factory=lambda: str(uuid.uuid4()))
     timestamp:      datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     ingested_at:        datetime = field(default_factory=lambda: datetime.now(timezone.utc))

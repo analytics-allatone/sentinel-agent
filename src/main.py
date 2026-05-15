@@ -16,17 +16,17 @@ consumer_task = None
 @asynccontextmanager
 async def lifespan(app: FastAPI):
 
-    # global consumer_task
+    global consumer_task
 
     # # DATABASE STARTUP
     await create_db_and_tables()
 
-    # # START KAFKA CONSUMER
-    # kafka_consumer_service.start()
+    # START KAFKA CONSUMER
+    kafka_consumer_service.start()
 
-    # consumer_task = asyncio.create_task(
-    #     kafka_consumer_service.consume_loop()
-    # )
+    consumer_task = asyncio.create_task(
+        kafka_consumer_service.consume_loop()
+    )
 
     print("Application Started")
 
@@ -35,10 +35,10 @@ async def lifespan(app: FastAPI):
     # SHUTDOWN LOGIC
     print("Application Shutting Down...")
 
-    # await kafka_consumer_service.shutdown()
+    await kafka_consumer_service.shutdown()
 
-    # if consumer_task:
-    #     consumer_task.cancel()
+    if consumer_task:
+        consumer_task.cancel()
 
 
 app = FastAPI(

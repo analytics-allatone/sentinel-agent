@@ -207,13 +207,14 @@ class ProcessCollector:
             process         = proc_info,
             user            = UserInfo(name=snap.get("username")),
             tags            = tags,
+            raw_log         = snap,
             mitre_technique = mitre_tech,
             mitre_tactic    = "Execution" if mitre_tech else None,
         )
         self._dispatch(event.to_dict())
 
     def _poll_processes(self):
-        logger.info("ProcessCollector polling started")
+        print("ProcessCollector polling started")
         while not self._stop.is_set():
             try:
                 current_pids: Dict[int, dict] = {}
@@ -235,7 +236,7 @@ class ProcessCollector:
                 self._known_pids = current_pids
 
             except Exception as ex:
-                logger.debug(f"Process poll error: {ex}")
+                print(f"Process poll error: {ex}")
             time.sleep(self._interval)
 
     def _poll_resources(self):
@@ -280,7 +281,7 @@ class ProcessCollector:
                     except (psutil.NoSuchProcess, psutil.AccessDenied):
                         pass
             except Exception as ex:
-                logger.debug(f"Resource poll error: {ex}")
+                print(f"Resource poll error: {ex}")
             time.sleep(self._resource_interval)
 
     def start(self):

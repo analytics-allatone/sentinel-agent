@@ -25,10 +25,11 @@ class SentinelAgent:
 
     def _build_dispatcher(self):
         cfg = self.config["output"]
+
         return EventDispatcher(
-            jsonl_dir      = cfg["log_dir"],
-            stdout         = cfg.get("stdout", False),
-            category_split = cfg.get("category_split", True),
+            kafka_brokers=cfg["kafka"]["brokers"],
+            kafka_topic=cfg["kafka"]["topic"],
+            stdout=cfg.get("stdout", False),
         )
 
     def _make_dispatch(self):
@@ -157,7 +158,7 @@ class SentinelAgent:
             except Exception as e:
                 print(f"HardDisk collector error: {e}")
         self._running = True
-        print(f"Agent running. Logs → {self.config['output']['log_dir']}")
+        print(f"Agent running.")
         print("Press Ctrl+C to stop.")
 
     def stop(self):

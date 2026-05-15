@@ -2,6 +2,10 @@ import asyncio
 import orjson
 import os
 
+from sqlalchemy import insert
+from models.data_log_model import MachineLogs
+from db.db import AsyncSessionLocal
+
 from confluent_kafka import Consumer, KafkaException
 from dotenv import load_dotenv
 
@@ -27,6 +31,20 @@ TOPIC = os.environ.get("KAFKA_TOPIC")
 BATCH_SIZE = 1000
 FLUSH_INTERVAL = 5
 
+import json
+from datetime import datetime
+
+def parse_dt(v):
+    if isinstance(v, str):
+        return datetime.fromisoformat(v.replace("Z", "+00:00"))
+    return v
+
+def parse_raw_log(l):
+    if isinstance(l , dict):
+        return json.dumps(l)
+    
+    return l
+
 
 class KafkaConsumerService:
 
@@ -45,26 +63,67 @@ class KafkaConsumerService:
 
         print("Kafka Consumer Started")
 
-    async def process_batch(self, messages):
 
-        """
-        Your business logic here.
-        """
+    async def insert_events_bulk(self , events: list[dict]):
+        async with AsyncSessionLocal() as session:
+            try:
+                await session.execute(
+                    insert(MachineLogs),
+                    events
+                )
+                await session.commit()
+
+            except Exception as e:
+                await session.rollback()
+                print("DB Insert Error:", e)
+                raise
+
+    async def process_batch(self, messages):
 
         parsed_messages = []
 
         for msg in messages:
-
             data = orjson.loads(msg.value())
 
-            parsed_messages.append(data)
+            # transform into DB format
+            parsed_messages.append({
+                "machine_id" : data.get("machine_id"),
+                "event_id": data.get("event_id"),
+                "timestamp": parse_dt(data.get("timestamp")),
+                "ingested_at": parse_dt(data.get("ingested_at")),
 
-        print("\n========== BATCH RECEIVED ==========")
+                "category": data.get("category"),
+                "action": data.get("action"),
+                "outcome": data.get("outcome"),
+                "severity": data.get("severity"),
 
-        for data in parsed_messages:
-            print(data)
+                "collector": data.get("collector"),
+                "host": str(data.get("host")),
+                "raw_log": parse_raw_log(data.get("raw_log")),
 
-        print("====================================\n")
+                "file_path": data.get("file", {}).get("path"),
+                "file_sha256": data.get("file", {}).get("sha256"),
+
+                "process_name": data.get("process", {}).get("name"),
+                "process_pid": data.get("process", {}).get("pid"),
+
+                "net_src_ip": data.get("network", {}).get("src_ip"),
+                "net_dst_ip": data.get("network", {}).get("dst_ip"),
+                "net_dst_port": data.get("network", {}).get("dst_port"),
+
+                "risk_score": data.get("risk_score"),
+                "anomaly": data.get("anomaly"),
+                "ioc_match": data.get("ioc_match"),
+                "mitre_tactic": data.get("mitre_tactic"),
+                "mitre_technique": data.get("mitre_technique"),
+                "notes": data.get("notes"),
+            })
+
+        print("inserting")
+
+        await self.insert_events_bulk(parsed_messages)
+        print("inserted")
+
 
     async def flush(self):
 

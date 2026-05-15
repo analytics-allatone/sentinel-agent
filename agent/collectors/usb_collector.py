@@ -42,9 +42,7 @@ from schema.event_schema import (
     EventCategory, EventOutcome, Severity,
     get_host_info,
 )
-from logger import Logger
 
-logger = Logger.get_logger(__name__)
 
 OS = platform.system()   # "Linux" | "Windows" | "Darwin"
 
@@ -352,7 +350,7 @@ def _build_snapshot(part) -> dict:
             except Exception:
                 pass
     except Exception as e:
-        logger.debug(f"Snapshot enrichment error on {mp}: {e}")
+        print(f"Snapshot enrichment error on {mp}: {e}")
 
     # Disk usage
     try:
@@ -382,7 +380,7 @@ def _scan_autorun_files(mountpoint: str) -> List[str]:
     except PermissionError:
         pass
     except Exception as e:
-        logger.debug(f"Autorun scan error on {mountpoint}: {e}")
+        print(f"Autorun scan error on {mountpoint}: {e}")
     return found
 
 
@@ -485,10 +483,10 @@ class USBCollector:
                 tags     = tags,
                 notes    = f"Suspicious USB label detected: '{snap.get('label')}' on {mp}",
             )
-            logger.warning(f"Suspicious USB label '{snap.get('label')}' on {mp}")
+            print(f"Suspicious USB label '{snap.get('label')}' on {mp}")
         else:
             self._emit("usb_connected", snap, severity=Severity.LOW, tags=tags)
-            logger.info(
+            print(
                 f"USB connected: {snap.get('device')} → {mp}  "
                 f"[{snap.get('fstype')}]  label='{snap.get('label')}'  "
                 f"serial={snap.get('serial')}  size={snap.get('size_bytes',0)//1048576}MB"
@@ -507,7 +505,7 @@ class USBCollector:
                     tags     = ["usb", "autorun", "potential_malware"],
                     notes    = f"Suspicious files at USB root on {mp}: {bad}",
                 )
-                logger.warning(f"USB autorun files on {mp}: {bad}")
+                print(f"USB autorun files on {mp}: {bad}")
 
     def _check_disconnect(self, snap: dict):
         """
@@ -527,7 +525,7 @@ class USBCollector:
                 + (f"  model={snap['model']}"   if snap.get("model")  else "")
             ),
         )
-        logger.info(
+        print(
             f"USB disconnected: {snap.get('device')} ← {mp}  "
             f"label='{snap.get('label')}'"
         )
@@ -550,7 +548,7 @@ class USBCollector:
                     f"device={snap.get('device')}  label='{snap.get('label')}'"
                 ),
             )
-            logger.warning(
+            print(
                 f"Large USB write on {snap['mountpoint']}: {mb:.1f} MB"
             )
 
@@ -561,7 +559,7 @@ class USBCollector:
         Secondary thread for Linux: detects USB mass-storage devices
         that appear in /sys/bus/usb but haven't been mounted yet.
         """
-        logger.info("USBCollector raw-device watcher started (Linux)")
+        print("USBCollector raw-device watcher started (Linux)")
         while not self._stop.is_set():
             try:
                 current_raw = {
@@ -593,19 +591,19 @@ class USBCollector:
                                 f"vid={entry.get('vendor')}:{entry.get('product')}"
                             ),
                         )
-                        logger.info(
+                        print(
                             f"Raw USB device: {entry.get('mfr')} "
                             f"{entry.get('prod_name')} serial={entry.get('serial')}"
                         )
                 self._known_raw = current_raw
             except Exception as e:
-                logger.debug(f"Raw USB poll error: {e}")
+                print(f"Raw USB poll error: {e}")
             time.sleep(self._interval)
 
     # ── main poll loop ───────────────────────
 
     def _poll(self):
-        logger.info("USBCollector started — polling all partition types")
+        print("USBCollector started — polling all partition types")
 
         # Seed silently so existing devices don't fire alerts at startup
         try:
@@ -613,12 +611,12 @@ class USBCollector:
                 if _is_removable_partition(part):
                     snap = _build_snapshot(part)
                     self._known[part.mountpoint] = snap
-            logger.debug(
+            print(
                 f"USBCollector seeded {len(self._known)} existing removable device(s): "
                 + ", ".join(self._known.keys())
             )
         except Exception as e:
-            logger.debug(f"USB seed error: {e}")
+            print(f"USB seed error: {e}")
 
         while not self._stop.is_set():
             try:
@@ -647,7 +645,7 @@ class USBCollector:
                 self._known = current
 
             except Exception as e:
-                logger.debug(f"USB poll error: {e}")
+                print(f"USB poll error: {e}")
 
             time.sleep(self._interval)
 

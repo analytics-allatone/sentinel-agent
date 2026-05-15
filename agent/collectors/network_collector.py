@@ -126,6 +126,7 @@ class NetworkCollector:
         }
 
     def _emit_connection(self, snap: dict, action: str):
+        print(f"SNAP:-> {snap}")
         laddr  = snap["laddr"]
         raddr  = snap["raddr"]
         dst_ip = raddr[0]
@@ -174,13 +175,13 @@ class NetworkCollector:
             network         = net_info,
             process         = proc_info,
             tags            = tags,
+            raw_log         = snap,
             mitre_tactic    = "Command and Control" if mitre_tech else None,
             mitre_technique = mitre_tech,
         )
         self._dispatch(event.to_dict())
 
     def _poll(self):
-        logger.info("NetworkCollector polling started")
         while not self._stop.is_set():
             try:
                 current = {}
@@ -208,7 +209,7 @@ class NetworkCollector:
                     self._emit_bandwidth_stats()
 
             except Exception as ex:
-                logger.debug(f"Network poll error: {ex}")
+                print(f"Network poll error: {ex}")
 
             time.sleep(self._interval)
 

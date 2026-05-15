@@ -170,7 +170,6 @@ class SentinelFileHandler(FileSystemEventHandler):
             user       = _get_current_user(),
             tags       = ["filesystem"],
         )
-        print(event.to_dict())
         self._dispatch(event.to_dict())
 
     def on_created(self, event):

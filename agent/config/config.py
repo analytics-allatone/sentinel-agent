@@ -32,14 +32,16 @@ DB_NAME = "developmentdb"
 ######################################
 
 DEFAULT_CONFIG = {
+    
     "output": {
-        "log_dir":      "./logs",
-        "db_path":      "./logs/sentinel.db",
-        "stdout":       False,
-        "category_split": True,
-        "max_size_mb":  50,
-        "max_files":    20,
+        "stdout": False,
+
+        "kafka": {
+            "brokers": "80.225.239.163:9092",
+            "topic": "agent-events"
+        }
     },
+    
     "collectors": {
         "file": {
             "enabled":     True,
