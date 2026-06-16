@@ -3,6 +3,7 @@ from fastapi import APIRouter , Depends , HTTPException , status , Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from pathlib import Path
 import base64
+from typing import Optional
 from sqlalchemy import desc ,select, func
 
 ###############################################
@@ -180,6 +181,7 @@ async def existing_group(db: AsyncSession = Depends(get_async_db)):
 async def agent_installation_command(os : str, 
                                      agent_name: str,
                                      server_ip : str,
+                                     group_id : Optional[str] = None,
                                      db: AsyncSession = Depends(get_async_db)):
     res_data = AgentInstallationCommandResponse(installation_command = "hajfdh  asalj aohaf a" , running_command = "hkljkfakln ajf")
     return standard_success_response(data = res_data , message = "Instalation command get Successfully")
