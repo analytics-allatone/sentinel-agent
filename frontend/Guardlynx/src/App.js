@@ -7,6 +7,7 @@ import Register from "./Register/Register";
 import Dashboard from "./Dashboard/Dashboard";
 import ForgotPage from "./ForgotPage/forgot-page";
 import InstallationProcess from "./InstallationProcess/InstallationProcess";
+import AgentDetails from "./Dashboard/AgentDetails/AgentDetails";
 
 function App() {
   return (
@@ -20,6 +21,7 @@ function App() {
           <Route path="/forgot-password" element={<ForgotPage />} />
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/installation" element={<InstallationProcess />} />
+          <Route path="/agentDetails" element={<AgentDetails agentId="agent_test_001" agentName="TestAgent" />} />
         </Routes>
       </BrowserRouter>
     </div>
