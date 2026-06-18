@@ -7,11 +7,26 @@ import Register from "./Register/Register";
 import Dashboard from "./Dashboard/Dashboard";
 import ForgotPage from "./ForgotPage/forgot-page";
 import InstallationProcess from "./InstallationProcess/InstallationProcess";
-import AgentDetails from "./Dashboard/AgentDetails/AgentDetails";
+import AgentDetails from "./Dashboard/AgentDashboard/AgentDetails";
+import { LoadingProvider } from "./context/LoadingContext";
+import Loader from "./components/Loader/Loader";
+import { useEffect, useState } from "react";
+import { registerLoaderCallbacks } from "./api/api";
 
-function App() {
+function AppContent() {
+  const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    // Register the loader callbacks with the API
+    registerLoaderCallbacks(
+      () => setIsLoading(true),
+      () => setIsLoading(false)
+    );
+  }, []);
+
   return (
     <div className="App">
+      <Loader isVisible={isLoading} />
       <BrowserRouter>
         <Routes>
           {/* when home page template is created then this route will be used instead of the login route */}
@@ -21,10 +36,23 @@ function App() {
           <Route path="/forgot-password" element={<ForgotPage />} />
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/installation" element={<InstallationProcess />} />
-          <Route path="/agentDetails" element={<AgentDetails agentId="agent_test_001" agentName="TestAgent" />} />
+          <Route
+            path="/agentDetails"
+            element={
+              <AgentDetails agentId="agent_test_001" agentName="TestAgent" />
+            }
+          />
         </Routes>
       </BrowserRouter>
     </div>
+  );
+}
+
+function App() {
+  return (
+    <LoadingProvider>
+      <AppContent />
+    </LoadingProvider>
   );
 }
 

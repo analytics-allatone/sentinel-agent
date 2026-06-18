@@ -66,6 +66,33 @@ export const logout = () => {
 };
 
 // ========================
+// 🎯 LOADING STATE MANAGEMENT
+// ========================
+
+let loadingCallbacks = {
+  showLoader: null,
+  hideLoader: null,
+};
+
+export const registerLoaderCallbacks = (showLoader, hideLoader) => {
+  loadingCallbacks.showLoader = showLoader;
+  loadingCallbacks.hideLoader = hideLoader;
+  console.log("[🎯 LOADER] Callbacks registered");
+};
+
+export const triggerShowLoader = () => {
+  if (loadingCallbacks.showLoader) {
+    loadingCallbacks.showLoader();
+  }
+};
+
+export const triggerHideLoader = () => {
+  if (loadingCallbacks.hideLoader) {
+    loadingCallbacks.hideLoader();
+  }
+};
+
+// ========================
 // 🔌 AXIOS INSTANCE
 // ========================
 
@@ -85,6 +112,9 @@ api.interceptors.request.use(
   (config) => {
     console.log("\n[📤 REQUEST] URL:", config.url);
     console.log("[📤 REQUEST] Method:", config.method.toUpperCase());
+
+    // Show loader on request start
+    triggerShowLoader();
 
     // Get token from cookie (most reliable source)
     let token = getCookie("token");
@@ -133,6 +163,7 @@ api.interceptors.request.use(
   },
   (error) => {
     console.error("[❌ REQUEST ERROR]:", error);
+    triggerHideLoader();
     return Promise.reject(error);
   },
 );
@@ -149,6 +180,7 @@ api.interceptors.response.use(
       "URL:",
       response.config.url,
     );
+    triggerHideLoader();
     return response;
   },
   (error) => {
@@ -158,6 +190,7 @@ api.interceptors.response.use(
       "[❌ RESPONSE ERROR] Message:",
       error.response?.data?.message,
     );
+    triggerHideLoader();
     return Promise.reject(error);
   },
 );

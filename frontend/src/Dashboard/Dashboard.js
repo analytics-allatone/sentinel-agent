@@ -21,6 +21,8 @@ function Dashboard() {
   const [groupStats, setGroupStats] = useState([]);
   const [selectedAgents, setSelectedAgents] = useState(new Set());
   const [selectAll, setSelectAll] = useState(false);
+  
+  const navigate = useNavigate();
 
   useEffect(() => {
     fetchAgents();
@@ -87,8 +89,7 @@ function Dashboard() {
   };
 
   const handleDeployAgent = () => {
-    alert("Deploy new agent clicked");
-    console.log("Deploy new agent");
+    navigate("/installation");
   };
 
   const handleRefresh = () => {
