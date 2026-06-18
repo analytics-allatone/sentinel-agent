@@ -47,3 +47,15 @@ build/
 
 # Kafka / runtime dumps (optional safety)
 *.dump
+
+
+
+**/node_modules
+frontend/build
+**/__pycache__
+*.pyc
+venv/
+.git/
+dist/
+build/
+*.spec
