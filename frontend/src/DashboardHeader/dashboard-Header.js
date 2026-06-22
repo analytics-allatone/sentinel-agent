@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
-import './dashboard-Header.css';
+import React, { useState } from "react";
+import "./dashboard-Header.css";
+import { logout } from "../api/api";
 
 const DashboardHeader = ({ onMenuToggle }) => {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
@@ -27,10 +28,10 @@ const DashboardHeader = ({ onMenuToggle }) => {
       </div>
 
       <div className="header-right">
-        <div className="search-box">
+        {/* <div className="search-box">
           <input type="text" placeholder="Search..." />
           <span className="search-icon">🔍</span>
-        </div>
+        </div> */}
 
         <div className="header-actions">
           <button className="notification-btn" onClick={toggleNotification}>
@@ -56,7 +57,9 @@ const DashboardHeader = ({ onMenuToggle }) => {
                 <div className="profile-item">Settings</div>
                 <div className="profile-item">Help</div>
                 <hr />
-                <div className="profile-item logout">Logout</div>
+                <div className="profile-item logout" onClick={logout}>
+                  Logout
+                </div>
               </div>
             )}
           </div>
