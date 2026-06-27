@@ -1,7 +1,7 @@
 set -euo pipefail
 
 # === CHANGE THESE TWO FOR YOUR ENVIRONMENT ================================
-DOWNLOAD_URL="http://141.148.220.11:8000/sentinel-agent"
+DOWNLOAD_URL=""https://YOUR_HOST/api/v1/binaries/setup.sh"
 EXPECTED_SHA256=""   # optional: set to pin a specific build, leave empty to skip
 # ==========================================================================
 

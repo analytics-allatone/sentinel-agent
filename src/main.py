@@ -21,13 +21,13 @@ worker_task = None
 @asynccontextmanager
 async def lifespan(app: FastAPI):
 
-    global worker_task
+    # global worker_task
 
     # # DATABASE STARTUP
-    await create_db_and_tables()
+    # await create_db_and_tables()
 
 
-    worker_task = asyncio.create_task(mqtt_background_consumer())
+    # worker_task = asyncio.create_task(mqtt_background_consumer())
 
     print("Application Started")
 
@@ -35,7 +35,7 @@ async def lifespan(app: FastAPI):
 
     # SHUTDOWN LOGIC
     print("Application Shutting Down...")
-    worker_task.cancel()
+    # worker_task.cancel()
 
 
 app = FastAPI(
@@ -44,7 +44,8 @@ app = FastAPI(
 
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-
+SCRIPTS_DIR = os.path.join(HERE, "scripts")
+BINARIES_DIR = os.path.join(HERE, "binaries")
 
 app.add_middleware(
     CORSMiddleware,
@@ -59,36 +60,29 @@ app.include_router(v1_api_router , prefix="/api")
 
 
 
-# @app.get("/")
-# def root():
-#     return {
-#         "APPLICATION": "RUNNING"
-#     }
+@app.get("/api/v1/scripts/{name}", response_class=PlainTextResponse)
+def install_ps1(name:str , request : Request):
+    text = open(os.path.join(SCRIPTS_DIR, name), encoding="utf-8").read()
+    base = str(request.base_url).rstrip("/")          # e.g. https://agents.example.com
+    return text.replace("https://YOUR_HOST", base)
 
-
-# @app.get("/install_service.ps1", response_class=PlainTextResponse)
-# def install_ps1(request : Request):
-#     text = open(os.path.join(HERE, "a.ps1"), encoding="utf-8").read()
-#     base = str(request.base_url).rstrip("/")          # e.g. https://agents.example.com
-#     return text.replace("https://YOUR_HOST", base)
-
-# @app.get("/binaries/{name}", response_class=FileResponse)
-# def install_ps1(name: str):
-#     safe = os.path.basename(name)                  # strips ../ to block path traversal
-#     path = os.path.join(HERE, safe)
-#     print(path)
-#     if not os.path.isfile(path):
-#         print("Not FOund")
-#         raise 
-#     return FileResponse(path, media_type="application/octet-stream", filename=safe)
+@app.get("/api/v1/binaries/{name}", response_class=FileResponse)
+def install_ps1(name: str):
+    safe = os.path.basename(name)                  # strips ../ to block path traversal
+    path = os.path.join(HERE, safe)
+    print(path)
+    if not os.path.isfile(path):
+        print("Not FOund")
+        raise 
+    return FileResponse(path, media_type="application/octet-stream", filename=safe)
 
 
 
-# @app.get("/healthCheck")
-# def health_check():
-#     return {
-#         "status": "Success"
-#     }
+@app.get("/healthCheck")
+def health_check():
+    return {
+        "status": "Success"
+    }
 
 
 
