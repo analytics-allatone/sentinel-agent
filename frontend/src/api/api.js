@@ -1,11 +1,5 @@
 import axios from "axios";
 
-const pro = "http://80.225.239.163:8000/api/v1";
-const envURL = process.env.REACT_APP_API_URL;
-
-const run = envURL || pro;
-
-export const baseURL = run;
 
 // ========================
 // 🍪 COOKIE HELPERS
@@ -97,7 +91,6 @@ export const triggerHideLoader = () => {
 // ========================
 
 const api = axios.create({
-  baseURL: `${run}`,
   withCredentials: true,
   headers: {
     "Content-Type": "application/json",

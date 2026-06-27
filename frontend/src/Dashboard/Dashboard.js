@@ -27,7 +27,7 @@ function Dashboard() {
 
   const fetchAgents = () => {
     api
-      .get("/get-agents")
+      .get("/api/v1/get-agents")
       .then((res) => {
         console.log("API Response:", res.data);
         if (res.data.status === "success" && res.data.data.agents) {

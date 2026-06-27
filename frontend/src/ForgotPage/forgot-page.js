@@ -31,7 +31,7 @@ function ForgotPage() {
 
     setLoading(true);
     try {
-      await api.post("/forgot-password", { email });
+      await api.post("/api/v1/forgot-password", { email });
       setSuccess("Verification code sent to your email");
       setStep(2);
     } catch (err) {
@@ -55,7 +55,7 @@ function ForgotPage() {
 
     setLoading(true);
     try {
-      await api.post("/verify-code", { email, code });
+      await api.post("/api/v1/verify-code", { email, code });
       setSuccess("Code verified successfully");
       setStep(3);
     } catch (err) {
@@ -87,7 +87,7 @@ function ForgotPage() {
 
     setLoading(true);
     try {
-      await api.post("/reset-password", {
+      await api.post("/api/v1/reset-password", {
         email,
         code,
         newPassword,

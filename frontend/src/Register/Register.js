@@ -70,7 +70,7 @@ function Register() {
 
     setLoading(true);
     try {
-      const response = await api.post("/signup", {
+      const response = await api.post("/api/v1/signup", {
         first_name: form.first_name,
         last_name: form.last_name,
         email: form.email,

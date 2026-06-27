@@ -92,7 +92,7 @@ const InstallationProcess = () => {
       setGroupsLoading(true);
       setGroupsError("");
       try {
-        const response = await api.get("/existing-groups");
+        const response = await api.get("/api/v1/existing-groups");
         if (cancelled) return;
         setGroups(normalizeGroups(response.data));
       } catch (error) {
@@ -149,7 +149,7 @@ const InstallationProcess = () => {
     debounceTimer.current = setTimeout(async () => {
       try {
         const response = await api.get(
-          `/is-valid-agent-name?agent_name=${encodeURIComponent(agentName)}`,
+          `/api/v1/is-valid-agent-name?agent_name=${encodeURIComponent(agentName)}`,
         );
         const valid = parseValidity(response.data);
         setAgentNameAvailable(valid);
@@ -198,7 +198,7 @@ const InstallationProcess = () => {
       }
 
       const response = await api.get(
-        `/agent-installation-command?${params.toString()}`,
+        `/api/v1/agent-installation-command?${params.toString()}`,
       );
       const data = response.data || {};
       const installCmd = data.data?.installation_command || "";
