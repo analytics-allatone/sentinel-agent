@@ -2,17 +2,19 @@ from contextlib import asynccontextmanager
 import asyncio
 
 import os
-from fastapi import FastAPI , Request , APIRouter
+from fastapi import FastAPI, HTTPException, Query , Request , APIRouter , Depends
 from fastapi.responses import PlainTextResponse , FileResponse
 from fastapi.middleware.cors import CORSMiddleware
-
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 from api.v1 import v1_api_router
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 
-from db.db import create_db_and_tables
+from db.db import create_db_and_tables , get_async_db
 import sys
 from bots.mqtt_consumer import mqtt_background_consumer
+from models.agent_model import AgentGroups, Agents
 
 
 worker_task = None
@@ -61,21 +63,43 @@ app.include_router(v1_api_router , prefix="/api")
 
 
 @app.get("/api/v1/scripts/{name}", response_class=PlainTextResponse)
-def install_ps1(name:str , request : Request):
+def install_ps1(name:str , request : Request , db: AsyncSession = Depends(get_async_db)):
     text = open(os.path.join(SCRIPTS_DIR, name), encoding="utf-8").read()
     base = str(request.base_url).rstrip("/")          # e.g. https://agents.example.com
     return text.replace("https://YOUR_HOST", base)
 
-@app.get("/api/v1/binaries/{name}", response_class=FileResponse)
-def install_ps1(name: str):
-    safe = os.path.basename(name)                  # strips ../ to block path traversal
-    path = os.path.join(HERE, safe)
-    print(path)
-    if not os.path.isfile(path):
-        print("Not FOund")
-        raise 
-    return FileResponse(path, media_type="application/octet-stream", filename=safe)
 
+
+@app.get("/api/v1/binaries/{name}", response_class=FileResponse)
+async def get_binary(
+    name: str,
+    agent_name: str = Query(...),                    # required
+    group_name: str = Query(default=None),           # optional
+    db: AsyncSession = Depends(get_async_db)
+):
+    safe = os.path.basename(name)
+    path = os.path.join(HERE, safe)
+    print(f"Binary: {path} | Agent: {agent_name} | Group: {group_name}")
+    if not os.path.isfile(path):
+        raise HTTPException(status_code=404, detail=f"Binary '{safe}' not found")
+    group_id = None
+    if group_name:
+        group_result = await db.execute(select(AgentGroups).where(AgentGroups.group_name == group_name))
+        existing_groups = group_result.scalars().first()
+        if existing_groups:
+            group_id = existing_groups.id
+        new_group = AgentGroups(group_name = group_name)
+        db.add(new_group)
+        await db.commit()
+        await db.refresh(new_group)
+        group_id = new_group.id
+    
+    this_agent = Agents(agent_name = agent_name)
+    if group_id :
+        this_agent.group_id = group_id
+    db.add(this_agent)
+    await db.commit()
+    return FileResponse(path, media_type="application/octet-stream", filename=safe)
 
 
 @app.get("/healthCheck")

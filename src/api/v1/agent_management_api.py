@@ -181,14 +181,17 @@ async def existing_group(db: AsyncSession = Depends(get_async_db)):
 async def agent_installation_command(os : str, 
                                      agent_name: str,
                                      server_ip : str,
-                                     group_name : Optional[str] = None,
+                                     group_name : Optional[str] = "None",
                                      db: AsyncSession = Depends(get_async_db)):
 
-    linux_command = f"curl -fsSL {server_ip}:8000/api/v1/scripts/setup.sh | sudo bash -s -- --server-ip {server_ip} --agent-name {agent_name}"
-    win_command = f"irm http://your-host:8000/scripts/agent.ps1 | iex"
+    linux_command = f"curl -fsSL {server_ip}:8000/api/v1/scripts/setup.sh | sudo bash -s -- --server-ip {server_ip} --agent-name {agent_name} --group_name {group_name}"
+    win_command = f"$env:SERVER_IP='{server_ip}'; $env:AGENT_NAME='{agent_name}'; $env:GROUP_NAME='{group_name}'; irm {server_ip}:8000/api/v1/scripts/windows_install.ps1 | iex"
     res_date = None
     if os == "windows":
         res_data = AgentInstallationCommandResponse(installation_command = win_command , running_command = "hkljkfakln ajf")
     else:
         res_data = AgentInstallationCommandResponse(installation_command = linux_command , running_command = "hkljkfakln ajf")
+    
+       
+
     return standard_success_response(data = res_data , message = "Instalation command get Successfully")

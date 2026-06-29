@@ -1,7 +1,7 @@
 set -euo pipefail
 
 # === CHANGE THESE TWO FOR YOUR ENVIRONMENT ================================
-DOWNLOAD_URL=""https://YOUR_HOST/api/v1/binaries/setup.sh"
+DOWNLOAD_URL="https://YOUR_HOST/api/v1/binaries/setup.sh"
 EXPECTED_SHA256=""   # optional: set to pin a specific build, leave empty to skip
 # ==========================================================================
 

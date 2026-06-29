@@ -24,5 +24,5 @@
 
 
 
-# @dashboard_router.post("/add-agent" , response_model = standard_success_response[AddAgentResponse] , status_code = 201)
+# @dashboard_router.get("/add-agent" , response_model = standard_success_response[AddAgentResponse] , status_code = 201)
 # async def getAgents(req: AddAgentRequest , db: AsyncSession = Depends(get_async_db) , user:dict = Depends(verify_token)):
