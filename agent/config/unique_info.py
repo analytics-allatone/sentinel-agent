@@ -8,7 +8,7 @@ def app_dir() -> str:
     it (systemd, launchd, Windows service) and regardless of the working dir."""
     if getattr(sys, "frozen", False):
         return os.path.dirname(sys.executable)
-    return os.path.dirname(os.path.abspath(__file__))
+    return os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
  
  
 load_dotenv(os.path.join(app_dir(), ".env"))

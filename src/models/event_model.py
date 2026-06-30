@@ -73,7 +73,7 @@ class FileEvents(Base):
     file_old_path = Column(String)
     file_old_sha256 = Column(String)
     file_size_bytes = Column(Integer)
-    file_inode = Column(String)
+    file_inode = Column(Integer)
     file_modified_at = Column(ForceDateTime)
     file_created_at = Column(ForceDateTime)
     file_permissions = Column(String)
