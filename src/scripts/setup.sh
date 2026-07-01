@@ -5,7 +5,7 @@ DOWNLOAD_URL="https://YOUR_HOST/api/v1/binaries/linux_agent"
 EXPECTED_SHA256=""   # optional: set to pin a specific build, leave empty to skip
 # ==========================================================================
 
-BINARY_PATH="/etc/sentinel-agent/sentinel-agent"   # same folder as .env
+BINARY_PATH="/etc/sentinel-agent/sentinel-agent"
 CONFIG_DIR="/etc/sentinel-agent"
 ENV_FILE="${CONFIG_DIR}/.env"
 SERVICE_FILE="/etc/systemd/system/sentinel-agent.service"
@@ -13,6 +13,7 @@ LOG_DIR="/var/log/sentinel-agent"
 
 SERVER_IP=""
 AGENT_NAME=""
+GROUP_NAME=""        # must be initialized — set -u crashes on unbound variables
 ACTION="install"
 
 # --- helpers ---------------------------------------------------------------
@@ -95,6 +96,7 @@ download_binary() {
         log "SHA-256 verified."
     fi
 
+    mkdir -p "$CONFIG_DIR"
     install -m 0755 "$tmp" "$BINARY_PATH"
     rm -f "$tmp"
     log "Installed binary at ${BINARY_PATH}"
@@ -140,7 +142,7 @@ EOF
 }
 
 enable_and_start() {
-    # Kill old service completely before rewriting
+    log "Reloading systemd..."
     systemctl stop sentinel-agent.service 2>/dev/null || true
     systemctl disable sentinel-agent.service 2>/dev/null || true
     systemctl daemon-reload
@@ -150,15 +152,20 @@ enable_and_start() {
     systemctl daemon-reload
     systemctl restart sentinel-agent.service
 
-    sleep 2
+    sleep 3
     if systemctl is-active --quiet sentinel-agent.service; then
         log "sentinel-agent service is running."
     else
         warn "Service did NOT start cleanly. Last 20 log lines:"
         journalctl -u sentinel-agent.service -n 20 --no-pager || true
+        if [ -f "${LOG_DIR}/agent.err" ]; then
+            warn "Error log:"
+            tail -20 "${LOG_DIR}/agent.err"
+        fi
         exit 1
     fi
 }
+
 print_done() {
     cat <<EOF
 
@@ -168,6 +175,7 @@ print_done() {
   Status:       systemctl status sentinel-agent
   Logs (live):  journalctl -u sentinel-agent -f
   Logs (file):  ${LOG_DIR}/agent.log
+  Error log:    ${LOG_DIR}/agent.err
   Config file:  ${ENV_FILE}
   Binary:       ${BINARY_PATH}
 
@@ -176,7 +184,7 @@ print_done() {
   Group name:   ${GROUP_NAME:-none}
 
   To uninstall:
-      sudo bash ./install-sentinel-agent.sh --uninstall
+      curl -fsSL http://${SERVER_IP}:8000/api/v1/scripts/setup.sh | sudo bash -s -- --uninstall
 ============================================================
 EOF
 }
@@ -192,8 +200,8 @@ uninstall() {
     rm -f "$BINARY_PATH"
     systemctl daemon-reload
 
-    # Leave the .env and logs in place by default - the user may want to
-    # reinstall later. Uncomment these lines for a fully clean uninstall:
+    # Leave .env and logs in place by default
+    # Uncomment for fully clean uninstall:
     # rm -rf "$CONFIG_DIR"
     # rm -rf "$LOG_DIR"
 
