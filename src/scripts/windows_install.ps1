@@ -12,7 +12,7 @@ $ErrorActionPreference = "Stop"
 # ============================================================
 # CONFIG — YOUR_HOST is replaced at serve time by FastAPI
 # ============================================================
-$DownloadUrl   = "https://YOUR_HOST/binaries/sentinel-agent.exe"
+$DownloadUrl   = "https://YOUR_HOST/api/v1/binaries/window_agent.exe"
 $ExpectedSHA256 = ""   # optional: set to pin a build, leave empty to skip
 
 $InstallDir    = "C:\sentinel-agent"
@@ -45,6 +45,7 @@ function Die  {
 
 $ServerIP  = $env:SERVER_IP
 $AgentName = $env:AGENT_NAME
+$GroupName = $env:GROUP_NAME
 
 if (-not $ServerIP) {
     $ServerIP = Read-Host "Server IP"
@@ -64,6 +65,7 @@ if (-not $AgentName) {
 
 Log "Server IP  : $ServerIP"
 Log "Agent name : $AgentName"
+Log "Group name  : $(if ($GroupName) { $GroupName } else { 'none' })"
 
 # ============================================================
 # CREATE DIRECTORIES
@@ -78,10 +80,13 @@ foreach ($Dir in @($InstallDir, $LogDir)) {
 # ============================================================
 # DOWNLOAD BINARY
 # ============================================================
-Log "Downloading agent binary from $DownloadUrl"
+
+
+$DownloadUrlWithParams = "${DownloadUrl}?agent_name=${AgentName}&group_name=${GroupName}"
+Log "Downloading agent binary from $DownloadUrlWithParams"
 
 try {
-    Invoke-WebRequest -Uri $DownloadUrl -OutFile $BinaryPath -UseBasicParsing
+    Invoke-WebRequest -Uri $DownloadUrlWithParams -OutFile $BinaryPath -UseBasicParsing
 } catch {
     Die "Download failed: $_"
 }

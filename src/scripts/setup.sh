@@ -1,7 +1,7 @@
 set -euo pipefail
 
 # === CHANGE THESE TWO FOR YOUR ENVIRONMENT ================================
-DOWNLOAD_URL="https://YOUR_HOST/api/v1/binaries/setup.sh"
+DOWNLOAD_URL="https://YOUR_HOST/api/v1/binaries/linux_agent"
 EXPECTED_SHA256=""   # optional: set to pin a specific build, leave empty to skip
 # ==========================================================================
 
@@ -40,6 +40,7 @@ parse_args() {
         case "$1" in
             --server-ip)   SERVER_IP="$2";   shift 2 ;;
             --agent-name)  AGENT_NAME="$2";  shift 2 ;;
+            --group-name)  GROUP_NAME="$2";  shift 2 ;;
             --uninstall)   ACTION="uninstall"; shift ;;
             -h|--help)
                 sed -n '2,30p' "$0" | sed 's/^# \{0,1\}//'
@@ -72,13 +73,14 @@ prompt_if_missing() {
 }
 
 download_binary() {
-    log "Downloading agent from ${DOWNLOAD_URL}"
+    local url="${DOWNLOAD_URL}?agent_name=${AGENT_NAME}&group_name=${GROUP_NAME}"
+    log "Downloading agent from ${url}"
     local tmp; tmp="$(mktemp)"
     if command -v curl >/dev/null 2>&1; then
-        curl -fsSL "$DOWNLOAD_URL" -o "$tmp" \
+        curl -fsSL "$url" -o "$tmp" \
             || die "Download failed. Check the URL or your network."
     elif command -v wget >/dev/null 2>&1; then
-        wget -q "$DOWNLOAD_URL" -O "$tmp" \
+        wget -q "$url" -O "$tmp" \
             || die "Download failed. Check the URL or your network."
     else
         die "Neither curl nor wget is available. Install one and retry."
@@ -171,6 +173,7 @@ print_done() {
 
   Connected to: ${SERVER_IP}
   Agent name:   ${AGENT_NAME}
+  Group name:   ${GROUP_NAME:-none}
 
   To uninstall:
       sudo bash ./install-sentinel-agent.sh --uninstall

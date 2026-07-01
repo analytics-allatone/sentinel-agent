@@ -184,7 +184,7 @@ async def agent_installation_command(os : str,
                                      group_name : Optional[str] = "None",
                                      db: AsyncSession = Depends(get_async_db)):
 
-    linux_command = f"curl -fsSL {server_ip}:8000/api/v1/scripts/setup.sh | sudo bash -s -- --server-ip {server_ip} --agent-name {agent_name} --group_name {group_name}"
+    linux_command = f"curl -fsSL {server_ip}:8000/api/v1/scripts/setup.sh | sudo bash -s -- --server-ip {server_ip} --agent-name {agent_name} --group-name {group_name}"
     win_command = f"$env:SERVER_IP='{server_ip}'; $env:AGENT_NAME='{agent_name}'; $env:GROUP_NAME='{group_name}'; irm {server_ip}:8000/api/v1/scripts/windows_install.ps1 | iex"
     res_date = None
     if os == "windows":
