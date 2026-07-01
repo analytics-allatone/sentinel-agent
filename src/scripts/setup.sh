@@ -5,7 +5,7 @@ DOWNLOAD_URL="https://YOUR_HOST/api/v1/binaries/linux_agent"
 EXPECTED_SHA256=""   # optional: set to pin a specific build, leave empty to skip
 # ==========================================================================
 
-BINARY_PATH="/usr/local/bin/sentinel-agent"
+BINARY_PATH="/etc/sentinel-agent/sentinel-agent"   # same folder as .env
 CONFIG_DIR="/etc/sentinel-agent"
 ENV_FILE="${CONFIG_DIR}/.env"
 SERVICE_FILE="/etc/systemd/system/sentinel-agent.service"
@@ -122,8 +122,6 @@ Wants=network-online.target
 
 [Service]
 Type=simple
-# Run as root - the agent needs to read process / file / auth events
-# that are only readable by privileged users.
 User=root
 EnvironmentFile=${ENV_FILE}
 ExecStart=${BINARY_PATH}
@@ -131,8 +129,6 @@ Restart=on-failure
 RestartSec=5s
 StandardOutput=append:${LOG_DIR}/agent.log
 StandardError=append:${LOG_DIR}/agent.err
-
-# Mild hardening - tighten further once you've verified the agent runs.
 NoNewPrivileges=false
 ProtectSystem=false
 
