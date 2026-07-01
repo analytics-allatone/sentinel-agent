@@ -78,27 +78,27 @@ async def get_binary(
     db: AsyncSession = Depends(get_async_db)
 ):
     safe = os.path.basename(name)
-    path = os.path.join(HERE, safe)
+    path = os.path.join(BINARIES_DIR, safe)
     print(f"Binary: {path} | Agent: {agent_name} | Group: {group_name}")
     if not os.path.isfile(path):
         raise HTTPException(status_code=404, detail=f"Binary '{safe}' not found")
-    group_id = None
-    if group_name:
-        group_result = await db.execute(select(AgentGroups).where(AgentGroups.group_name == group_name))
-        existing_groups = group_result.scalars().first()
-        if existing_groups:
-            group_id = existing_groups.id
-        new_group = AgentGroups(group_name = group_name)
-        db.add(new_group)
-        await db.commit()
-        await db.refresh(new_group)
-        group_id = new_group.id
+    # group_id = None
+    # if group_name:
+    #     group_result = await db.execute(select(AgentGroups).where(AgentGroups.group_name == group_name))
+    #     existing_groups = group_result.scalars().first()
+    #     if existing_groups:
+    #         group_id = existing_groups.id
+    #     new_group = AgentGroups(group_name = group_name)
+    #     db.add(new_group)
+    #     await db.commit()
+    #     await db.refresh(new_group)
+    #     group_id = new_group.id
     
-    this_agent = Agents(agent_name = agent_name)
-    if group_id :
-        this_agent.group_id = group_id
-    db.add(this_agent)
-    await db.commit()
+    # this_agent = Agents(agent_name = agent_name)
+    # if group_id :
+    #     this_agent.group_id = group_id
+    # db.add(this_agent)
+    # await db.commit()
     return FileResponse(path, media_type="application/octet-stream", filename=safe)
 
 
