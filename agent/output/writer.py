@@ -47,7 +47,7 @@ class EventDispatcher:
         self._loop.close()
 
     async def _worker(self):
-        print("⚡ Sentinel Dispatcher Pipeline Engine Active.")
+        print("Sentinel Dispatcher Pipeline Engine Active.")
         while not self._stop.is_set():
             try:
                 event = self._queue.get(timeout=0.5)
@@ -58,7 +58,7 @@ class EventDispatcher:
             except Empty:
                 continue
             except Exception as e:
-                print(f"⚠️ Dispatcher Network Transfer Error: {e}")
+                print(f" Dispatcher Network Transfer Error: {e}")
                 await asyncio.sleep(2)
 
     def push(self, event_dict: dict , machine_info:dict|None):
@@ -66,11 +66,11 @@ class EventDispatcher:
             final_event = {"event" : event_dict , "machine_info" : machine_info}
             self._queue.put_nowait(final_event)
             if self._stdout:
-                print(f"📦 Event queued successfully: {event_dict.get('type')}")
+                print(f" Event queued successfully: {event_dict.get('type')}")
         except Exception:
-            print("🚨 Event queue max capacity reached! Dropping oldest event packet.")
+            print("Event queue max capacity reached! Dropping oldest event packet.")
 
     def flush_and_stop(self):
-        print("🛑 Shutting down Dispatcher... Processing remaining queue packets.")
+        print("Shutting down Dispatcher... Processing remaining queue packets.")
         self._stop.set()
         self._thread.join(timeout=5)
