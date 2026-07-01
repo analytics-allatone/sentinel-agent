@@ -5,15 +5,15 @@ DOWNLOAD_URL="https://YOUR_HOST/api/v1/binaries/linux_agent"
 EXPECTED_SHA256=""   # optional: set to pin a specific build, leave empty to skip
 # ==========================================================================
 
-BINARY_PATH="/etc/sentinel-agent/sentinel-agent"
-CONFIG_DIR="/etc/sentinel-agent"
+BINARY_PATH="/usr/local/bin/sentinel-agent"    # exec-safe location
+CONFIG_DIR="/etc/sentinel-agent"               # .env lives here
 ENV_FILE="${CONFIG_DIR}/.env"
 SERVICE_FILE="/etc/systemd/system/sentinel-agent.service"
 LOG_DIR="/var/log/sentinel-agent"
 
 SERVER_IP=""
 AGENT_NAME=""
-GROUP_NAME=""        # must be initialized — set -u crashes on unbound variables
+GROUP_NAME=""
 ACTION="install"
 
 # --- helpers ---------------------------------------------------------------
@@ -96,7 +96,6 @@ download_binary() {
         log "SHA-256 verified."
     fi
 
-    mkdir -p "$CONFIG_DIR"
     install -m 0755 "$tmp" "$BINARY_PATH"
     rm -f "$tmp"
     log "Installed binary at ${BINARY_PATH}"
@@ -112,6 +111,11 @@ EOF
     chmod 600 "$ENV_FILE"
     chown root:root "$ENV_FILE"
     log "Wrote ${ENV_FILE} (mode 0600, root-only)"
+
+    cp "$ENV_FILE" "$(dirname ${BINARY_PATH})/.env"
+    chmod 600 "$(dirname ${BINARY_PATH})/.env"
+    chown root:root "$(dirname ${BINARY_PATH})/.env"
+    log "Copied .env to $(dirname ${BINARY_PATH})/.env"
 }
 
 write_service() {
