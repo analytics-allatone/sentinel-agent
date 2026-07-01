@@ -141,10 +141,9 @@ EOF
 
 enable_and_start() {
     systemctl daemon-reload
+    systemctl stop sentinel-agent.service 2>/dev/null || true  # ← stop old first
     systemctl enable sentinel-agent.service >/dev/null
     systemctl restart sentinel-agent.service
-
-    # Give it a couple of seconds to fail fast if config is wrong.
     sleep 2
     if systemctl is-active --quiet sentinel-agent.service; then
         log "sentinel-agent service is running."
