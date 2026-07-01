@@ -88,11 +88,12 @@ async def get_binary(
         existing_groups = group_result.scalars().first()
         if existing_groups:
             group_id = existing_groups.id
-        new_group = AgentGroups(group_name = group_name)
-        db.add(new_group)
-        await db.commit()
-        await db.refresh(new_group)
-        group_id = new_group.id
+        else:
+            new_group = AgentGroups(group_name = group_name)
+            db.add(new_group)
+            await db.commit()
+            await db.refresh(new_group)
+            group_id = new_group.id
     
     this_agent = Agents(agent_name = agent_name)
     if group_id :
