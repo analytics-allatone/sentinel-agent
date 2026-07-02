@@ -15,11 +15,12 @@ const InstallationProcess = () => {
   const [startCommand, setStartCommand] = useState("");
   const [copied, setCopied] = useState("");
 
-  // Groups (now uses a string for the group name, not an id)
+  // Groups (uses a string for the group name, not an id)
   const [groups, setGroups] = useState([]);
   const [selectedGroup, setSelectedGroup] = useState(""); // holds the typed/selected group name
   const [groupsLoading, setGroupsLoading] = useState(false);
   const [groupsError, setGroupsError] = useState("");
+  const [groupDropdownOpen, setGroupDropdownOpen] = useState(false);
 
   // Command generation state
   const [commandLoading, setCommandLoading] = useState(false);
@@ -27,6 +28,10 @@ const InstallationProcess = () => {
 
   // Debounce timer ref
   const debounceTimer = useRef(null);
+
+  // Group combobox refs
+  const groupInputRef = useRef(null);
+  const groupWrapperRef = useRef(null);
 
   // OS Architecture mapping
   const architectures = {
@@ -39,15 +44,28 @@ const InstallationProcess = () => {
 
   // Normalize whatever /v1/existing-groups returns into [{ id, name }]
   const normalizeGroups = (data) => {
-    let raw = data;
-    if (Array.isArray(data)) {
-      raw = data;
-    } else if (data && typeof data === "object") {
-      const arrKey = Object.keys(data).find((k) => Array.isArray(data[k]));
-      raw = arrKey ? data[arrKey] : [];
-    } else {
-      raw = [];
-    }
+    const pickArray = (value) => {
+      if (Array.isArray(value)) return value;
+      if (!value || typeof value !== "object") return [];
+
+      if (Array.isArray(value.groups)) return value.groups;
+      if (Array.isArray(value.data)) return value.data;
+      if (value.data && typeof value.data === "object") {
+        if (Array.isArray(value.data.groups)) return value.data.groups;
+        if (Array.isArray(value.data.items)) return value.data.items;
+      }
+
+      const arrKey = Object.keys(value).find((k) => Array.isArray(value[k]));
+      return arrKey ? value[arrKey] : [];
+    };
+
+    const payload = data?.data?.groups
+      ? data.data.groups
+      : data?.groups
+        ? data.groups
+        : data;
+
+    const raw = pickArray(payload);
 
     return raw.map((g, i) => {
       if (typeof g === "string") return { id: g, name: g };
@@ -171,6 +189,20 @@ const InstallationProcess = () => {
     };
   }, [agentName]);
 
+  /* ------------------ Close group dropdown on outside click ----------- */
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (
+        groupWrapperRef.current &&
+        !groupWrapperRef.current.contains(e.target)
+      ) {
+        setGroupDropdownOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   // Validate server IP
   const isValidIP = (ip) => {
     if (!ip) return false;
@@ -193,6 +225,8 @@ const InstallationProcess = () => {
         server_ip: serverIP,
       });
       // Only add group if it's not empty
+      // Works whether the user picked an existing group from the dropdown
+      // or typed a brand-new group name that didn't match anything.
       if (selectedGroup.trim()) {
         params.append("group_name", selectedGroup.trim());
       }
@@ -249,12 +283,20 @@ const InstallationProcess = () => {
     setAgentName("");
     setServerIP("");
     setSelectedGroup("");
+    setGroupDropdownOpen(false);
     setAgentNameAvailable(null);
     setAgentNameError("");
     setInstallationCommand("");
     setStartCommand("");
     setCommandError("");
   };
+
+  // Filtered groups shown in the dropdown based on what's currently typed
+  const filteredGroups = (() => {
+    const query = selectedGroup.trim().toLowerCase();
+    if (!query) return groups;
+    return groups.filter((g) => g.name.toLowerCase().includes(query));
+  })();
 
   return (
     <>
@@ -378,36 +420,73 @@ const InstallationProcess = () => {
               )}
             </div>
 
-            {/* Group Selection – now with searchable input + datalist */}
+            {/* Group Selection (searchable combobox) */}
             <div className="form-section">
               <label className="form-label">
                 <span className="label-title">Group *</span>
                 <span className="label-hint">
-                  Select an existing group or type a new one
+                  Search an existing group or type a new one
                 </span>
               </label>
-              <div className="input-wrapper">
+
+              <div
+                className="input-wrapper group-combobox"
+                ref={groupWrapperRef}
+              >
                 <input
+                  ref={groupInputRef}
                   type="text"
                   className={`form-input ${selectedGroup.trim() ? "success" : ""}`}
                   placeholder={
                     groupsLoading
                       ? "Loading groups..."
-                      : groups.length === 0
-                        ? "No groups found, type a new one"
-                        : "Type to search or enter new group name"
+                      : "Search or type a new group"
                   }
                   value={selectedGroup}
-                  onChange={(e) => setSelectedGroup(e.target.value)}
-                  list="group-suggestions"
                   disabled={groupsLoading}
+                  autoComplete="off"
+                  onChange={(e) => {
+                    setSelectedGroup(e.target.value);
+                    setGroupDropdownOpen(true);
+                  }}
+                  onFocus={() => setGroupDropdownOpen(true)}
                 />
-                <datalist id="group-suggestions">
-                  {groups.map((g) => (
-                    <option key={g.id} value={g.name} />
-                  ))}
-                </datalist>
+
+                {groupDropdownOpen && !groupsLoading && (
+                  <ul className="group-dropdown-list">
+                    {groups.length === 0 && (
+                      <li className="group-dropdown-empty">
+                        No groups yet — type a name to create one
+                      </li>
+                    )}
+
+                    {groups.length > 0 && filteredGroups.length === 0 && (
+                      <li className="group-dropdown-empty">
+                        No match — “{selectedGroup.trim()}” will be created as a
+                        new group
+                      </li>
+                    )}
+
+                    {filteredGroups.map((g) => (
+                      <li
+                        key={g.id}
+                        className={`group-dropdown-item ${
+                          g.name === selectedGroup ? "active" : ""
+                        }`}
+                        // onMouseDown (not onClick) so it fires before the
+                        // input's onBlur/outside-click handler closes the list
+                        onMouseDown={() => {
+                          setSelectedGroup(g.name);
+                          setGroupDropdownOpen(false);
+                        }}
+                      >
+                        {g.name}
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </div>
+
               {groupsError && (
                 <div className="error-message">{groupsError}</div>
               )}
@@ -528,21 +607,21 @@ const InstallationProcess = () => {
           {/* Info Section */}
           <div className="info-section">
             <div className="info-card">
-              <span className="info-icon">ℹ️</span>
+              {/* <span className="info-icon">ℹ️</span> */}
               <div>
                 <h3>Installation Tips</h3>
                 <ul>
-                  <li>
+                  <li className="li">
                     Make sure you pick the right OS and architecture for your
                     machine
                   </li>
-                  <li>
+                  <li className="li">
                     Double-check that the server IP or domain is reachable
                   </li>
-                  <li>
+                  <li className="li">
                     Each agent needs a unique name so you can identify it later
                   </li>
-                  <li>
+                  <li className="li">
                     You might need admin/sudo privileges to run the installation
                   </li>
                 </ul>

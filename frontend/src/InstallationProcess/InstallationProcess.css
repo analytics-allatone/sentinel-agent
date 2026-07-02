@@ -185,6 +185,12 @@
   border-color: #10b981;
 }
 
+.form-input:disabled {
+  background-color: #f3f4f6;
+  color: #9ca3af;
+  cursor: not-allowed;
+}
+
 .input-status {
   position: absolute;
   right: 14px;
@@ -226,6 +232,9 @@
   color: #9ca3af;
   cursor: not-allowed;
 }
+.li{
+  text-align: left;
+}
 @keyframes spin {
   to {
     transform: rotate(360deg);
@@ -251,6 +260,51 @@
 
 .error-message::before {
   content: "⚠";
+}
+
+/* Group Combobox (searchable dropdown with free-text support) */
+.group-combobox {
+  position: relative;
+}
+
+.group-dropdown-list {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  max-height: 220px;
+  overflow-y: auto;
+  background: white;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  margin: 0;
+  padding: 4px;
+  list-style: none;
+  z-index: 20;
+}
+
+.group-dropdown-item {
+  padding: 9px 12px;
+  text-align: left;
+  font-size: 0.9rem;
+  color: #5a5a5a;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.group-dropdown-item:hover,
+.group-dropdown-item.active {
+  background: #eff6ff;
+  color: #1e40af;
+}
+
+.group-dropdown-empty {
+  padding: 9px 12px;
+  font-size: 0.85em;
+  color: #9ca3af;
+  font-style: italic;
 }
 
 /* Command Section */
