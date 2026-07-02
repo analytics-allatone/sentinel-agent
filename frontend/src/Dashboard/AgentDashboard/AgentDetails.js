@@ -405,6 +405,16 @@ export default function AgentDetails({ agentData }) {
               </div>
               <div className="severity-item">
                 <Gauge
+                  value={data.severity.critical}
+                  max={data.outcome.total}
+                  label="critical"
+                  gradientId="crit-grad"
+                  colors={["#5f1fa0", "#b044e0", "#e06030", "#fa8231"]}
+                  size={260}
+                />
+              </div>
+              <div className="severity-item">
+                <Gauge
                   value={data.severity.info}
                   max={data.outcome.total}
                   label="info"

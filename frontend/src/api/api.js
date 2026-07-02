@@ -1,6 +1,5 @@
 import axios from "axios";
 
-
 // ========================
 // 🍪 COOKIE HELPERS
 // ========================
@@ -91,6 +90,7 @@ export const triggerHideLoader = () => {
 // ========================
 
 const api = axios.create({
+  // baseURL: "http://80.225.239.163:8000",
   withCredentials: true,
   headers: {
     "Content-Type": "application/json",

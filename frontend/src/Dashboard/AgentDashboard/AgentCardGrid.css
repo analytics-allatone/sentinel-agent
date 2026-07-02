@@ -1,0 +1,292 @@
+
+
+/* ── Reset & Base ───────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+.dashboard {
+  font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", sans-serif;
+  background: #F4F6FA;
+  min-height: 100vh;
+  padding: 28px 32px 48px;
+  color: #1C2033;
+}
+
+/* ── Page Header ────────────────────────────────────────────── */
+.page-header {
+  margin-bottom: 24px;
+}
+
+.page-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #1C2033;
+  letter-spacing: -0.2px;
+}
+
+.arrow-sep {
+  color: #8892A4;
+  font-weight: 400;
+  margin: 0 4px;
+}
+
+.page-sub {
+  margin-top: 5px;
+  font-size: 13px;
+  color: #6B7385;
+  line-height: 1.5;
+  max-width: 600px;
+}
+
+/* ── Section Bar ────────────────────────────────────────────── */
+.section-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #ffffff;
+  border: 1px solid #E4E8F0;
+  border-radius: 12px;
+  padding: 12px 20px;
+  margin-bottom: 20px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+}
+
+.section-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sentinel-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #4CAF50;
+  box-shadow: 0 0 0 3px rgba(76,175,80,0.18);
+}
+
+.section-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1C2033;
+}
+
+.section-em {
+  font-size: 14px;
+  color: #8892A4;
+}
+
+.section-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.total-events-label {
+  font-size: 11px;
+  color: #8892A4;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.total-events-val {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1C2033;
+}
+
+.critical-badge {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: #FFF2F2;
+  border: 1px solid #FFCDD2;
+  border-radius: 20px;
+  padding: 3px 10px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #C62828;
+}
+
+.critical-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #E53935;
+}
+
+/* ── Card Grid ──────────────────────────────────────────────── */
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+}
+
+/* ── Card ───────────────────────────────────────────────────── */
+.card {
+  background: #ffffff;
+  border-radius: 14px;
+  border: 1px solid #E4E8F0;
+  overflow: hidden;
+  cursor: pointer;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+
+.card-hovered {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 28px rgba(0,0,0,0.10);
+  border-color: var(--accent-dark);
+}
+
+.card-strip {
+  height: 4px;
+  width: 100%;
+}
+
+.card-body {
+  padding: 16px 18px 18px;
+}
+
+/* ── Card Header Row ────────────────────────────────────────── */
+.card-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.card-icon-label {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.card-icon {
+  font-size: 15px;
+  line-height: 1;
+}
+
+.card-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #6B7385;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.status-pill {
+  font-size: 10.5px;
+  font-weight: 500;
+  padding: 2px 8px;
+  border-radius: 20px;
+}
+
+.status-pill.status-warn {
+  background: #FFF8E1;
+  color: #E65100;
+  border: 1px solid #FFE082;
+}
+
+.status-pill.status-ok {
+  background: #F0FDF4;
+  color: #166534;
+  border: 1px solid #BBF7D0;
+}
+
+/* ── Big Number ─────────────────────────────────────────────── */
+.card-total {
+  font-size: 30px;
+  font-weight: 700;
+  letter-spacing: -1px;
+  line-height: 1.1;
+  margin-bottom: 12px;
+}
+
+/* ── Mini Swatch Row ────────────────────────────────────────── */
+.card-mini-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.mini-swatch {
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  flex-shrink: 0;
+}
+
+.mini-label {
+  font-size: 12.5px;
+  color: #4B5268;
+  font-weight: 500;
+}
+
+/* ── Divider ────────────────────────────────────────────────── */
+.card-divider {
+  height: 1px;
+  border-radius: 1px;
+  margin-bottom: 10px;
+}
+
+/* ── Trend Row ──────────────────────────────────────────────── */
+.trend-row {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-bottom: 12px;
+}
+
+.arrow {
+  font-size: 10px;
+  line-height: 1;
+}
+
+.arrow.up   { color: #16A34A; }
+.arrow.down { color: #DC2626; }
+.arrow.flat { color: #8892A4; }
+
+.delta-val {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.delta-val.delta-up   { color: #16A34A; }
+.delta-val.delta-down { color: #DC2626; }
+.delta-val.delta-flat { color: #8892A4; }
+
+.delta-text {
+  font-size: 12px;
+  color: #8892A4;
+}
+
+/* ── Sparkline ──────────────────────────────────────────────── */
+.sparkline {
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+  height: 52px;
+}
+
+.sparkline-bar {
+  flex: 1;
+  border-radius: 3px 3px 0 0;
+  min-height: 4px;
+  transition: opacity 0.15s ease;
+}
+
+.card-hovered .sparkline-bar {
+  opacity: 1 !important;
+}
+
+/* ── Responsive ─────────────────────────────────────────────── */
+@media (max-width: 1100px) {
+  .card-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 600px) {
+  .dashboard { padding: 16px; }
+  .card-grid { grid-template-columns: 1fr; }
+  .section-bar { flex-direction: column; align-items: flex-start; gap: 10px; }
+}
