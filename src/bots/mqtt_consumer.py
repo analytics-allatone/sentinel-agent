@@ -86,7 +86,9 @@ async def mqtt_background_consumer():
                         master_dict[agent_name] = {}
                         master_dict[agent_name]["meta_data"] = machine_info
                         master_dict[agent_name]["event_data"] = []
-                    
+                    if event_data["category"] == "auth":
+                        print("AUTH")
+                        print(event_data)
                     master_dict[agent_name]["event_data"].append(event_data)
                     if len(master_dict[agent_name]["event_data"]) >= BATCH_SIZE:
                         await push_data_to_db(master_dict[agent_name] , agents_map)

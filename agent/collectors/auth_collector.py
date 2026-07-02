@@ -26,12 +26,22 @@ PATTERNS = {
     "ssh_fail": re.compile(
         r"sshd\[(\d+)\]: Failed (\S+) for (?:invalid user )?(\S+) from ([\d.a-fA-F:]+) port (\d+)"
     ),
-    "ssh_invalid": re.compile(
-        r"sshd\[(\d+)\]: Invalid user (\S+) from ([\d.a-fA-F:]+)"
+   "ssh_invalid": re.compile(
+        r"sshd\[(\d+)\]: Invalid user (\S+) from ([\d.a-fA-F:]+)(?:\s+port\s+(\d+))?"
     ),
     "ssh_disconnect": re.compile(
-        r"sshd\[(\d+)\]: Disconnected from (?:authenticating user )?(\S+)? ?([\d.a-fA-F:]+) port (\d+)"
+        r"sshd\[(\d+)\]: Disconnected from (?:authenticating user )?(?:\s+)?(\S+)?\s+([\d.a-fA-F:]+) port (\d+)"
     ),
+    "ssh_recv_disconnect": re.compile(
+        r"sshd\[(\d+)\]: Received disconnect from ([\d.a-fA-F:]+) port (\d+)"
+    ),
+
+#    "ssh_invalid": re.compile(
+#        r"sshd\[(\d+)\]: Invalid user (\S+) from ([\d.a-fA-F:]+)"
+#    ),
+#   "ssh_disconnect": re.compile(
+#    r"sshd\[(\d+)\]: Disconnected from (?:(?:authenticating|invalid) user )?(\S+) ([\d.a-fA-F:]+) port (\d+)"
+#    ),
     "sudo": re.compile(
         r"sudo:\s+(\S+)\s*:\s*TTY=(\S+)\s*;\s*PWD=(\S+)\s*;\s*USER=(\S+)\s*;\s*COMMAND=(.*)"
     ),
@@ -84,7 +94,7 @@ def _parse_timestamp(ts_str: str) -> str:
 
 def parse_auth_line(line: str, dispatch: Callable, machine_info):
     """Parse a single auth log line and emit a AuthEvent if matched."""
-    print(f"[RAW AUTH LOG] {line.rstrip()}")
+#    print(f"[RAW AUTH LOG] {line.rstrip()}")
     line = line.strip()
     if not line:
         return
@@ -141,7 +151,56 @@ def parse_auth_line(line: str, dispatch: Callable, machine_info):
             mitre_tactic   = "Credential Access",
             mitre_technique = "T1110"
         )
-
+    # ── SSH INVALID USER ────────────────────────
+    m = PATTERNS["ssh_invalid"].search(msg)
+    if m and not event:
+        event = AuthEvent(
+            timestamp = timestamp,
+            action    = EventAction.SSH_FAIL,      # invalid user = failed auth
+            outcome   = EventOutcome.FAILURE,
+            severity  = Severity.HIGH,
+            collector = "auth_log",
+            tags      = ["ssh", "authentication", "invalid_user", "brute_force_candidate"],
+            user_name = m.group(2),
+            auth_source_ip = m.group(3),
+            auth_session_type = "ssh",
+            auth_failure_reason = "invalid user",
+            process_pid  = int(m.group(1)),
+            process_name = "sshd",
+            mitre_tactic    = "Credential Access",
+            mitre_technique = "T1110"
+        )
+    # ── SSH DISCONNECT (pre-auth) ───────────────
+    m = PATTERNS["ssh_disconnect"].search(msg)
+    if m and not event:
+        event = AuthEvent(
+            timestamp = timestamp,
+            action    = EventAction.SSH_FAIL,
+            outcome   = EventOutcome.FAILURE,
+            severity  = Severity.LOW,
+            collector = "auth_log",
+            tags      = ["ssh", "disconnect", "brute_force_candidate"],
+            user_name = m.group(2),
+            auth_source_ip   = m.group(3),
+            auth_source_port = int(m.group(4)),
+            auth_session_type = "ssh",
+            process_pid  = int(m.group(1)),
+            process_name = "sshd",
+        )
+    m = PATTERNS["ssh_recv_disconnect"].search(msg)
+    if m and not event:
+         event = AuthEvent(
+	     timestamp = timestamp,
+	     action    = EventAction.SSH_FAIL,
+	     outcome   = EventOutcome.FAILURE,
+	     severity  = Severity.LOW,
+	     tags      = ["ssh", "disconnect", "brute_force_candidate"],
+	     auth_source_ip   = m.group(2),
+	     auth_source_port = int(m.group(3)),
+	     auth_session_type = "ssh",
+	     process_pid  = int(m.group(1)),
+	     process_name = "sshd",
+	     )
     # ── SUDO EXECUTION ──────────────────────────
     m = PATTERNS["sudo"].search(msg)
     if m and not event:
@@ -223,11 +282,33 @@ def parse_auth_line(line: str, dispatch: Callable, machine_info):
             process_pid  = int(m.group(1)),
             process_name = "passwd"
         )
-
+    # ── SSH DISCONNECT (pre-auth probe) ─────────
+    m = PATTERNS["ssh_disconnect"].search(msg)
+    if m and not event:
+        event = AuthEvent(
+            timestamp = timestamp,
+	        action    = EventAction.SSH_FAIL,
+	        outcome   = EventOutcome.FAILURE,
+	        severity  = Severity.LOW,
+	        collector = "auth_log",
+	        tags      = ["ssh", "disconnect", "preauth", "brute_force_candidate"],
+	        user_name = m.group(2),
+	        auth_source_ip   = m.group(3),
+	        auth_source_port = int(m.group(4)),
+	        auth_session_type   = "ssh",
+	        auth_failure_reason = "pre-auth disconnect",
+	        process_pid  = int(m.group(1)),
+	        process_name = "sshd",
+	        mitre_tactic    = "Credential Access",
+	        mitre_technique = "T1110"
+	    )
     if event:
-        dispatch(event.to_dict(), machine_info)
-
-
+        try:
+        #print(f"[MATCHED] {line}")   # only prints when something matched
+            dispatch(event.to_dict(), machine_info)
+        except Exception as e:
+            print(f"[AUTH] dispatch/build error: {e}")
+   
 # ─────────────────────────────────────────────
 #  COLLECTORS LAYER
 # ─────────────────────────────────────────────
@@ -278,7 +359,11 @@ class LinuxAuthCollector:
             print(f"Permission denied reading {self._log_path}. Run as root.")
         except FileNotFoundError:
             print(f"Auth log not found: {self._log_path}")
-
+        if line:
+            try:
+                parse_auth_line(line, self._dispatch, self._machine_info)
+            except Exception as e:
+                print(f"[AUTH] parse error: {e}") 
     def start(self):
         self._thread = threading.Thread(target=self._tail, daemon=True, name="auth-tail")
         self._thread.start()

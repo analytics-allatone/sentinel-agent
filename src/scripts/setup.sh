@@ -1,18 +1,19 @@
 set -euo pipefail
 
 # === CHANGE THESE TWO FOR YOUR ENVIRONMENT ================================
-DOWNLOAD_URL=""https://YOUR_HOST/api/v1/binaries/setup.sh"
+DOWNLOAD_URL="https://YOUR_HOST/api/v1/binaries/linux_agent"
 EXPECTED_SHA256=""   # optional: set to pin a specific build, leave empty to skip
 # ==========================================================================
 
-BINARY_PATH="/usr/local/bin/sentinel-agent"
-CONFIG_DIR="/etc/sentinel-agent"
+BINARY_PATH="/usr/local/bin/sentinel-agent"    # exec-safe location
+CONFIG_DIR="/etc/sentinel-agent"               # .env lives here
 ENV_FILE="${CONFIG_DIR}/.env"
 SERVICE_FILE="/etc/systemd/system/sentinel-agent.service"
 LOG_DIR="/var/log/sentinel-agent"
 
 SERVER_IP=""
 AGENT_NAME=""
+GROUP_NAME=""
 ACTION="install"
 
 # --- helpers ---------------------------------------------------------------
@@ -40,6 +41,7 @@ parse_args() {
         case "$1" in
             --server-ip)   SERVER_IP="$2";   shift 2 ;;
             --agent-name)  AGENT_NAME="$2";  shift 2 ;;
+            --group-name)  GROUP_NAME="$2";  shift 2 ;;
             --uninstall)   ACTION="uninstall"; shift ;;
             -h|--help)
                 sed -n '2,30p' "$0" | sed 's/^# \{0,1\}//'
@@ -72,13 +74,14 @@ prompt_if_missing() {
 }
 
 download_binary() {
-    log "Downloading agent from ${DOWNLOAD_URL}"
+    local url="${DOWNLOAD_URL}?agent_name=${AGENT_NAME}&group_name=${GROUP_NAME}"
+    log "Downloading agent from ${url}"
     local tmp; tmp="$(mktemp)"
     if command -v curl >/dev/null 2>&1; then
-        curl -fsSL "$DOWNLOAD_URL" -o "$tmp" \
+        curl -fsSL "$url" -o "$tmp" \
             || die "Download failed. Check the URL or your network."
     elif command -v wget >/dev/null 2>&1; then
-        wget -q "$DOWNLOAD_URL" -O "$tmp" \
+        wget -q "$url" -O "$tmp" \
             || die "Download failed. Check the URL or your network."
     else
         die "Neither curl nor wget is available. Install one and retry."
@@ -108,6 +111,11 @@ EOF
     chmod 600 "$ENV_FILE"
     chown root:root "$ENV_FILE"
     log "Wrote ${ENV_FILE} (mode 0600, root-only)"
+
+    cp "$ENV_FILE" "$(dirname ${BINARY_PATH})/.env"
+    chmod 600 "$(dirname ${BINARY_PATH})/.env"
+    chown root:root "$(dirname ${BINARY_PATH})/.env"
+    log "Copied .env to $(dirname ${BINARY_PATH})/.env"
 }
 
 write_service() {
@@ -120,8 +128,6 @@ Wants=network-online.target
 
 [Service]
 Type=simple
-# Run as root - the agent needs to read process / file / auth events
-# that are only readable by privileged users.
 User=root
 EnvironmentFile=${ENV_FILE}
 ExecStart=${BINARY_PATH}
@@ -129,8 +135,6 @@ Restart=on-failure
 RestartSec=5s
 StandardOutput=append:${LOG_DIR}/agent.log
 StandardError=append:${LOG_DIR}/agent.err
-
-# Mild hardening - tighten further once you've verified the agent runs.
 NoNewPrivileges=false
 ProtectSystem=false
 
@@ -142,17 +146,26 @@ EOF
 }
 
 enable_and_start() {
+    log "Reloading systemd..."
+    systemctl stop sentinel-agent.service 2>/dev/null || true
+    systemctl disable sentinel-agent.service 2>/dev/null || true
     systemctl daemon-reload
+    sleep 1
+
     systemctl enable sentinel-agent.service >/dev/null
+    systemctl daemon-reload
     systemctl restart sentinel-agent.service
 
-    # Give it a couple of seconds to fail fast if config is wrong.
-    sleep 2
+    sleep 3
     if systemctl is-active --quiet sentinel-agent.service; then
         log "sentinel-agent service is running."
     else
         warn "Service did NOT start cleanly. Last 20 log lines:"
         journalctl -u sentinel-agent.service -n 20 --no-pager || true
+        if [ -f "${LOG_DIR}/agent.err" ]; then
+            warn "Error log:"
+            tail -20 "${LOG_DIR}/agent.err"
+        fi
         exit 1
     fi
 }
@@ -166,14 +179,16 @@ print_done() {
   Status:       systemctl status sentinel-agent
   Logs (live):  journalctl -u sentinel-agent -f
   Logs (file):  ${LOG_DIR}/agent.log
+  Error log:    ${LOG_DIR}/agent.err
   Config file:  ${ENV_FILE}
   Binary:       ${BINARY_PATH}
 
   Connected to: ${SERVER_IP}
   Agent name:   ${AGENT_NAME}
+  Group name:   ${GROUP_NAME:-none}
 
   To uninstall:
-      sudo bash ./install-sentinel-agent.sh --uninstall
+      curl -fsSL http://${SERVER_IP}:8000/api/v1/scripts/setup.sh | sudo bash -s -- --uninstall
 ============================================================
 EOF
 }
@@ -189,8 +204,8 @@ uninstall() {
     rm -f "$BINARY_PATH"
     systemctl daemon-reload
 
-    # Leave the .env and logs in place by default - the user may want to
-    # reinstall later. Uncomment these lines for a fully clean uninstall:
+    # Leave .env and logs in place by default
+    # Uncomment for fully clean uninstall:
     # rm -rf "$CONFIG_DIR"
     # rm -rf "$LOG_DIR"
 
