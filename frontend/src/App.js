@@ -12,6 +12,7 @@ import { LoadingProvider } from "./context/LoadingContext";
 import Loader from "./components/Loader/Loader";
 import { useEffect, useState } from "react";
 import { registerLoaderCallbacks } from "./api/api";
+import AgentCardGrid from "./Dashboard/AgentDashboard/AgentCardGrid";
 
 function AppContent() {
   const [isLoading, setIsLoading] = useState(false);
@@ -43,6 +44,10 @@ function AppContent() {
           <Route
             path="/installation"
             element={<ProtectedRoute element={<InstallationProcess />} />}
+          />
+          <Route
+            path="/agentDetailsCard"
+            element={<ProtectedRoute element={<AgentCardGrid />} />}
           />
           <Route
             path="/agentDetails"
