@@ -133,13 +133,7 @@ function Timeline() {
           </div>
           <div className="timeline-no-data">
             <div className="no-data-text">Data outside time range</div>
-            {/* <button className="zoom-btn">Zoom to data</button> */}
           </div>
-          {/* Right axis True/False */}
-          {/* <div className="right-axis">
-            <span>True</span>
-            <span>False</span>
-          </div> */}
         </div>
       </div>
       <div className="timeline-xaxis">
@@ -187,6 +181,7 @@ function TimeRangeFilter({ range, onChange }) {
   const [customFrom, setCustomFrom] = useState(toLocalInputValue(range.from));
   const [customTo, setCustomTo] = useState(toLocalInputValue(range.to));
   const wrapRef = useRef(null);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     function handleClickOutside(e) {
@@ -203,6 +198,17 @@ function TimeRangeFilter({ range, onChange }) {
     setCustomTo(toLocalInputValue(range.to));
   }, [range]);
 
+  // Validate range
+  useEffect(() => {
+    const fromDate = new Date(customFrom);
+    const toDate = new Date(customTo);
+    if (!isNaN(fromDate) && !isNaN(toDate) && fromDate >= toDate) {
+      setError("From must be earlier than To");
+    } else {
+      setError("");
+    }
+  }, [customFrom, customTo]);
+
   function applyPreset(preset) {
     const to = new Date();
     const from = new Date(to.getTime() - preset.ms);
@@ -211,6 +217,7 @@ function TimeRangeFilter({ range, onChange }) {
   }
 
   function applyCustom() {
+    if (error) return;
     const from = new Date(customFrom);
     const to = new Date(customTo);
     if (isNaN(from) || isNaN(to) || from >= to) return;
@@ -293,6 +300,7 @@ function TimeRangeFilter({ range, onChange }) {
                   type="datetime-local"
                   value={customFrom}
                   onChange={(e) => setCustomFrom(e.target.value)}
+                  max={customTo}
                 />
               </label>
               <label className="custom-range-field">
@@ -301,9 +309,19 @@ function TimeRangeFilter({ range, onChange }) {
                   type="datetime-local"
                   value={customTo}
                   onChange={(e) => setCustomTo(e.target.value)}
+                  min={customFrom}
                 />
               </label>
-              <button className="apply-range-btn" onClick={applyCustom}>
+              {error && <div className="range-error">{error}</div>}
+              <button
+                className="apply-range-btn"
+                onClick={applyCustom}
+                disabled={!!error}
+                style={{
+                  opacity: error ? 0.6 : 1,
+                  cursor: error ? "not-allowed" : "pointer",
+                }}
+              >
                 Apply time range
               </button>
             </div>
@@ -501,8 +519,6 @@ export default function AgentDetails({ agentData }) {
 
   return (
     <div className={`dashboard-root${darkMode ? "" : " light-mode"}`}>
-      {/* TOP BAR */}
-
       {/* FILTER BAR */}
       <div className="filter-bar">
         <span className="filter-label">Agent Name</span>
@@ -522,11 +538,6 @@ export default function AgentDetails({ agentData }) {
 
       {/* MAIN DASHBOARD */}
       <div className="dashboard-main">
-        {/* FILE Section label */}
-        {/* <div className="section-collapse">
-          <span className="arrow">▾</span> File
-        </div> */}
-
         {/* TOP ROW */}
         <div className="top-row">
           {/* OUTCOME */}

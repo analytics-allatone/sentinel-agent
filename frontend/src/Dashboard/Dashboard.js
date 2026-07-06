@@ -528,7 +528,16 @@ function Dashboard() {
                     />
                   </td>
                   <td>{agent.id}</td>
-                  <td>{agent.name}</td>
+                  <td>
+                    <a
+                      href="/agentDetailsCard"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="agent-name-link"
+                    >
+                      {agent.name}
+                    </a>
+                  </td>
                   <td>{agent.macAddress}</td>
                   <td>{agent.hostName}</td>
                   <td>{agent.ipAddress}</td>

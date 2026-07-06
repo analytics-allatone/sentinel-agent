@@ -173,6 +173,16 @@
   background: #b0b8c8;
 }
 
+.date-error {
+  color: #b91c1c;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  padding: 10px 14px;
+  border-radius: 10px;
+  margin-bottom: 16px;
+  font-size: 13px;
+}
+
 .spinner-small {
   display: inline-block;
   width: 14px;

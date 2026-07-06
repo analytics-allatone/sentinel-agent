@@ -632,7 +632,7 @@ const InstallationProcess = () => {
             )}
 
             {/* Start Command */}
-            {startCommand && (
+            {false && startCommand && (
               <div className="form-section command-section">
                 <label className="form-label">
                   <span className="label-title">Start Agent Command</span>

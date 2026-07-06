@@ -1,5 +1,19 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import "./AgentCardGrid.css";
+
+const formatDateTimeLocal = (date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  const hours = String(date.getHours()).padStart(2, "0");
+  const minutes = String(date.getMinutes()).padStart(2, "0");
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
+};
+
+const defaultToDate = formatDateTimeLocal(new Date());
+const defaultFromDate = formatDateTimeLocal(
+  new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
+);
 
 // ─── Static data ──────────────────────────────────────────────
 const CARDS = [
@@ -170,10 +184,12 @@ function Card({ card }) {
 
 export default function AgentCardGrid() {
   const [cards, setCards] = useState(CARDS);
-  const [fromDate, setFromDate] = useState("");
-  const [toDate, setToDate] = useState("");
+  const [fromDate, setFromDate] = useState(defaultFromDate);
+  const [toDate, setToDate] = useState(defaultToDate);
   const [loading, setLoading] = useState(false);
-  const [filterActive, setFilterActive] = useState(false);
+  const [filterActive, setFilterActive] = useState(true);
+
+  const isRangeInvalid = fromDate && toDate && fromDate > toDate;
 
   const totalEvents = cards
     .reduce((sum, c) => sum + parseInt(c.total.replace(/,/g, "")), 0)
@@ -251,11 +267,16 @@ export default function AgentCardGrid() {
   };
 
   const handleClearFilter = () => {
-    setFromDate("");
-    setToDate("");
-    setFilterActive(false);
+    setFromDate(defaultFromDate);
+    setToDate(defaultToDate);
+    setFilterActive(true);
     setCards(CARDS);
   };
+
+  useEffect(() => {
+    fetchFilteredData(defaultFromDate, defaultToDate);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleKeyDown = (e) => {
     if (e.key === "Enter") {
@@ -286,6 +307,7 @@ export default function AgentCardGrid() {
             id="fromDate"
             value={fromDate}
             onChange={(e) => setFromDate(e.target.value)}
+            max={toDate}
             onKeyDown={handleKeyDown}
             disabled={loading}
           />
@@ -298,6 +320,7 @@ export default function AgentCardGrid() {
             id="toDate"
             value={toDate}
             onChange={(e) => setToDate(e.target.value)}
+            min={fromDate}
             onKeyDown={handleKeyDown}
             disabled={loading}
           />
@@ -307,7 +330,7 @@ export default function AgentCardGrid() {
           <button
             className="btn-filter btn-apply"
             onClick={handleApplyFilter}
-            disabled={loading}
+            disabled={loading || isRangeInvalid}
           >
             {loading ? <span className="spinner-small" /> : "Apply 🚀"}
           </button>
@@ -324,6 +347,12 @@ export default function AgentCardGrid() {
           </span>
         </div>
       </div>
+
+      {isRangeInvalid && (
+        <div className="date-error">
+          From date cannot be greater than To date.
+        </div>
+      )}
 
       {/* Section Bar */}
       <div className="section-bar">
