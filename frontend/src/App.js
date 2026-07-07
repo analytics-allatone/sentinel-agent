@@ -13,6 +13,8 @@ import Loader from "./components/Loader/Loader";
 import { useEffect, useState } from "react";
 import { registerLoaderCallbacks } from "./api/api";
 import AgentCardGrid from "./Dashboard/AgentDashboard/AgentCardGrid";
+import SOC2Report from "./Reports/SOC2Report";
+import CapacityReport from "./Reports/CapacityReport";
 
 function AppContent() {
   const [isLoading, setIsLoading] = useState(false);
@@ -48,6 +50,14 @@ function AppContent() {
           <Route
             path="/agentDetailsCard"
             element={<ProtectedRoute element={<AgentCardGrid />} />}
+          />
+          <Route
+            path="/reports/soc2"
+            element={<ProtectedRoute element={<SOC2Report />} />}
+          />
+          <Route
+            path="/reports/capacity"
+            element={<ProtectedRoute element={<CapacityReport />} />}
           />
           <Route
             path="/agentDetails"
