@@ -25,6 +25,7 @@ const InstallationProcess = () => {
   // Command generation state
   const [commandLoading, setCommandLoading] = useState(false);
   const [commandError, setCommandError] = useState("");
+  const [notification, setNotification] = useState("");
 
   // Debounce timer ref
   const debounceTimer = useRef(null);
@@ -169,14 +170,40 @@ const InstallationProcess = () => {
         const response = await api.get(
           `/api/v1/is-valid-agent-name?agent_name=${encodeURIComponent(agentName)}`,
         );
-        const valid = parseValidity(response.data);
-        setAgentNameAvailable(valid);
-        if (!valid) {
-          setAgentNameError("This agent name is already taken");
+
+        // If backend returns an explicit error detail in a 200 response
+        if (
+          response &&
+          response.data &&
+          typeof response.data.detail === "string"
+        ) {
+          setAgentNameAvailable(false);
+          setAgentNameError(response.data.detail);
+          setNotification(response.data.detail);
+          setTimeout(() => setNotification(""), 4000);
+        } else {
+          const valid = parseValidity(response.data);
+          setAgentNameAvailable(valid);
+          if (!valid) {
+            setAgentNameError("This agent name is already taken");
+          } else {
+            setAgentNameError("");
+          }
         }
       } catch (error) {
         console.error("Error checking agent name:", error);
-        setAgentNameAvailable(true);
+        // If the server responded with an error payload like { detail: '...' }
+        const serverDetail = error?.response?.data?.detail;
+        if (serverDetail && typeof serverDetail === "string") {
+          setAgentNameAvailable(false);
+          setAgentNameError(serverDetail);
+          setNotification(serverDetail);
+          setTimeout(() => setNotification(""), 4000);
+        } else {
+          // Network or unexpected error: clear availability so user can't proceed
+          setAgentNameAvailable(false);
+          setAgentNameError("Error checking agent name");
+        }
       } finally {
         setAgentNameChecking(false);
       }
@@ -202,6 +229,11 @@ const InstallationProcess = () => {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  // Clear notification when user edits the agent name
+  useEffect(() => {
+    if (notification) setNotification("");
+  }, [agentName]);
 
   // Validate server IP
   const isValidIP = (ip) => {
@@ -308,6 +340,22 @@ const InstallationProcess = () => {
             <p>Set up and configure your agent</p>
           </div>
 
+          {notification && (
+            <div
+              className="notification error"
+              style={{
+                background: "#fff2f2",
+                border: "1px solid #ffc9c9",
+                color: "#7a0000",
+                padding: "10px",
+                borderRadius: "6px",
+                margin: "12px 0",
+              }}
+            >
+              {notification}
+            </div>
+          )}
+
           {/* Form Section */}
           <div className="installation-form">
             {/* Operating System Selection */}
@@ -408,10 +456,12 @@ const InstallationProcess = () => {
                     </span>
                   )}
                   {!agentNameChecking && agentName && agentNameAvailable && (
-                    <span className="available">✓ Available</span>
+                    <span className="available">✓ Agents name is Valid</span>
                   )}
                   {!agentNameChecking && agentName && !agentNameAvailable && (
-                    <span className="unavailable">✗ Not Available</span>
+                    <span className="unavailable">
+                      ✗ Agents name is not Valid
+                    </span>
                   )}
                 </div>
               </div>
@@ -582,7 +632,7 @@ const InstallationProcess = () => {
             )}
 
             {/* Start Command */}
-            {startCommand && (
+            {false && startCommand && (
               <div className="form-section command-section">
                 <label className="form-label">
                   <span className="label-title">Start Agent Command</span>

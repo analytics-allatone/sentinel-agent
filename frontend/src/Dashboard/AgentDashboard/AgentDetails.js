@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import "./AgentDetails.css";
 
 // ─── SVG Gauge ──────────────────────────────────────────────────────────────
@@ -133,13 +133,7 @@ function Timeline() {
           </div>
           <div className="timeline-no-data">
             <div className="no-data-text">Data outside time range</div>
-            {/* <button className="zoom-btn">Zoom to data</button> */}
           </div>
-          {/* Right axis True/False */}
-          {/* <div className="right-axis">
-            <span>True</span>
-            <span>False</span>
-          </div> */}
         </div>
       </div>
       <div className="timeline-xaxis">
@@ -159,6 +153,181 @@ function Timeline() {
           <span>anomaly</span>
         </div>
       </div>
+    </div>
+  );
+}
+
+// ─── Date/Time Range Filter ───────────────────────────────────────────────────
+const RANGE_PRESETS = [
+  { key: "15m", label: "Last 15 minutes", ms: 15 * 60 * 1000 },
+  { key: "1h", label: "Last 1 hour", ms: 60 * 60 * 1000 },
+  { key: "6h", label: "Last 6 hours", ms: 6 * 60 * 60 * 1000 },
+  { key: "24h", label: "Last 24 hours", ms: 24 * 60 * 60 * 1000 },
+  { key: "2d", label: "Last 2 days", ms: 2 * 24 * 60 * 60 * 1000 },
+  { key: "7d", label: "Last 7 days", ms: 7 * 24 * 60 * 60 * 1000 },
+  { key: "30d", label: "Last 30 days", ms: 30 * 24 * 60 * 60 * 1000 },
+  { key: "90d", label: "Last 90 days", ms: 90 * 24 * 60 * 60 * 1000 },
+];
+
+function toLocalInputValue(date) {
+  const pad = (n) => String(n).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(
+    date.getDate(),
+  )}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
+function TimeRangeFilter({ range, onChange }) {
+  const [open, setOpen] = useState(false);
+  const [customFrom, setCustomFrom] = useState(toLocalInputValue(range.from));
+  const [customTo, setCustomTo] = useState(toLocalInputValue(range.to));
+  const wrapRef = useRef(null);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    function handleClickOutside(e) {
+      if (wrapRef.current && !wrapRef.current.contains(e.target)) {
+        setOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  useEffect(() => {
+    setCustomFrom(toLocalInputValue(range.from));
+    setCustomTo(toLocalInputValue(range.to));
+  }, [range]);
+
+  // Validate range
+  useEffect(() => {
+    const fromDate = new Date(customFrom);
+    const toDate = new Date(customTo);
+    if (!isNaN(fromDate) && !isNaN(toDate) && fromDate >= toDate) {
+      setError("From must be earlier than To");
+    } else {
+      setError("");
+    }
+  }, [customFrom, customTo]);
+
+  function applyPreset(preset) {
+    const to = new Date();
+    const from = new Date(to.getTime() - preset.ms);
+    onChange({ key: preset.key, label: preset.label, from, to });
+    setOpen(false);
+  }
+
+  function applyCustom() {
+    if (error) return;
+    const from = new Date(customFrom);
+    const to = new Date(customTo);
+    if (isNaN(from) || isNaN(to) || from >= to) return;
+    onChange({
+      key: "custom",
+      label: "Custom range",
+      from,
+      to,
+    });
+    setOpen(false);
+  }
+
+  function shift(direction) {
+    const span = range.to.getTime() - range.from.getTime();
+    const delta = span * direction;
+    const from = new Date(range.from.getTime() + delta);
+    const to = new Date(range.to.getTime() + delta);
+    onChange({ ...range, key: "custom", label: "Custom range", from, to });
+  }
+
+  return (
+    <div className="time-range-wrap" ref={wrapRef}>
+      <div className="time-controls">
+        <button
+          className="time-btn"
+          title="Shift back"
+          onClick={() => shift(-1)}
+        >
+          «
+        </button>
+        <button
+          className="time-btn range-btn"
+          onClick={() => setOpen((o) => !o)}
+        >
+          <span className="range-btn-icon">🕐</span>
+          {range.label}
+          <span className="range-btn-caret">▾</span>
+        </button>
+        <button
+          className="time-btn"
+          title="Shift forward"
+          onClick={() => shift(1)}
+        >
+          »
+        </button>
+        <button
+          className="time-btn"
+          title="Refresh"
+          onClick={() => onChange({ ...range })}
+        >
+          ⊖
+        </button>
+      </div>
+
+      {open && (
+        <div className="time-range-popover">
+          <div className="time-range-popover-inner">
+            <div className="time-range-quick">
+              <div className="time-range-quick-title">Quick ranges</div>
+              <ul>
+                {RANGE_PRESETS.map((p) => (
+                  <li key={p.key}>
+                    <button
+                      className={`quick-range-item${
+                        range.key === p.key ? " active" : ""
+                      }`}
+                      onClick={() => applyPreset(p)}
+                    >
+                      {p.label}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div className="time-range-custom">
+              <div className="time-range-quick-title">Custom range</div>
+              <label className="custom-range-field">
+                <span>From</span>
+                <input
+                  type="datetime-local"
+                  value={customFrom}
+                  onChange={(e) => setCustomFrom(e.target.value)}
+                  max={customTo}
+                />
+              </label>
+              <label className="custom-range-field">
+                <span>To</span>
+                <input
+                  type="datetime-local"
+                  value={customTo}
+                  onChange={(e) => setCustomTo(e.target.value)}
+                  min={customFrom}
+                />
+              </label>
+              {error && <div className="range-error">{error}</div>}
+              <button
+                className="apply-range-btn"
+                onClick={applyCustom}
+                disabled={!!error}
+                style={{
+                  opacity: error ? 0.6 : 1,
+                  cursor: error ? "not-allowed" : "pointer",
+                }}
+              >
+                Apply time range
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -318,6 +487,14 @@ export default function AgentDetails({ agentData }) {
     agentData?.agentName ?? "TestAgent",
   );
 
+  // Default time range: last 7 days
+  const [timeRange, setTimeRange] = useState(() => {
+    const preset = RANGE_PRESETS.find((p) => p.key === "7d");
+    const to = new Date();
+    const from = new Date(to.getTime() - preset.ms);
+    return { key: preset.key, label: preset.label, from, to };
+  });
+
   // Default data if none provided
   const data = agentData ?? {
     agentName: "TestAgent",
@@ -342,36 +519,25 @@ export default function AgentDetails({ agentData }) {
 
   return (
     <div className={`dashboard-root${darkMode ? "" : " light-mode"}`}>
-      {/* TOP BAR */}
-
       {/* FILTER BAR */}
       <div className="filter-bar">
         <span className="filter-label">Agent Name</span>
 
         <div className="filter-sep" />
 
-        <div className="time-controls">
-          <button className="time-btn">«</button>
-          <button className="time-btn">⏱ Last 6 hours ▾</button>
-          <button className="time-btn">»</button>
-          <button className="time-btn">⊖</button>
-          <button
-            className="theme-toggle"
-            onClick={() => setDarkMode((d) => !d)}
-            title="Toggle dark/light mode"
-          >
-            {darkMode ? "☀ Light" : "🌙 Dark"}
-          </button>
-        </div>
+        <TimeRangeFilter range={timeRange} onChange={setTimeRange} />
+
+        <button
+          className="theme-toggle"
+          onClick={() => setDarkMode((d) => !d)}
+          title="Toggle dark/light mode"
+        >
+          {darkMode ? "☀ Light" : "🌙 Dark"}
+        </button>
       </div>
 
       {/* MAIN DASHBOARD */}
       <div className="dashboard-main">
-        {/* FILE Section label */}
-        {/* <div className="section-collapse">
-          <span className="arrow">▾</span> File
-        </div> */}
-
         {/* TOP ROW */}
         <div className="top-row">
           {/* OUTCOME */}

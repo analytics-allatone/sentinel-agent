@@ -51,6 +51,17 @@
   padding: 24px !important;
   color: #888;
 }
+
+.agent-name-link {
+  color: #606060;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.agent-name-link:hover {
+  /* text-decoration: underline; */
+}
+
 .pagination-bar1 {
   display: flex;
   align-items: center;
