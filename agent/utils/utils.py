@@ -50,5 +50,9 @@ def get_machine_info() -> dict:
     return info
 
 
+
+async def handle_command(payload):
+    return
+
 if __name__ == "__main__":
     print(get_machine_info())
