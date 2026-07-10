@@ -15,6 +15,8 @@ import { registerLoaderCallbacks } from "./api/api";
 import AgentCardGrid from "./Dashboard/AgentDashboard/AgentCardGrid";
 import SOC2Report from "./Reports/SOC2Report";
 import CapacityReport from "./Reports/CapacityReport";
+import { AccessProvider } from "./Access/AccessContext";
+import AccessManagement from "./Access/AccessManagement";
 
 function AppContent() {
   const [isLoading, setIsLoading] = useState(false);
@@ -35,7 +37,7 @@ function AppContent() {
           {/* Public Routes - No authentication required */}
           <Route path="/" element={<Login />} />
           <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
+          {/* <Route path="/register" element={<Register />} /> */}
           <Route path="/forgot-password" element={<ForgotPage />} />
 
           {/* Protected Routes - Authentication required */}
@@ -59,6 +61,8 @@ function AppContent() {
             path="/reports/capacity"
             element={<ProtectedRoute element={<CapacityReport />} />}
           />
+          {/* RBAC — self-contained, uses its own sign-in / role gate */}
+          <Route path="/access"     element={<ProtectedRoute element={<AccessManagement />} />} />
           <Route
             path="/agentDetails"
             element={
@@ -81,7 +85,9 @@ function AppContent() {
 function App() {
   return (
     <LoadingProvider>
-      <AppContent />
+      <AccessProvider>
+        <AppContent />
+      </AccessProvider>
     </LoadingProvider>
   );
 }
