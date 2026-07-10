@@ -530,7 +530,7 @@ function Dashboard() {
                   <td>{agent.id}</td>
                   <td>
                     <a
-                      href="/agentDetailsCard"
+                      href="/reports/soc2"
                       target="_blank"
                       rel="noopener noreferrer"
                       className="agent-name-link"
