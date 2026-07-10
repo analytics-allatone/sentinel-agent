@@ -49,6 +49,7 @@ export const clearAuthCookies = () => {
   deleteCookie("access_token");
   deleteCookie("refresh_token");
   localStorage.removeItem("token");
+  localStorage.removeItem("auth_email");
   console.log("[🗑️ COOKIE] Cleared all auth cookies");
 };
 

@@ -37,6 +37,9 @@ function Login() {
         console.log("[Login] ✅ Access token stored");
       }
 
+      // Remember the signed-in email so the RBAC layer can identify the user.
+      localStorage.setItem("auth_email", email.trim().toLowerCase());
+
       if (refreshToken) {
         setCookie("refresh_token", refreshToken, 30);
         console.log("[Login] ✅ Refresh token stored");
@@ -116,9 +119,9 @@ function Login() {
             </button>
           </form>
 
-          <div className="signup-link">
+          {/* <div className="signup-link">
             Don't have an account? <a href="/register">Sign up here</a>
-          </div>
+          </div> */}
         </div>
       </div>
     </div>

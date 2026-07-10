@@ -7,7 +7,7 @@
   --accent: #0f6e56;
 
   background: var(--surface-0);
-  min-height: 100%;
+  min-height: 100vh;
   padding: 16px;
   color: #1a1a1a;
   display: flex;

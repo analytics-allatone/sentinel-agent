@@ -79,6 +79,10 @@ function Register() {
         country_code: "+91",
       });
 
+      // Remember the registered email so the RBAC layer can identify the
+      // user (the first registered user becomes the Super Admin).
+      localStorage.setItem("auth_email", form.email.trim().toLowerCase());
+
       setSuccess("Account created successfully! Redirecting to login...");
       setForm({
         first_name: "",
