@@ -15,17 +15,25 @@ class LoginResponse(BaseModel):
 
 
 
+class CreateUserRequest(BaseModel):
+    name: str
+    email: str
+    password: str
+    role : str
 
 
+class CreateUserResponse(BaseModel):
+    name: str
+    email: str
+    password: str
+    role : str
 
 
 class SignupRequest(BaseModel):
-    first_name : str
-    last_name : str
+    name : str
     email : str
-    country_code :str
-    phone_number : str
     password : str
+    role : str
 
 
 class SignupResponse(BaseModel):
@@ -34,54 +42,23 @@ class SignupResponse(BaseModel):
 
 
 
+class UpdateUserRequest(BaseModel):
+    email : str
+    name: str
+    password : str
+    role : str
+
+
+class UpdateUserResponse(BaseModel):
+    email:str
+    name: str
+    password: str
+    role : str
 
 
 
-
-
-class ForgotPasswordRequest(BaseModel):
+class DeleteUserRequest(BaseModel):
     email: str
-
-
-class ForgotPasswordResponse(BaseModel):
-    request_id : str
-
-
-
-
-
-
-
-
-class ValidateForgotPasswordOTPRequest(BaseModel):
-    request_id : str
-    otp : str
-
-
-
-class ValidateForgotPasswordOtpResponse(BaseModel):
-    email : str
-
-
-
-
-
-
-
-
-class SetNewPasswordRequest(BaseModel):
-    email : str
-    new_password : str
-
-
-class SetNewPasswordResponse(BaseModel):
-    pass
-
-
-
-
-
-
 
 
 

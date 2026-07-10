@@ -36,10 +36,58 @@ def verify_token(credentials: HTTPAuthorizationCredentials = Depends(bearer_sche
     token = credentials.credentials  # extracts the token after "Bearer "
     try:
         payload = jwt.decode(token, JWT_SECRET_KEY, algorithms=[ALGORITHM])
-        user_email: str = payload.get("email")
-        if user_email is None:
+        user_role: str = payload.get("role")
+        if user_role is None:
             raise HTTPException(status_code=401, detail="Invalid token")
         return payload  # return full payload so routes can use it
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(status_code=401, detail="Token expired")
+    except jwt.InvalidTokenError:
+        raise HTTPException(status_code=401, detail="Invalid token")
+    except:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token expired or invalid",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    
+
+
+
+
+def verify_superadmin_token(credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme)):
+    token = credentials.credentials  # extracts the token after "Bearer "
+    try:
+        payload = jwt.decode(token, JWT_SECRET_KEY, algorithms=[ALGORITHM])
+        user_role: str = payload.get("role")
+        if user_role is None:
+            raise HTTPException(status_code=401, detail="Invalid token")
+        elif user_role != "super_admin":
+            raise HTTPException(status_code=401, detail="Unauthorized user")
+        return payload
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(status_code=401, detail="Token expired")
+    except jwt.InvalidTokenError:
+        raise HTTPException(status_code=401, detail="Invalid token")
+    except:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token expired or invalid",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    
+
+
+def verify_admin_token(credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme)):
+    token = credentials.credentials  # extracts the token after "Bearer "
+    try:
+        payload = jwt.decode(token, JWT_SECRET_KEY, algorithms=[ALGORITHM])
+        user_role: str = payload.get("role")
+        if user_role is None:
+            raise HTTPException(status_code=401, detail="Invalid token")
+        elif user_role not in ["super_admin" , "admin"]:
+            raise HTTPException(status_code=401, detail="Unauthorized user")
+        return payload
     except jwt.ExpiredSignatureError:
         raise HTTPException(status_code=401, detail="Token expired")
     except jwt.InvalidTokenError:

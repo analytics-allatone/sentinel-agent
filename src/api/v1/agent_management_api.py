@@ -23,7 +23,7 @@ from schemas.v1.agent_management_schema import (
 
 from models.agent_model import Agents , AgentGroups
 
-from auth.jwt_auth import verify_token
+from auth.jwt_auth import verify_token , verify_admin_token
 
 
 
@@ -33,27 +33,27 @@ agent_management_router = APIRouter()
 
 
 
-@agent_management_router.post("/add-agent" , response_model = standard_success_response[AddAgentResponse] , status_code = 201)
-async def getAgents(req: AddAgentRequest , db: AsyncSession = Depends(get_async_db) , user:dict = Depends(verify_token)):
+# @agent_management_router.post("/add-agent" , response_model = standard_success_response[AddAgentResponse] , status_code = 201)
+# async def getAgents(req: AddAgentRequest , db: AsyncSession = Depends(get_async_db) , user:dict = Depends(verify_token)):
 
-    agent_name = req.agent_name.strip()
-    result = await db.execute(select(Agents).where(Agents.agent_name == agent_name))
-    existing_user = result.scalars().first()
+#     agent_name = req.agent_name.strip()
+#     result = await db.execute(select(Agents).where(Agents.agent_name == agent_name))
+#     existing_user = result.scalars().first()
 
-    if existing_user:
-        raise HTTPException(status_code=401, detail="Agent already exists with this name")
+#     if existing_user:
+#         raise HTTPException(status_code=401, detail="Agent already exists with this name")
     
-    new_agent = Agents(
-       agent_name = agent_name
-    )
-    if req.group_id:
-        new_agent.group_id = req.group_id
-    db.add(new_agent)
-    await db.commit()
-    await db.refresh(new_agent)
+#     new_agent = Agents(
+#        agent_name = agent_name
+#     )
+#     if req.group_id:
+#         new_agent.group_id = req.group_id
+#     db.add(new_agent)
+#     await db.commit()
+#     await db.refresh(new_agent)
 
-    res_data = AddAgentResponse(id = new_agent.id , agent_name= new_agent.agent_name , group_id = new_agent.group_id)
-    return standard_success_response(data = res_data , message = "Agent added successfully")
+#     res_data = AddAgentResponse(id = new_agent.id , agent_name= new_agent.agent_name , group_id = new_agent.group_id)
+#     return standard_success_response(data = res_data , message = "Agent added successfully")
 
 
 
@@ -182,15 +182,16 @@ async def agent_installation_command(os : str,
                                      agent_name: str,
                                      server_ip : str,
                                      group_name : Optional[str] = "None",
-                                     db: AsyncSession = Depends(get_async_db)):
+                                     db: AsyncSession = Depends(get_async_db),
+                                     user:dict = Depends(verify_admin_token)):
 
     linux_command = f"curl -fsSL {server_ip}:8000/api/v1/scripts/setup.sh | sudo bash -s -- --server-ip {server_ip} --agent-name {agent_name} --group-name {group_name}"
     win_command = f"$env:SERVER_IP='{server_ip}'; $env:AGENT_NAME='{agent_name}'; $env:GROUP_NAME='{group_name}'; irm {server_ip}:8000/api/v1/scripts/windows_install.ps1 | iex"
     res_date = None
     if os == "windows":
-        res_data = AgentInstallationCommandResponse(installation_command = win_command , running_command = "hkljkfakln ajf")
+        res_data = AgentInstallationCommandResponse(installation_command = win_command)
     else:
-        res_data = AgentInstallationCommandResponse(installation_command = linux_command , running_command = "hkljkfakln ajf")
+        res_data = AgentInstallationCommandResponse(installation_command = linux_command)
     
        
 
