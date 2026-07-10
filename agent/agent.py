@@ -10,7 +10,7 @@ from collectors.network_collector import NetworkCollector
 from collectors.process_collector import ProcessCollector
 from collectors.usb_collector import USBCollector
 from collectors.harddisk_collector import HardDiskCollector
-from utils import get_machine_info
+from utils.utils import get_machine_info
 
 
 
