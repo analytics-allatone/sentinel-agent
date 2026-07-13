@@ -162,7 +162,7 @@ async def createUser(req: CreateUserRequest ,  db: AsyncSession = Depends(get_as
 
 
 
-@auth_router.get("get-users" , response_model = standard_success_response[GetUsersResponse] , status_code=200)
+@auth_router.get("/get-users" , response_model = standard_success_response[GetUsersResponse] , status_code=200)
 async def getUsers(db: AsyncSession = Depends(get_async_db) , user:dict = Depends(verify_admin_token)):
     
     result = await db.execute(select(Users))
