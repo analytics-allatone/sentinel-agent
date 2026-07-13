@@ -19,9 +19,9 @@ from schemas.v1.auth_schema import(
     SignupRequest , SignupResponse,
     UpdateUserRequest , UpdateUserResponse,
     RefreshAccessTokenRequest , RefreshAccessTokenResponse,
-    DeleteUserRequest , GetUsersResponse , ApplicationUser 
+    DeleteUserRequest , GetUsersResponse , ApplicationUser
 )
-from auth.crypto import hash_password , verify_password
+from auth.crypto import hash_password , verify_password , verify_admin_token
 
 from models.user_model import Users
 
