@@ -71,7 +71,7 @@ class RefreshAccessTokenResponse(BaseModel):
     access_token : str
 
 
-class ApplicationUsers(BaseModel):
+class ApplicationUser(BaseModel):
     name: str
     email: str
     password : str
@@ -80,4 +80,4 @@ class ApplicationUsers(BaseModel):
 
 
 class GetUsersResponse(BaseModel):
-    users : list[ApplicationUsers]
+    users : list[ApplicationUser]
