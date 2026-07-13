@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-
+from typing import Optional
 
 
 
@@ -44,15 +44,15 @@ class SignupResponse(BaseModel):
 
 class UpdateUserRequest(BaseModel):
     email : str
-    name: str
-    password : str
-    role : str
+    name : Optional[str]
+    password : Optional[str]
+    role : Optional[str]
 
 
 class UpdateUserResponse(BaseModel):
     email:str
     name: str
-    password: str
+    password : str
     role : str
 
 
@@ -70,3 +70,14 @@ class RefreshAccessTokenRequest(BaseModel):
 class RefreshAccessTokenResponse(BaseModel):
     access_token : str
 
+
+class ApplicationUsers(BaseModel):
+    name: str
+    email: str
+    password : str
+    role : str
+
+
+
+class GetUsersResponse(BaseModel):
+    users : list[ApplicationUsers]

@@ -19,7 +19,7 @@ from schemas.v1.auth_schema import(
     SignupRequest , SignupResponse,
     UpdateUserRequest , UpdateUserResponse,
     RefreshAccessTokenRequest , RefreshAccessTokenResponse,
-    DeleteUserRequest
+    DeleteUserRequest , GetUsersResponse , ApplicationUser 
 )
 from auth.crypto import hash_password , verify_password
 
@@ -133,7 +133,7 @@ async def refreshAccessToken(req: RefreshAccessTokenRequest):
 
 
 @auth_router.post("/create-user" , response_model = standard_success_response[CreateUserResponse] , status_code=201)
-async def signup(req: CreateUserRequest ,  db: AsyncSession = Depends(get_async_db) , user:dict = Depends(verify_superadmin_token)):
+async def createUser(req: CreateUserRequest ,  db: AsyncSession = Depends(get_async_db) , user:dict = Depends(verify_superadmin_token)):
 
     result = await db.execute(select(Users).where(Users.email == req.email))
     existing_user = result.scalars().first()
@@ -162,10 +162,21 @@ async def signup(req: CreateUserRequest ,  db: AsyncSession = Depends(get_async_
 
 
 
+@auth_router.get("get-users" , response_model = standard_success_response[GetUsersResponse] , status_code=200)
+async def getUsers(db: AsyncSession = Depends(get_async_db) , user:dict = Depends(verify_admin_token)):
+    
+    result = await db.execute(select(Users))
+    users = result.scalars().all()
+
+    response = GetUsersResponse(users = [ApplicationUser(name = u.name , email = u.email , password = u.password , role = u.role) for u in users])
+    return  standard_success_response(data = response , message = "Users fetched successfully")
+
+
+
 
 
 @auth_router.put("/update-user" , response_model = standard_success_response[UpdateUserResponse] , status_code=200)
-async def signup(req: UpdateUserRequest ,  db: AsyncSession = Depends(get_async_db) , user:dict = Depends(verify_superadmin_token)):
+async def updateUser(req: UpdateUserRequest ,  db: AsyncSession = Depends(get_async_db) , user:dict = Depends(verify_superadmin_token)):
 
     result = await db.execute(select(Users).where(Users.email == req.email))
     existing_user = result.scalars().first()
@@ -173,17 +184,20 @@ async def signup(req: UpdateUserRequest ,  db: AsyncSession = Depends(get_async_
     if not existing_user:
         raise HTTPException(status_code=404, detail="User not found with this email")
     
+    hashed_password = None
+    if req.password:
+        hashed_password = hash_password(req.password)
+        existing_user.password = hashed_password
+    if req.name:
+        existing_user.name = req.name
+    if req.role:
+        existing_user.role = req.role
 
-    hashed_password = hash_password(req.password)
-
-    existing_user.name = req.name
-    existing_user.password = hashed_password
-    existing_user.role = req.role
     await db.commit()
-
+    await db.refresh(existing_user)
     
     
-    response = UpdateUserResponse(name = req.name , email = req.username , password = req.password , role = req.role)
+    response = UpdateUserResponse(name = existing_user.name , email = existing_user.email , password =  existing_user.password , role = existing_user.role)
     return  standard_success_response(data = response , message = "User Updated successfully") 
 
 
@@ -192,7 +206,7 @@ async def signup(req: UpdateUserRequest ,  db: AsyncSession = Depends(get_async_
 
 
 @auth_router.delete("/delete-user", status_code=204)
-async def delete_user(req: DeleteUserRequest, db: AsyncSession = Depends(get_async_db), user: dict = Depends(verify_superadmin_token)):
+async def deleteUser(req: DeleteUserRequest, db: AsyncSession = Depends(get_async_db), user: dict = Depends(verify_superadmin_token)):
     result = await db.execute(select(Users).where(Users.email == req.email))
     existing_user = result.scalars().first()
     if not existing_user:
