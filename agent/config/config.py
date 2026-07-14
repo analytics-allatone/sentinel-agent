@@ -62,6 +62,11 @@ DEFAULT_CONFIG = {
             "scan_on_connect": True,
             "transfer_threshold_bytes": 524288000,
         },
+        "db_discovery": {
+            "enabled": True,
+            "config_file": None,         # None = auto-resolve (config/db_inspect.json)
+            "poll_interval": 5.0,
+        },
         "harddisk": {
             "enabled": True,
             "poll_interval": 30.0,

@@ -4,6 +4,7 @@ from datetime import datetime
 import aiomqtt
 import threading
 import inspect
+import requests
 
 
 
@@ -131,3 +132,8 @@ class MQTTProducer:
             
         except TypeError as err:
             print(f"❌ Serialization Failure: {err}")
+        finally :
+            agent_name="agent1"
+            API="http://127.0.0.1:8000"
+            requests.post(f"{API}/api/agents/{agent_name}/detected-event", json=event)
+
