@@ -4,20 +4,34 @@ import { INVITE_ROLES, MIN_PASSWORD } from "../AccessContext";
 
 export default function EditUserModal({ user, onClose, onSave }) {
   const isSuper = user.role === "super_admin";
+  const [name, setName] = useState(user.name || "");
   const [role, setRole] = useState(user.role);
   const [newPassword, setNewPassword] = useState("");
   const [error, setError] = useState("");
+  const [saving, setSaving] = useState(false);
 
-  const handleSave = () => {
+  const handleSave = async () => {
     setError("");
+    if (!name.trim()) {
+      setError("Name cannot be empty.");
+      return;
+    }
     if (newPassword && newPassword.length < MIN_PASSWORD) {
       setError(`Password must be at least ${MIN_PASSWORD} characters.`);
       return;
     }
-    onSave({
-      role,
-      newPassword: newPassword || undefined,
-    });
+    setSaving(true);
+    try {
+      await onSave({
+        name: name.trim(),
+        role,
+        newPassword: newPassword || undefined,
+      });
+    } catch (err) {
+      setError(err.message || "Could not update the user.");
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -26,11 +40,15 @@ export default function EditUserModal({ user, onClose, onSave }) {
       onClose={onClose}
       footer={
         <>
-          <button className="rbac-btn" onClick={onClose}>
+          <button className="rbac-btn" onClick={onClose} disabled={saving}>
             Cancel
           </button>
-          <button className="rbac-btn rbac-btn-primary" onClick={handleSave} disabled={isSuper}>
-            Save changes
+          <button
+            className="rbac-btn rbac-btn-primary"
+            onClick={handleSave}
+            disabled={isSuper || saving}
+          >
+            {saving ? "Saving…" : "Save changes"}
           </button>
         </>
       }
@@ -41,6 +59,18 @@ export default function EditUserModal({ user, onClose, onSave }) {
         </p>
       ) : (
         <div className="rbac-form">
+          <label className="rbac-field">
+            <span className="rbac-label">Name</span>
+            <input
+              type="text"
+              className="rbac-input"
+              placeholder="Full name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              autoFocus
+            />
+          </label>
+
           <div className="rbac-field">
             <span className="rbac-label">Role</span>
             <div className="rbac-role-picker">

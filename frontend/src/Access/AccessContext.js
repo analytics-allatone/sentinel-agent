@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
+import api from "../api/api";
 
 /**
  * Frontend-only RBAC store.
@@ -70,6 +71,27 @@ function nowIso() {
 
 function makeId() {
   return `u_${Math.random().toString(36).slice(2, 9)}`;
+}
+
+// Map a user record returned by GET /api/v1/get-users into the local user
+// shape. `existing` (matched by e-mail) preserves frontend-only fields — id,
+// status, per-user permissions, invite date — across refetches.
+function mapApiUser(apiUser, existing) {
+  const email = (apiUser.email || "").trim().toLowerCase();
+  const role = apiUser.role || "view_only";
+  return {
+    id: existing?.id || makeId(),
+    email,
+    name: apiUser.name?.trim() || email.split("@")[0],
+    role,
+    permissions:
+      existing?.permissions ?? (role === "admin" ? permsForRole("admin") : null),
+    status: existing?.status || "active",
+    invitedAt: existing?.invitedAt || nowIso(),
+    lastActive: existing?.lastActive ?? null,
+    // backend stores an argon2 hash; keep it so records round-trip
+    password: apiUser.password || existing?.password || null,
+  };
 }
 
 // NOTE: frontend-only demo. Passwords are stored as a non-reversible hash
@@ -180,8 +202,35 @@ export function AccessProvider({ children }) {
     localStorage.removeItem(CURRENT_KEY);
   };
 
+  // ── load users from the backend ───────────────────────────────
+  // GET /api/v1/get-users → { data: { users: [{ name, email, password, role }] } }
+  // Merges by e-mail so frontend-only fields (id, status, permissions) survive.
+  const fetchUsers = async () => {
+    try {
+      const res = await api.get("/api/v1/get-users");
+      const apiUsers = res?.data?.data?.users;
+      if (!Array.isArray(apiUsers)) return;
+      setUsers((prev) => {
+        const byEmail = new Map(prev.map((u) => [u.email.toLowerCase(), u]));
+        return apiUsers.map((au) =>
+          mapApiUser(au, byEmail.get((au.email || "").trim().toLowerCase()))
+        );
+      });
+    } catch (e) {
+      console.warn("[RBAC] get-users API failed:", e?.response?.status || e?.message);
+    }
+  };
+
+  // Pull the user list from the backend once on mount.
+  useEffect(() => {
+    fetchUsers();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // ── management actions (guard with can('manageUsers') at call sites) ──
-  const inviteUser = ({ email, name, role, permissions, password }) => {
+  // Each mirrors its change to the backend API. Local state updates regardless
+  // so the UI stays responsive even if the backend is temporarily unavailable.
+  const inviteUser = async ({ email, name, role, permissions, password }) => {
     const clean = (email || "").trim().toLowerCase();
     if (!clean || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(clean)) {
       throw new Error("Enter a valid e-mail address.");
@@ -192,12 +241,27 @@ export function AccessProvider({ children }) {
     if (!password || password.length < MIN_PASSWORD) {
       throw new Error(`Set a password of at least ${MIN_PASSWORD} characters.`);
     }
+    const finalName = name?.trim() || clean.split("@")[0];
+    const finalRole = role || "view_only";
+
+    // POST /api/v1/create-user  { name, email, password, role }
+    try {
+      await api.post("/api/v1/create-user", {
+        name: finalName,
+        email: clean,
+        password,
+        role: finalRole,
+      });
+    } catch (e) {
+      console.warn("[RBAC] create-user API failed:", e?.response?.status || e?.message);
+    }
+
     const user = {
       id: makeId(),
       email: clean,
-      name: name?.trim() || clean.split("@")[0],
-      role: role || "view_only",
-      permissions: role === "admin" ? permissions || permsForRole("admin") : null,
+      name: finalName,
+      role: finalRole,
+      permissions: finalRole === "admin" ? permissions || permsForRole("admin") : null,
       status: "active",
       invitedAt: nowIso(),
       lastActive: null,
@@ -207,7 +271,24 @@ export function AccessProvider({ children }) {
     return user;
   };
 
-  const updateUser = (id, patch) => {
+  const updateUser = async (id, patch) => {
+    const target = users.find((u) => u.id === id);
+
+    // PUT /api/v1/update-user  { email, name, password, role }
+    if (target) {
+      const payload = {
+        email: target.email,
+        name: patch.name ?? target.name,
+        password: patch.newPassword ?? "",
+        role: patch.role ?? target.role,
+      };
+      try {
+        await api.put("/api/v1/update-user", payload);
+      } catch (e) {
+        console.warn("[RBAC] update-user API failed:", e?.response?.status || e?.message);
+      }
+    }
+
     setUsers((prev) =>
       prev.map((u) => {
         if (u.id !== id) return u;
@@ -227,14 +308,30 @@ export function AccessProvider({ children }) {
     );
   };
 
-  const setUserStatus = (id, status) => updateUser(id, { status });
+  // enable/disable is a local-only status flag (no dedicated backend endpoint)
+  const setUserStatus = (id, status) => {
+    setUsers((prev) =>
+      prev.map((u) => (u.id === id ? { ...u, status } : u))
+    );
+  };
 
-  const removeUser = (id) => {
+  const removeUser = async (id) => {
     const target = users.find((u) => u.id === id);
     if (target && target.role === "super_admin") {
       const admins = users.filter((u) => u.role === "super_admin").length;
       if (admins <= 1) throw new Error("Cannot remove the last Super Admin.");
     }
+
+    // DELETE /api/v1/delete-user  { email }
+    // axios sends a request body on DELETE only via the `data` config key.
+    if (target) {
+      try {
+        await api.delete("/api/v1/delete-user", { data: { email: target.email } });
+      } catch (e) {
+        console.warn("[RBAC] delete-user API failed:", e?.response?.status || e?.message);
+      }
+    }
+
     setUsers((prev) => prev.filter((u) => u.id !== id));
     if (target && target.email.toLowerCase() === currentEmail.toLowerCase()) signOut();
   };
@@ -263,6 +360,7 @@ export function AccessProvider({ children }) {
     can,
     signInAs,
     signOut,
+    fetchUsers,
     inviteUser,
     updateUser,
     setUserStatus,
