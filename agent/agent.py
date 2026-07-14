@@ -10,6 +10,7 @@ from collectors.network_collector import NetworkCollector
 from collectors.process_collector import ProcessCollector
 from collectors.usb_collector import USBCollector
 from collectors.harddisk_collector import HardDiskCollector
+from collectors.capacity_monitoring_collector import ResourceCollector
 from utils.utils import get_machine_info
 
 
@@ -56,6 +57,21 @@ class SentinelAgent:
     def start(self):
         self._dispatcher = self._build_dispatcher()
         dispatch = self._make_dispatch()
+
+
+        try:
+            rc = ResourceCollector(
+                dispatch      = dispatch,
+                machine_info  = self.machine_info,
+                poll_interval = 30.0,
+            )
+            rc.start()
+            self._collectors.append(rc)
+            print("Resource Collector started")
+        except Exception as e:
+            print(f"Resource collector error: {e}")
+
+
         try:
             
             fc = FileCollector(
