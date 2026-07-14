@@ -15,14 +15,17 @@ from db.db import  get_async_db
 from schemas.v1.standard_schema import standard_success_response
 from schemas.v1.auth_schema import(
     LoginRequest , LoginResponse,
+    CreateUserRequest , CreateUserResponse,
     SignupRequest , SignupResponse,
-    RefreshAccessTokenRequest , RefreshAccessTokenResponse
+    UpdateUserRequest , UpdateUserResponse,
+    RefreshAccessTokenRequest , RefreshAccessTokenResponse,
+    DeleteUserRequest , GetUsersResponse , ApplicationUser
 )
-from auth.crypto import hash_password , verify_password
+from auth.crypto import hash_password , verify_password 
 
 from models.user_model import Users
 
-from auth.jwt_auth import create_access_token , create_refresh_token , verify_token
+from auth.jwt_auth import create_access_token , create_refresh_token , verify_token , verify_superadmin_token , verify_admin_token
 
 
 
@@ -45,14 +48,15 @@ async def login(req: LoginRequest ,  db: AsyncSession = Depends(get_async_db)):
         
     
     if not user:
-        raise HTTPException(status_code=401, detail="Email do not exist , Signup")
+        raise HTTPException(status_code=401, detail="Email do not exist")
     
     if not verify_password(password , user.password):
         raise HTTPException(status_code=401, detail="Invalid password")
     
     token_data = {
         "id" : user.id,
-        "email": user.email
+        "email": user.email,
+        "role" : user.role
     }
 
     access_token = create_access_token(token_data)
@@ -79,12 +83,10 @@ async def signup(req: SignupRequest ,  db: AsyncSession = Depends(get_async_db))
     hashed_password = hash_password(req.password)
 
     new_user = Users(
-        first_name = req.first_name,
-        last_name = req.last_name,
+        name = req.last,
         email = req.email,
-        country_code = req.country_code,
-        phone_number = req.phone_number,
-        password = hashed_password
+        password = hashed_password,
+        role = req.role
     )
     db.add(new_user)
     await db.commit()
@@ -92,7 +94,8 @@ async def signup(req: SignupRequest ,  db: AsyncSession = Depends(get_async_db))
 
     token_data = {
         "id" : new_user.id,
-        "email": new_user.email
+        "email": new_user.email,
+        "role" : new_user.role
     }
 
     access_token = create_access_token(token_data)
@@ -116,9 +119,98 @@ async def refreshAccessToken(req: RefreshAccessTokenRequest):
     token_data = {
         "id" : payload["id"],
         "email": payload["email"],
+        "role": payload["role"]
     }
 
     access_token = create_access_token(token_data)
     response = RefreshAccessTokenResponse(access_token = access_token)
     
     return  standard_success_response(data = response , message = "New Access token generated successfully")
+
+
+
+
+
+
+@auth_router.post("/create-user" , response_model = standard_success_response[CreateUserResponse] , status_code=201)
+async def createUser(req: CreateUserRequest ,  db: AsyncSession = Depends(get_async_db) , user:dict = Depends(verify_superadmin_token)):
+
+    result = await db.execute(select(Users).where(Users.email == req.email))
+    existing_user = result.scalars().first()
+
+    if existing_user:
+        raise HTTPException(status_code=401, detail="User already exists with this Email")
+    
+
+    hashed_password = hash_password(req.password)
+
+    new_user = Users(
+        name = req.name,
+        email = req.email,
+        password = hashed_password,
+        role = req.role
+    )
+    db.add(new_user)
+    await db.commit()
+    await db.refresh(new_user)
+
+    
+    
+    response = CreateUserResponse(name = new_user.name , email = new_user.email , password = req.password , role = new_user.role)
+    return  standard_success_response(data = response , message = "User Created successfully") 
+
+
+
+
+@auth_router.get("/get-users" , response_model = standard_success_response[GetUsersResponse] , status_code=200)
+async def getUsers(db: AsyncSession = Depends(get_async_db) , user:dict = Depends(verify_admin_token)):
+    
+    result = await db.execute(select(Users))
+    users = result.scalars().all()
+
+    response = GetUsersResponse(users = [ApplicationUser(name = u.name , email = u.email , password = u.password , role = u.role) for u in users])
+    return  standard_success_response(data = response , message = "Users fetched successfully")
+
+
+
+
+
+@auth_router.put("/update-user" , response_model = standard_success_response[UpdateUserResponse] , status_code=200)
+async def updateUser(req: UpdateUserRequest ,  db: AsyncSession = Depends(get_async_db) , user:dict = Depends(verify_superadmin_token)):
+
+    result = await db.execute(select(Users).where(Users.email == req.email))
+    existing_user = result.scalars().first()
+
+    if not existing_user:
+        raise HTTPException(status_code=404, detail="User not found with this email")
+    
+    hashed_password = None
+    if req.password:
+        hashed_password = hash_password(req.password)
+        existing_user.password = hashed_password
+    if req.name:
+        existing_user.name = req.name
+    if req.role:
+        existing_user.role = req.role
+
+    await db.commit()
+    await db.refresh(existing_user)
+    
+    
+    response = UpdateUserResponse(name = existing_user.name , email = existing_user.email , password =  existing_user.password , role = existing_user.role)
+    return  standard_success_response(data = response , message = "User Updated successfully") 
+
+
+
+
+
+
+@auth_router.delete("/delete-user", status_code=204)
+async def deleteUser(req: DeleteUserRequest, db: AsyncSession = Depends(get_async_db), user: dict = Depends(verify_superadmin_token)):
+    result = await db.execute(select(Users).where(Users.email == req.email))
+    existing_user = result.scalars().first()
+    if not existing_user:
+        raise HTTPException(status_code=404, detail="User not found with this email")
+    await db.delete(existing_user)
+    await db.commit()
+    return None

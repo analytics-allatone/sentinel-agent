@@ -75,6 +75,5 @@ class ExistingGroupsResponse(BaseModel):
 
 class AgentInstallationCommandResponse(BaseModel):
     installation_command : str
-    running_command : str
 
     
