@@ -124,14 +124,14 @@ export default function AccessManagement() {
 
   if (!currentUser) return <SignInGate />;
 
-  const handleInvite = (payload) => {
-    const user = inviteUser(payload);
+  const handleInvite = async (payload) => {
+    const user = await inviteUser(payload);
     setInviting(false);
-    flash(`Invitation sent to ${user.email}.`);
+    flash(`User ${user.email} created.`);
   };
 
-  const handleSaveEdit = (patch) => {
-    updateUser(editUser.id, patch);
+  const handleSaveEdit = async (patch) => {
+    await updateUser(editUser.id, patch);
     flash(`Updated access for ${editUser.email}.`);
     setEditUser(null);
   };
@@ -159,9 +159,9 @@ export default function AccessManagement() {
       message: `This permanently removes ${u.email} from the workspace. They will need a new invite to return.`,
       confirmLabel: "Remove",
       danger: true,
-      onConfirm: () => {
+      onConfirm: async () => {
         try {
-          removeUser(u.id);
+          await removeUser(u.id);
           flash(`${u.email} removed.`);
         } catch (err) {
           flash(err.message);
@@ -187,9 +187,9 @@ export default function AccessManagement() {
             <span className="rbac-whoami-email">{currentUser.email}</span>
             <RoleBadge role={currentUser.role} />
           </div>
-          <button className="rbac-btn rbac-btn-ghost" onClick={signOut}>
+          {/* <button className="rbac-btn rbac-btn-ghost" onClick={signOut}>
             Sign out
-          </button>
+          </button> */}
         </div>
       </div>
 

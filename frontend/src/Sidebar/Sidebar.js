@@ -10,7 +10,7 @@ const Sidebar = ({ isOpen, onClose }) => {
     { id: 'assets', label: 'Assets', icon: '📦', href: '/assets' },
     { id: 'monitoring', label: 'Monitoring', icon: '👁️', href: '/monitoring' },
     { id: 'reports', label: 'Reports', icon: '📈', href: '/reports' },
-    { id: 'users', label: 'Users', icon: '👥', href: '/users' },
+    { id: 'users', label: 'Users', icon: '👥', href: '/access' },
   ];
 
   const settingsItems = [

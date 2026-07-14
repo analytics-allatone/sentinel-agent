@@ -17,17 +17,22 @@ export default function InviteModal({ onClose, onInvite }) {
   const [showPw, setShowPw] = useState(false);
   const [error, setError] = useState("");
 
-  const handleSubmit = (e) => {
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
     if (!password || password.length < MIN_PASSWORD) {
       setError(`Set a password of at least ${MIN_PASSWORD} characters.`);
       return;
     }
+    setSubmitting(true);
     try {
-      onInvite({ email, name, role, password });
+      await onInvite({ email, name, role, password });
     } catch (err) {
-      setError(err.message);
+      setError(err.message || "Could not create the user.");
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -37,11 +42,16 @@ export default function InviteModal({ onClose, onInvite }) {
       onClose={onClose}
       footer={
         <>
-          <button className="rbac-btn" onClick={onClose}>
+          <button className="rbac-btn" onClick={onClose} disabled={submitting}>
             Cancel
           </button>
-          <button className="rbac-btn rbac-btn-primary" form="invite-form" type="submit">
-            Send invite
+          <button
+            className="rbac-btn rbac-btn-primary"
+            form="invite-form"
+            type="submit"
+            disabled={submitting}
+          >
+            {submitting ? "Creating…" : "Create user"}
           </button>
         </>
       }
