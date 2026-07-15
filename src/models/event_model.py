@@ -266,6 +266,7 @@ class CapacityMonitoringEvents(Base):
     disk_read_bytes_total = Column(BigInteger)
     top_cpu_process = Column(JSONB , nullable=True, default=dict)
     top_memory_process = Column(JSONB , nullable=True, default=dict)
+    agent_cpu_percent = Column(Float)
     agent_rss_mb = Column(Float)
     agent_num_threads = Column(Integer)
     agent_open_files = Column(Float)
