@@ -84,7 +84,7 @@ class SentinelAgent:
             )
             fc.start()
             self._collectors.append(fc)
-            print("✓ File Collector started")
+            print("File Collector started")
         except ImportError as e:
             print(f"File collector unavailable: {e}")
         except Exception as e:

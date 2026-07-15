@@ -5,7 +5,7 @@ import os
 import sys
 from queue import Queue, Empty
 from mqtt_producer import MQTTProducer
-from config.unique_info import AGENT_NAME
+from config.unique_info import AGENT_NAME , SERVER_IP
 from utils.utils import handle_command
 import diskcache
 
