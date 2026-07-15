@@ -48,6 +48,7 @@ app = FastAPI(
 HERE = os.path.dirname(os.path.abspath(__file__))
 SCRIPTS_DIR = os.path.join(HERE, "scripts")
 BINARIES_DIR = os.path.join(HERE, "binaries")
+DOWNLOADABLES_DIR = os.path.join(HERE , "downloadables")
 
 app.add_middleware(
     CORSMiddleware,
@@ -79,7 +80,6 @@ async def get_binary(
 ):
     safe = os.path.basename(name)
     path = os.path.join(BINARIES_DIR, safe)
-    print(f"Binary: {path} | Agent: {agent_name} | Group: {group_name}")
     if not os.path.isfile(path):
         raise HTTPException(status_code=404, detail=f"Binary '{safe}' not found")
     group_id = None
@@ -105,6 +105,21 @@ async def get_binary(
     db.add(this_agent)
     await db.commit()
     return FileResponse(path, media_type="application/octet-stream", filename=safe)
+
+
+
+
+
+@app.get("api/v1/nssm" , response_class=FileResponse)
+async def getNssm():
+    safe = os.path.basename("nssm-2.24.zip")
+    path = os.path.join(DOWNLOADABLES_DIR, safe)
+    if not os.path.isfile(path):
+        raise HTTPException(status_code=404, detail=f"NSSM '{safe}' not found")
+
+    return FileResponse(path, media_type="application/octet-stream", filename=safe)
+
+
 
 
 @app.get("/healthCheck")
