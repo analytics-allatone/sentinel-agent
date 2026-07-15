@@ -23,13 +23,13 @@ worker_task = None
 @asynccontextmanager
 async def lifespan(app: FastAPI):
 
-    # global worker_task
+    global worker_task
 
     # DATABASE STARTUP
     await create_db_and_tables()
 
 
-    # worker_task = asyncio.create_task(mqtt_background_consumer())
+    worker_task = asyncio.create_task(mqtt_background_consumer())
 
     print("Application Started")
 
@@ -37,7 +37,7 @@ async def lifespan(app: FastAPI):
 
     # SHUTDOWN LOGIC
     print("Application Shutting Down...")
-    # worker_task.cancel()
+    worker_task.cancel()
 
 
 app = FastAPI(
