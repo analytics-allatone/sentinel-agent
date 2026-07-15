@@ -10,13 +10,11 @@ from models.agent_model import Agents
 load_dotenv()
 
 # ⚠️ CONFIGURATION: Must match Step 2 parameters exactly
-SERVER_IP = "80.225.239.163" 
+SERVER_IP = "mosquitto" 
 MQTT_USER = "my_mqtt_user"
 MQTT_PASS = "mqttpassword"
 TOPIC = "agent/agent_events"
 
-
-VALID_CATEGORIES = ["authentication" , "file" , "network" , "process" , "usb"]
 
 
 BATCH_SIZE = 50
@@ -74,7 +72,7 @@ async def mqtt_background_consumer():
 
                     category = event_data.get("category" , None)
 
-                    if not agent_name or not category or category not in VALID_CATEGORIES:
+                    if not agent_name or not category:
                         continue
 
                     if agent_name not in agents_map:
@@ -86,12 +84,9 @@ async def mqtt_background_consumer():
                         master_dict[agent_name] = {}
                         master_dict[agent_name]["meta_data"] = machine_info
                         master_dict[agent_name]["event_data"] = []
-                    if event_data["category"] == "auth":
-                        print("AUTH")
-                        print(event_data)
                     master_dict[agent_name]["event_data"].append(event_data)
                     if len(master_dict[agent_name]["event_data"]) >= BATCH_SIZE:
-                        await push_data_to_db(master_dict[agent_name] , agents_map)
+                        await push_data_to_db(master_dict[agent_name])
                         master_dict[agent_name]["event_data"] = []
 
 

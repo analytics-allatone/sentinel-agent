@@ -94,7 +94,11 @@ async def get_binary(
             await db.commit()
             await db.refresh(new_group)
             group_id = new_group.id
-    
+    agent_exist_result = await db.execute(select(Agents).where(Agents.agent_name == agent_name))
+    existing_agent = agent_exist_result.scalars().first()
+    if existing_agent:
+        if existing_agent.mac_address:
+            raise HTTPException(status_code=409, detail=f"Agent already installed with this name , use another name")
     this_agent = Agents(agent_name = agent_name)
     if group_id :
         this_agent.group_id = group_id

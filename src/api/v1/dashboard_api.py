@@ -1,29 +1,30 @@
-from sqlalchemy.future import select
-from fastapi import APIRouter , Depends , HTTPException , status , Query
-from sqlalchemy.ext.asyncio import AsyncSession
-from pathlib import Path
-from typing import Optional
-from sqlalchemy import desc ,select, func
+# from sqlalchemy.future import select
+# from fastapi import APIRouter , Depends , HTTPException , status , Query
+# from sqlalchemy.ext.asyncio import AsyncSession
+# from pathlib import Path
+# from typing import Optional
+# from sqlalchemy import desc ,select, func
 
-###############################################
-#                                             #
-#              LOCAL MODULES IMPORT           #
-#                                             #
-###############################################
-from db.db import  get_async_db
-from auth.jwt_auth import verify_token
-from schemas.v1.standard_schema import standard_success_response
-from schemas.v1.dashboard_schema import (
-    Soc2ReportResponse , AgentsInfo , 
-    Soc2ReportRecentEvent , Soc2ReportSummary ,
-    Soc2ReportAuth , Soc2ReportFile ,
-    Soc2ReportNetwork , Soc2ReportProcess ,
-    Soc2ReportBars 
-)
+# ###############################################
+# #                                             #
+# #              LOCAL MODULES IMPORT           #
+# #                                             #
+# ###############################################
+# from db.db import  get_async_db
+# from auth.jwt_auth import verify_token
+# from schemas.v1.standard_schema import standard_success_response
+# from schemas.v1.dashboard_schema import (
+#     Soc2ReportResponse , AgentsInfo , 
+#     Soc2ReportRecentEvent , Soc2ReportSummary ,
+#     Soc2ReportAuth , Soc2ReportFile ,
+#     Soc2ReportNetwork , Soc2ReportProcess ,
+#     Soc2ReportBars 
+# )
+# from models.agent_model import Agents
 
 
 
-dashboard_router = APIRouter()
+# dashboard_router = APIRouter()
 
 
 
@@ -32,7 +33,32 @@ dashboard_router = APIRouter()
 
 # @dashboard_router.get("/soc2-report" , response_model = standard_success_response[Soc2ReportResponse] , status_code = 200)
 # async def soc2Report(db: AsyncSession = Depends(get_async_db) , user:dict = Depends(verify_token)):
-#     response = Soc2ReportResponse()
+#     all_agents_query = await db.execute(select(Agents))
+#     all_agents = all_agents_query.scalars().all()
+#     agents_list = []
+#     for ag in all_agents:
+#         curr_agent = AgentsInfo(
+#             id = ag.id,
+#             agent_name = ag.agent_name,
+#             host_name = ag.host_name,
+#             os = ag.os,
+#             status = ag.status
+#         )
+#         agents_list.append(curr_agent)
+
+
+#     total_events : int 
+#     period_days : int
+#     critical_events : int
+#     agents_monitored : int
+#     compliance_score : float
+#     compliance_gap : float
+#     recent_events : list[Soc2ReportRecentEvent]
+
+    
+#     response = Soc2ReportResponse(
+#         agents = agents_list
+#     )
 #     return standard_success_response[Soc2ReportResponse](data=response , message="SOC2 Report Data" )
 
 

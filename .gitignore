@@ -223,4 +223,4 @@ __marimo__/
 #Databases
 databases
 databases/
-.db
+*.db

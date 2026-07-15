@@ -63,7 +63,7 @@ class SentinelAgent:
             rc = ResourceCollector(
                 dispatch      = dispatch,
                 machine_info  = self.machine_info,
-                poll_interval = 30.0,
+                poll_interval = 10.0,
             )
             rc.start()
             self._collectors.append(rc)

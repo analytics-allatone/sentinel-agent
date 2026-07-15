@@ -25,7 +25,7 @@ class AuthEvents(Base):
     __tablename__ = "auth_events"
 
     id = Column(BigInteger, primary_key=True, autoincrement=True, index=True)
-    agent_id = Column(Integer , nullable = False , index = True)
+    agent_name = Column(String , nullable = False , index = True)
     action = Column(String , nullable = False)
     outcome = Column(String , nullable = False)
     severity = Column(String , nullable = False)
@@ -57,7 +57,7 @@ class FileEvents(Base):
     __tablename__ = "file_events"
 
     id = Column(BigInteger, primary_key=True, autoincrement=True, index=True)
-    agent_id = Column(Integer , nullable = False , index = True)
+    agent_name = Column(String , nullable = False , index = True)
     action = Column(String , nullable = False)
     outcome = Column(String , nullable = False)
     severity = Column(String , nullable = False)
@@ -108,7 +108,7 @@ class NetworkEvents(Base):
     __tablename__ = "network_events"
 
     id = Column(BigInteger, primary_key=True, autoincrement=True, index=True)
-    agent_id = Column(Integer , nullable = False , index = True)
+    agent_name = Column(String , nullable = False , index = True)
     action = Column(String , nullable = False)
     outcome = Column(String , nullable = False)
     severity = Column(String , nullable = False)
@@ -156,7 +156,7 @@ class ProcessEvents(Base):
     __tablename__ = "process_events"
 
     id = Column(BigInteger, primary_key=True, autoincrement=True, index=True)
-    agent_id = Column(Integer , nullable = False , index = True)
+    agent_name = Column(String , nullable = False , index = True)
     action = Column(String , nullable = False)
     outcome = Column(String , nullable = False)
     severity = Column(String , nullable = False)
@@ -195,7 +195,7 @@ class USBEvents(Base):
     __tablename__ = "usb_events"
 
     id = Column(BigInteger, primary_key=True, autoincrement=True, index=True)
-    agent_id = Column(Integer , nullable = False , index = True)
+    agent_name = Column(String , nullable = False , index = True)
     action = Column(String , nullable = False)
     outcome = Column(String , nullable = False)
     severity = Column(String , nullable = False)
@@ -228,5 +228,48 @@ class USBEvents(Base):
     mitre_tactic = Column(String)
     mitre_technique = Column(String)
 
+    timestamp = Column(ForceDateTime)
+    ingested_at =  Column(TIMESTAMP(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc))
+
+
+
+
+
+
+class CapacityMonitoringEvents(Base):
+    __tablename__ = "capacity_monitoring_events"
+
+    id = Column(BigInteger, primary_key=True, autoincrement=True, index=True)
+    agent_name = Column(String , nullable = False , index = True)
+    action = Column(String , nullable = False)
+    cpu_percent = Column(Float)
+    cpu_count = Column(Integer)
+    cpu_per_core = Column(JSONB , nullable=True, default=list)
+    memory_percent = Column(Float)
+    memory_used_mb = Column(Float)
+    memory_total_mb = Column(Float)
+    memory_available_mb = Column(Float)
+    swap_percent = Column(Float)
+    disk_percent = Column(Float)
+    disk_used_gb = Column(Float)
+    disk_total_gb = Column(Float)
+    disk_free_gb = Column(Float)
+    disk_percent_max = Column(Float)
+    disk_partitions = Column(JSONB , nullable=True, default=list)
+    bandwidth_mbps = Column(Float)
+    bytes_sent_total = Column(BigInteger)
+    bytes_recv_total = Column(BigInteger)
+    active_connections = Column(Integer)
+    connections_by_protocol = Column(JSONB , nullable=True, default=dict)
+    disk_read_mbps = Column(Float)
+    disk_write_bytes_total = Column(BigInteger)
+    disk_read_bytes_total = Column(BigInteger)
+    top_cpu_process = Column(JSONB , nullable=True, default=dict)
+    top_memory_process = Column(JSONB , nullable=True, default=dict)
+    top_memory_process = Column(Float)
+    agent_rss_mb = Column(Float)
+    agent_num_threads = Column(Integer)
+    agent_open_files = Column(Float)
+    
     timestamp = Column(ForceDateTime)
     ingested_at =  Column(TIMESTAMP(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc))
