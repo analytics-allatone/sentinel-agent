@@ -23,13 +23,13 @@ worker_task = None
 @asynccontextmanager
 async def lifespan(app: FastAPI):
 
-    global worker_task
+    # global worker_task
 
     # DATABASE STARTUP
     await create_db_and_tables()
 
 
-    worker_task = asyncio.create_task(mqtt_background_consumer())
+    # worker_task = asyncio.create_task(mqtt_background_consumer())
 
     print("Application Started")
 
@@ -37,7 +37,7 @@ async def lifespan(app: FastAPI):
 
     # SHUTDOWN LOGIC
     print("Application Shutting Down...")
-    worker_task.cancel()
+    # worker_task.cancel()
 
 
 app = FastAPI(
@@ -110,10 +110,12 @@ async def get_binary(
 
 
 
-@app.get("api/v1/nssm" , response_class=FileResponse)
+@app.get("/api/v1/nssm" , response_class=FileResponse)
 async def getNssm():
+    print("here")
     safe = os.path.basename("nssm-2.24.zip")
     path = os.path.join(DOWNLOADABLES_DIR, safe)
+    print(path)
     if not os.path.isfile(path):
         raise HTTPException(status_code=404, detail=f"NSSM '{safe}' not found")
 
