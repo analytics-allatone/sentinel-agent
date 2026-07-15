@@ -10,7 +10,7 @@ from models.agent_model import Agents
 load_dotenv()
 
 # ⚠️ CONFIGURATION: Must match Step 2 parameters exactly
-SERVER_IP = "mosquitto" 
+SERVER_IP = "80.225.239.163" 
 MQTT_USER = "my_mqtt_user"
 MQTT_PASS = "mqttpassword"
 TOPIC = "agent/agent_events"
