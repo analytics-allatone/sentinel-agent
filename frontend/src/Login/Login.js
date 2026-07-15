@@ -108,7 +108,7 @@ function Login() {
               />
             </div>
 
-            {/* <a href="/forgot-password" className="forgot-password">Forgot password?</a> */}
+            <a href="/forgot-password" className="forgot-password">Forgot password?</a>
 
             <button
               type="submit"
@@ -119,9 +119,9 @@ function Login() {
             </button>
           </form>
 
-          {/* <div className="signup-link">
+          <div className="signup-link">
             Don't have an account? <a href="/register">Sign up here</a>
-          </div> */}
+          </div>
         </div>
       </div>
     </div>
