@@ -21,7 +21,7 @@ $EnvFile     = "$InstallDir\.env"
 $LogDir      = "$InstallDir\logs"
 $ServiceName = "sentinel-agent"
 
-$NSSMUrl  = "https://nssm.cc/release/nssm-2.24.zip"
+$NSSMUrl  = "https://YOUR_HOST/api/v1/nssm"
 $NSSMZip  = "$env:TEMP\nssm.zip"
 $NSSMDir  = "$env:TEMP\nssm"
 

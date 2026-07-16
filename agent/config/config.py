@@ -78,4 +78,4 @@ DEFAULT_CONFIG = {
     }
 }
 
-SEVERITY_ORDER = ["info", "low", "medium", "high", "critical"]
+SEVERITY_ORDER = ["info", "low", "medium", "high", "warning", "critical"]

@@ -34,3 +34,17 @@ class AgentGroups(Base):
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     group_name = Column(String ,nullable = False ,  unique = True)
+
+
+
+
+class ServicesCredentials(Base):
+    __tablename__ = "services_credentials"
+
+    id = Column(Integer , primary_key=True , autoincrement=True)
+    agent_name = Column(String)
+    service_name = Column(String)
+    username = Column(String)
+    password = Column(String)
+
+

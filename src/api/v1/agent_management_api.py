@@ -33,30 +33,6 @@ agent_management_router = APIRouter()
 
 
 
-# @agent_management_router.post("/add-agent" , response_model = standard_success_response[AddAgentResponse] , status_code = 201)
-# async def getAgents(req: AddAgentRequest , db: AsyncSession = Depends(get_async_db) , user:dict = Depends(verify_token)):
-
-#     agent_name = req.agent_name.strip()
-#     result = await db.execute(select(Agents).where(Agents.agent_name == agent_name))
-#     existing_user = result.scalars().first()
-
-#     if existing_user:
-#         raise HTTPException(status_code=401, detail="Agent already exists with this name")
-    
-#     new_agent = Agents(
-#        agent_name = agent_name
-#     )
-#     if req.group_id:
-#         new_agent.group_id = req.group_id
-#     db.add(new_agent)
-#     await db.commit()
-#     await db.refresh(new_agent)
-
-#     res_data = AddAgentResponse(id = new_agent.id , agent_name= new_agent.agent_name , group_id = new_agent.group_id)
-#     return standard_success_response(data = res_data , message = "Agent added successfully")
-
-
-
 
 
 @agent_management_router.get("/get-agents" , response_model = standard_success_response[GetAgentsResponse] , status_code = 200)
