@@ -5,6 +5,7 @@ import "./CapacityReport.css";
 import StatCard from "./components/StatCard";
 import ProgressBar from "./components/ProgressBar";
 import SparklineBar from "./components/SparklineBar";
+import TimeSeriesChart from "./components/TimeSeriesChart";
 import EventList from "./components/EventList";
 import AgentHealthList from "./components/AgentHealthList";
 import AgentTable from "./components/AgentTable";
@@ -29,6 +30,100 @@ function parseISO(s) {
   return new Date(y, (m || 1) - 1, d || 1);
 }
 
+// ─── capacity-monitoring/overview helpers ──────────────────────
+// The API expects datetime bounds like 2026-07-14T00:00:00 / 2026-07-15T23:59:59
+
+// value for an <input type="datetime-local">, e.g. "2026-07-14T00:00"
+function toLocalInput(d, endOfDay = false) {
+  return `${toISODate(d)}T${endOfDay ? "23:59" : "00:00"}`;
+}
+
+// datetime-local gives "2026-07-14T00:00"; the API wants seconds too
+function toApiDateTime(v, endOfDay = false) {
+  if (!v) return "";
+  if (v.length === 16) return `${v}:${endOfDay ? "59" : "00"}`;
+  return v;
+}
+
+// "2026-07-15T11:23:22.432392+00:00" -> "11:23"
+function hm(t) {
+  const m = String(t || "").match(/T(\d{2}):(\d{2})/);
+  return m ? `${m[1]}:${m[2]}` : "";
+}
+
+// down-sample a [{ t, value }] series to at most n points for the sparkline
+function downsample(series, n = 16) {
+  if (!Array.isArray(series) || series.length === 0) return [];
+  if (series.length <= n) return series;
+  const step = series.length / n;
+  const out = [];
+  for (let i = 0; i < n; i++) out.push(series[Math.floor(i * step)]);
+  return out;
+}
+
+function seriesToTrend(series, n = 16) {
+  return downsample(series, n).map((p) => ({ day: hm(p.t), value: Math.round(Number(p.value) || 0) }));
+}
+
+function avgOf(series) {
+  if (!series || !series.length) return null;
+  const sum = series.reduce((a, p) => a + (Number(p.value) || 0), 0);
+  return Math.round(sum / series.length);
+}
+function peakOf(series) {
+  if (!series || !series.length) return null;
+  return Math.round(Math.max(...series.map((p) => Number(p.value) || 0)));
+}
+
+// Map the capacity-monitoring/overview response onto the shape the tabs consume,
+// keeping the mock for sections the endpoint does not cover (network, alerts, per-agent bars).
+function mapCapacityOverview(res, agentName, mock) {
+  const cpuSeries = res.cpu_utilization_series || [];
+  const memSeries = res.memory_utilization_series || [];
+  const stoSeries = res.storage_utilization_series || [];
+  const sum = res.summary || {};
+
+  return {
+    ...mock,
+    summary: {
+      ...mock.summary,
+      avg_cpu: sum.avg_cpu_percent != null ? Math.round(sum.avg_cpu_percent) : avgOf(cpuSeries),
+      peak_cpu: peakOf(cpuSeries),
+      peak_cpu_agent: agentName,
+      avg_memory: avgOf(memSeries),
+      peak_memory: peakOf(memSeries),
+      peak_memory_agent: agentName,
+      avg_disk: avgOf(stoSeries),
+      peak_disk: peakOf(stoSeries),
+      peak_disk_agent: agentName,
+      avg_bandwidth: sum.avg_bandwidth_mbps != null ? `${sum.avg_bandwidth_mbps} MB/s` : mock.summary.avg_bandwidth,
+    },
+    cpu: {
+      ...mock.cpu,
+      cpuTrend: seriesToTrend(cpuSeries),
+      memoryTrend: seriesToTrend(memSeries),
+    },
+    storage: {
+      ...mock.storage,
+      diskTrend: seriesToTrend(stoSeries),
+    },
+    // full-resolution series for the interactive zoomable chart
+    series: {
+      cpu: cpuSeries,
+      memory: memSeries,
+      storage: stoSeries,
+      agentCpu: res.agent_cpu_utilization_series || [],
+      agentMemory: res.agent_memory_utilization_series || [],
+    },
+  };
+}
+
+// Fallback series (used before the API returns) built from the mock trend arrays,
+// so the interactive chart always has something to render.
+function seriesFromTrend(trend) {
+  return (trend || []).map((p) => ({ t: p.day, value: p.value }));
+}
+
 const TABS = [
   { key: "overview", label: "Overview" },
   { key: "cpumem", label: "CPU and memory" },
@@ -40,6 +135,24 @@ const TABS = [
 
 // Capacity thresholds for the auto-coloured progress bars (red >75, amber >=61)
 const BAR_THRESH = { dangerAt: 75, warnAt: 61 };
+
+// Series colours — one per entity, stable across every tab so a metric keeps its
+// identity. Validated (CVD ΔE, chroma, contrast) against the white card surface;
+// see the palette check in scripts/validate_palette.js.
+const C = {
+  cpu: "#2a78d6", // blue
+  memory: "#008300", // green
+  storage: "#eda100", // yellow — sub-3:1, relieved by the legend + tooltip
+  agentCpu: "#eb6834", // orange — only ever paired with cpu
+  agentMemory: "#4a3aa7", // violet — only ever paired with memory
+};
+
+// Initial (and "applied") filter values.
+const DEFAULTS = {
+  agentName: "TestAgent",
+  fromDt: toLocalInput(new Date(Date.now() - 864e5), false),
+  toDt: toLocalInput(new Date(), true),
+};
 
 // ─── chart icon (no icon library) ──────────────────────────────
 function ChartIcon() {
@@ -53,12 +166,16 @@ function ChartIcon() {
 }
 
 export default function CapacityReport() {
-  const [rangeType, setRangeType] = useState("7"); // "7" | "30" | "custom"
-  const [customFrom, setCustomFrom] = useState(toISODate(new Date(Date.now() - 7 * 864e5)));
-  const [customTo, setCustomTo] = useState(toISODate(new Date()));
+  // ── search form: agent name + from/to datetime ───────────────
+  const [agentName, setAgentName] = useState(DEFAULTS.agentName);
+  const [fromDt, setFromDt] = useState(DEFAULTS.fromDt);
+  const [toDt, setToDt] = useState(DEFAULTS.toDt);
+
+  // the filters the displayed report actually belongs to — only updated on a
+  // successful search, so the header does not track half-typed form edits
+  const [applied, setApplied] = useState(DEFAULTS);
 
   const [agents, setAgents] = useState([]);
-  const [selectedAgent, setSelectedAgent] = useState("all");
 
   const [activeTab, setActiveTab] = useState("overview");
   const [status, setStatus] = useState("idle"); // idle | loading | error | success
@@ -66,27 +183,20 @@ export default function CapacityReport() {
   const [errorMsg, setErrorMsg] = useState("");
   const [exporting, setExporting] = useState(null); // "pdf" | "docx" | null
 
-  // ── active date range ────────────────────────────────────────
-  const range = useMemo(() => {
-    let from;
-    let to;
-    if (rangeType === "custom") {
-      from = parseISO(customFrom);
-      to = parseISO(customTo);
-    } else {
-      to = new Date();
-      from = new Date(Date.now() - Number(rangeType) * 864e5);
-    }
-    return { from, to };
-  }, [rangeType, customFrom, customTo]);
+  // ── range of the report on screen (from the applied filters) ─
+  const range = useMemo(
+    () => ({
+      from: parseISO((applied.fromDt || "").slice(0, 10)),
+      to: parseISO((applied.toDt || "").slice(0, 10)),
+    }),
+    [applied]
+  );
 
   const periodText = useMemo(() => {
     const { from, to } = range;
     const yearPart = to.getFullYear();
-    return `Period: ${prettyDate(from)} – ${prettyDate(to)}, ${yearPart}`;
+    return `${prettyDate(from)} – ${prettyDate(to)}, ${yearPart}`;
   }, [range]);
-
-  const agentIdsParam = selectedAgent === "all" ? undefined : String(selectedAgent);
 
   // status-pill counts
   const counts = useMemo(() => {
@@ -132,51 +242,53 @@ export default function CapacityReport() {
     return null;
   };
 
-  const buildParams = () => {
-    const p = { from: toISODate(range.from), to: toISODate(range.to) };
-    if (agentIdsParam) p.agent_ids = agentIdsParam;
-    return p;
-  };
+  const buildParams = () => ({ from: toISODate(range.from), to: toISODate(range.to) });
 
-  const safeGet = async (url, params) => {
-    try {
-      const res = await api.get(url, { params });
-      return res.data;
-    } catch (e) {
-      return null;
+  const handleSearch = async () => {
+    const name = agentName.trim();
+    if (!name) {
+      setErrorMsg("Enter an agent name to search.");
+      setStatus("error");
+      return;
     }
-  };
+    if (!fromDt || !toDt) {
+      setErrorMsg("Pick both a From and a To date/time.");
+      setStatus("error");
+      return;
+    }
+    if (new Date(fromDt) > new Date(toDt)) {
+      setErrorMsg("The From date/time must be before the To date/time.");
+      setStatus("error");
+      return;
+    }
 
-  const handleGenerate = async () => {
     setStatus("loading");
     setErrorMsg("");
-    const params = buildParams();
 
     try {
-      const [agentList, summary, cpu, network, storage, alerts] = await Promise.all([
-        fetchAgents(),
-        safeGet("/api/v1/reports/capacity/summary", params),
-        safeGet("/api/v1/reports/capacity/cpu", params),
-        safeGet("/api/v1/reports/capacity/network", params),
-        safeGet("/api/v1/reports/capacity/storage", params),
-        safeGet("/api/v1/reports/capacity/alerts", params),
-      ]);
+      const res = await api.get("/api/v1/capacity-monitoring/overview", {
+        params: {
+          agent_name: name,
+          from_dt: toApiDateTime(fromDt, false),
+          to_dt: toApiDateTime(toDt, true),
+        },
+      });
 
+      const agentList = await fetchAgents();
       const mock = buildCapacityMock();
-      const merged = {
-        agents: agentList || mock.agents,
-        summary: summary || mock.summary,
-        cpu: cpu || mock.cpu,
-        network: network || mock.network,
-        storage: storage || mock.storage,
-        alerts: alerts?.alerts || alerts || mock.alerts,
-      };
+      const merged = mapCapacityOverview(res.data || {}, name, mock);
+      merged.agents = agentList || mock.agents;
 
       if (!agentList) setAgents(mock.agents);
       setData(merged);
+      setApplied({ agentName: name, fromDt, toDt });
       setStatus("success");
     } catch (e) {
-      setErrorMsg(e?.message || "Failed to generate the report.");
+      setErrorMsg(
+        e?.response?.data?.detail ||
+          e?.message ||
+          `Failed to load capacity data for "${name}".`
+      );
       setStatus("error");
     }
   };
@@ -184,7 +296,7 @@ export default function CapacityReport() {
   // ── export ───────────────────────────────────────────────────
   const handleExportPdf = () => {
     if (!data) {
-      handleGenerate();
+      handleSearch();
       return;
     }
     setExporting("pdf");
@@ -239,7 +351,7 @@ export default function CapacityReport() {
       return (
         <div className="cap-error-banner">
           <span>{errorMsg || "Something went wrong loading the report."}</span>
-          <button className="cap-btn cap-btn-primary" onClick={handleGenerate}>
+          <button className="cap-btn cap-btn-primary" onClick={handleSearch}>
             Retry
           </button>
         </div>
@@ -266,54 +378,85 @@ export default function CapacityReport() {
 
   return (
     <div className="cap-page">
-      {/* ── top bar ── */}
-      <div className="cap-topbar">
+      {/* ── header ── */}
+      <header className="cap-topbar">
         <div className="cap-title">
-          <ChartIcon />
+          <span className="cap-title-icon">
+            <ChartIcon />
+          </span>
           <span className="cap-title-text">
-            Guardlynx <span className="cap-title-dim">— capacity report</span>
+            Capacity report
+            <span className="cap-title-sub">
+              {applied.agentName ? `${applied.agentName} · ` : ""}
+              {periodText}
+            </span>
           </span>
         </div>
 
-        <div className="cap-controls">
-          <select className="cap-select" value={rangeType} onChange={(e) => setRangeType(e.target.value)}>
-            <option value="7">Last 7 days</option>
-            <option value="30">Last 30 days</option>
-            <option value="custom">Custom</option>
-          </select>
-
-          {rangeType === "custom" && (
-            <>
-              <input type="date" className="cap-date" value={customFrom} max={customTo} onChange={(e) => setCustomFrom(e.target.value)} />
-              <input type="date" className="cap-date" value={customTo} min={customFrom} onChange={(e) => setCustomTo(e.target.value)} />
-            </>
-          )}
-
-          <select className="cap-select" value={selectedAgent} onChange={(e) => setSelectedAgent(e.target.value)}>
-            <option value="all">All agents</option>
-            {agents.map((a) => (
-              <option key={a.id} value={a.id}>
-                {a.agent_name}
-              </option>
-            ))}
-          </select>
-
-          <button className="cap-btn cap-btn-primary" onClick={handleGenerate} disabled={loading}>
-            {loading ? "Generating…" : "Generate"}
-          </button>
-
+        <div className="cap-header-actions">
           <span className="cap-pill cap-pill-agents">{counts.total} agents</span>
           {counts.degraded > 0 && <span className="cap-pill cap-pill-degraded">{counts.degraded} degraded</span>}
           {counts.offline > 0 && <span className="cap-pill cap-pill-offline">{counts.offline} offline</span>}
 
-          <button className="cap-btn" onClick={handleExportPdf} disabled={exporting !== null}>
+          <button type="button" className="cap-btn" onClick={handleExportPdf} disabled={exporting !== null}>
             {exporting === "pdf" ? "…" : "Export PDF"}
           </button>
-          {/* <button className="cap-btn" onClick={handleExportDocx} disabled={exporting !== null}>
-            {exporting === "docx" ? "…" : "Export DOCX"}
-          </button> */}
         </div>
-      </div>
+      </header>
+
+      {/* ── search panel ── */}
+      <form
+        className="cap-controls"
+        onSubmit={(e) => {
+          e.preventDefault();
+          handleSearch();
+        }}
+      >
+        <label className="cap-field cap-field-grow">
+          <span className="cap-field-label">Agent name</span>
+          <input
+            type="text"
+            className="cap-input"
+            placeholder="e.g. TestAgent"
+            value={agentName}
+            onChange={(e) => setAgentName(e.target.value)}
+            list="cap-agent-options"
+            autoComplete="off"
+          />
+          <datalist id="cap-agent-options">
+            {agents.map((a) => (
+              <option key={a.id} value={a.agent_name} />
+            ))}
+          </datalist>
+        </label>
+
+        <label className="cap-field">
+          <span className="cap-field-label">From</span>
+          <input
+            type="datetime-local"
+            className="cap-date"
+            value={fromDt}
+            max={toDt}
+            onChange={(e) => setFromDt(e.target.value)}
+          />
+        </label>
+
+        <label className="cap-field">
+          <span className="cap-field-label">To</span>
+          <input
+            type="datetime-local"
+            className="cap-date"
+            value={toDt}
+            min={fromDt}
+            onChange={(e) => setToDt(e.target.value)}
+          />
+        </label>
+
+        <button type="submit" className="cap-btn cap-btn-primary cap-btn-search" disabled={loading}>
+          {loading && <span className="cap-spinner" aria-hidden="true" />}
+          {loading ? "Searching…" : "Search"}
+        </button>
+      </form>
 
       {/* ── tab bar ── */}
       <div className="cap-tabbar">
@@ -341,7 +484,7 @@ export default function CapacityReport() {
           {exporting === "docx" ? "…" : "Export DOCX"}
         </button> */}
         {/* <span className="cap-period">{periodText}</span>
-        <button className="cap-btn cap-btn-primary cap-btn-sm cap-regen" onClick={handleGenerate} disabled={loading}>
+        <button className="cap-btn cap-btn-primary cap-btn-sm cap-regen" onClick={handleSearch} disabled={loading}>
           {loading ? "…" : "Regenerate"}
         </button> */}
       </div>
@@ -393,21 +536,52 @@ function AgentBars({ items }) {
   );
 }
 
+// Resolve full-resolution series for the interactive chart, falling back to the
+// mock trend arrays when the live API series are not present.
+function resolveSeries(d) {
+  const s = d.series || {};
+  const cpu = d.cpu || {};
+  const storage = d.storage || {};
+  return {
+    cpu: s.cpu && s.cpu.length ? s.cpu : seriesFromTrend(cpu.cpuTrend),
+    memory: s.memory && s.memory.length ? s.memory : seriesFromTrend(cpu.memoryTrend),
+    storage: s.storage && s.storage.length ? s.storage : seriesFromTrend(storage.diskTrend),
+    agentCpu: s.agentCpu || [],
+    agentMemory: s.agentMemory || [],
+  };
+}
+
 // ════════════════════════════════════════════════════════════════
 //  Tab bodies
 // ════════════════════════════════════════════════════════════════
 function OverviewTab({ d, agents, loading }) {
   const s = d.summary || {};
   const cpu = d.cpu || {};
+  const ser = resolveSeries(d);
   return (
     <div className="cap-tab-body">
       <div className="cap-section-head">Summary</div>
       <StatRow>
-        <StatCard loading={loading} label="⊞ Avg CPU" value={pct(s.avg_cpu)} sub="normal range" subColor="success" />
-        <StatCard loading={loading} label="◷ Avg memory" value={pct(s.avg_memory)} sub="watch threshold" subColor="warning" />
-        <StatCard loading={loading} label="⇅ Avg bandwidth" value={s.avg_bandwidth} sub="within limits" subColor="success" />
-        <StatCard loading={loading} label="▤ Avg disk" value={pct(s.avg_disk)} sub="healthy" subColor="success" />
+        <StatCard loading={loading} label="Avg CPU" value={pct(s.avg_cpu)} sub="normal range" subColor="success" />
+        <StatCard loading={loading} label="Avg memory" value={pct(s.avg_memory)} sub="watch threshold" subColor="warning" />
+        <StatCard loading={loading} label="Avg bandwidth" value={s.avg_bandwidth} sub="within limits" subColor="success" />
+        <StatCard loading={loading} label="Avg disk" value={pct(s.avg_disk)} sub="healthy" subColor="success" />
       </StatRow>
+      <Section title="System utilization — CPU · memory · storage">
+        {loading ? (
+          <SkelLines n={6} />
+        ) : (
+          <TimeSeriesChart
+            height={240}
+            unit="%"
+            series={[
+              { key: "cpu", name: "CPU", color: C.cpu, area: true, data: ser.cpu },
+              { key: "mem", name: "Memory", color: C.memory, data: ser.memory },
+              { key: "sto", name: "Storage", color: C.storage, data: ser.storage },
+            ]}
+          />
+        )}
+      </Section>
       <div className="cap-two-col">
         <Section title="Resource utilization per agent">
           {loading ? <SkelLines n={6} /> : <AgentBars items={cpu.cpuPerAgent} />}
@@ -424,6 +598,7 @@ function OverviewTab({ d, agents, loading }) {
 function CpuMemTab({ d, loading }) {
   const s = d.summary || {};
   const cpu = d.cpu || {};
+  const ser = resolveSeries(d);
   return (
     <div className="cap-tab-body">
       <div className="cap-section-head">CPU and memory</div>
@@ -433,6 +608,34 @@ function CpuMemTab({ d, loading }) {
         <StatCard loading={loading} label="Avg memory" value={pct(s.avg_memory)} sub="watch" subColor="warning" />
         <StatCard loading={loading} label="Peak memory" value={pct(s.peak_memory)} sub={s.peak_memory_agent} subColor="danger" />
       </StatRow>
+      <Section title="CPU usage — system vs agent">
+        {loading ? (
+          <SkelLines n={6} />
+        ) : (
+          <TimeSeriesChart
+            height={220}
+            unit="%"
+            series={[
+              { key: "cpu", name: "System CPU", color: C.cpu, area: true, data: ser.cpu },
+              { key: "acpu", name: "Agent CPU", color: C.agentCpu, data: ser.agentCpu },
+            ]}
+          />
+        )}
+      </Section>
+      <Section title="Memory usage — system vs agent">
+        {loading ? (
+          <SkelLines n={6} />
+        ) : (
+          <TimeSeriesChart
+            height={220}
+            unit="%"
+            series={[
+              { key: "mem", name: "System memory", color: C.memory, area: true, data: ser.memory },
+              { key: "amem", name: "Agent memory", color: C.agentMemory, data: ser.agentMemory },
+            ]}
+          />
+        )}
+      </Section>
       <div className="cap-three-col">
         <Section title="CPU — 7 day trend">
           {loading ? <SkelLines n={2} /> : <SparklineBar data={cpu.cpuTrend} height={54} />}
@@ -601,7 +804,7 @@ function PrintableReport({ d, agents, periodText }) {
           <ChartIcon />
           <span className="cap-print-title">Guardlynx — Capacity Report</span>
         </div>
-        <div className="cap-print-period">{periodText}</div>
+        <div className="cap-print-period">Period: {periodText}</div>
       </div>
 
       <PrintSection title="1. Overview">
