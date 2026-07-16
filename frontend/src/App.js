@@ -14,7 +14,7 @@ import { useEffect, useState } from "react";
 import { registerLoaderCallbacks } from "./api/api";
 import AgentCardGrid from "./Dashboard/AgentDashboard/AgentCardGrid";
 import SOC2Report from "./Reports/SOC2Report";
-import CapacityReport from "./Reports/CapacityReport";
+import CapacityDashboard from "./Reports/CapacityDashboard";
 import { AccessProvider } from "./Access/AccessContext";
 import AccessManagement from "./Access/AccessManagement";
 
@@ -59,7 +59,7 @@ function AppContent() {
           />
           <Route
             path="/reports/capacity"
-            element={<ProtectedRoute element={<CapacityReport />} />}
+            element={<ProtectedRoute element={<CapacityDashboard />} />}
           />
           {/* RBAC — self-contained, uses its own sign-in / role gate */}
           <Route path="/access"     element={<ProtectedRoute element={<AccessManagement />} />} />

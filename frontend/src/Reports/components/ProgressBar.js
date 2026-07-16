@@ -22,6 +22,15 @@ const COLORS = {
   blue: "#2b7fd0",
 };
 
+// tint of the fill's own hue for the unfilled track, so the severity of a bar
+// reads across its whole length rather than only the filled part
+function tint(color, alpha) {
+  const m = /^#([0-9a-f]{6})$/i.exec(color || "");
+  if (!m) return "rgba(11, 11, 11, 0.06)";
+  const n = parseInt(m[1], 16);
+  return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${alpha})`;
+}
+
 export default function ProgressBar({
   label,
   value = 0,
@@ -48,7 +57,7 @@ export default function ProgressBar({
         <span className="pbar-label">{label}</span>
         {right != null && right !== "" && <span className="pbar-count">{right}</span>}
       </div>
-      <div className="pbar-track">
+      <div className="pbar-track" style={{ background: tint(color, 0.14) }}>
         <div className="pbar-fill" style={{ width: `${pct}%`, background: color }} />
       </div>
     </div>

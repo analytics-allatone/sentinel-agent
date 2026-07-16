@@ -1,100 +1,227 @@
 .cap-page {
   /* theme tokens — green accent distinguishes it from the blue SOC2 report */
-  --surface-0: #f9f8f6;
+  --surface-0: #f7f7f5;
   --surface-1: #f5f5f3;
-  --border: #e0e0e0;
-  --text-secondary: #888;
+  --card: #ffffff;
+  --border: rgba(11, 11, 11, 0.09);
+  --border-strong: rgba(11, 11, 11, 0.16);
+  --text-primary: #0b0b0b;
+  --text-secondary: #52514e;
+  --text-muted: #898781;
   --accent: #0f6e56;
+  --accent-wash: rgba(15, 110, 86, 0.08);
+  --radius: 10px;
+  --shadow-sm: 0 1px 2px rgba(11, 11, 11, 0.04);
+  --shadow-md: 0 4px 14px rgba(11, 11, 11, 0.07);
 
   background: var(--surface-0);
   min-height: 100vh;
-  padding: 16px;
-  color: #1a1a1a;
+  padding: 20px 20px 16px;
+  color: var(--text-primary);
   display: flex;
   flex-direction: column;
+  /* App.css ships CRA's boilerplate `.App { text-align: center }`, which
+     otherwise centres every block of text on this page */
+  text-align: left;
 }
 
-/* ── top bar ───────────────────────────────────────────── */
+/* ── header ────────────────────────────────────────────── */
 .cap-topbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: 16px;
   flex-wrap: wrap;
-  margin-bottom: 12px;
+  margin-bottom: 14px;
 }
 .cap-title {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 11px;
+  min-width: 0;
+}
+.cap-title-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 9px;
+  background: var(--accent-wash);
+  flex-shrink: 0;
 }
 .cap-title-text {
-  font-size: 15px;
-  font-weight: 600;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 17px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+  min-width: 0;
 }
-.cap-title-dim {
-  color: var(--text-secondary);
+.cap-title-sub {
+  font-size: 12px;
   font-weight: 400;
+  color: var(--text-muted);
+  letter-spacing: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
-.cap-controls {
+.cap-header-actions {
   display: flex;
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
 }
 
+/* ── search panel ──────────────────────────────────────── */
+.cap-controls {
+  display: flex;
+  /* explicit: Login.css ships an unscoped `form { flex-direction: column }`
+     that CRA bundles globally and would otherwise stack these fields */
+  flex-direction: row;
+  align-items: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+  padding: 12px 14px;
+  margin-bottom: 14px;
+}
+
 .cap-select,
-.cap-date {
-  height: 32px;
-  border: 0.5px solid #d5d5d0;
-  border-radius: 6px;
+.cap-date,
+.cap-input {
+  height: 36px;
+  border: 1px solid #dededa;
+  border-radius: 8px;
   background: #fff;
   padding: 0 10px;
   font-size: 13px;
-  color: #333;
+  color: var(--text-primary);
   font-family: inherit;
   cursor: pointer;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
-.cap-date {
+.cap-date,
+.cap-input {
   cursor: text;
+}
+.cap-input {
+  width: 100%;
+}
+.cap-input::placeholder {
+  color: #b4b2ac;
+}
+.cap-input:hover,
+.cap-date:hover {
+  border-color: #c9c8c2;
+}
+.cap-input:focus,
+.cap-date:focus,
+.cap-select:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(15, 110, 86, 0.13);
+}
+
+/* search field + its caption */
+.cap-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+}
+.cap-field-grow {
+  flex: 1 1 200px;
+  max-width: 280px;
+}
+.cap-field-label {
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  line-height: 1;
 }
 
 .cap-btn {
-  height: 32px;
-  border: 0.5px solid #d5d5d0;
-  border-radius: 6px;
+  height: 36px;
+  border: 1px solid #dededa;
+  border-radius: 8px;
   background: #fff;
-  padding: 0 12px;
+  padding: 0 14px;
   font-size: 13px;
-  color: #333;
+  font-weight: 500;
+  color: var(--text-primary);
   cursor: pointer;
   font-family: inherit;
   white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  transition: background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
 }
 .cap-btn:hover:not(:disabled) {
-  background: #f2f2ef;
+  background: #f4f4f1;
+  border-color: #c9c8c2;
+}
+.cap-btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(15, 110, 86, 0.3);
 }
 .cap-btn:disabled {
-  opacity: 0.6;
+  opacity: 0.55;
   cursor: default;
 }
 .cap-btn-primary {
   background: var(--accent);
   border-color: var(--accent);
   color: #fff;
+  box-shadow: 0 1px 2px rgba(15, 110, 86, 0.18);
 }
 .cap-btn-primary:hover:not(:disabled) {
   background: #0c5b47;
+  border-color: #0c5b47;
+}
+.cap-btn-search {
+  min-width: 104px;
 }
 .cap-btn-sm {
   height: 30px;
   font-size: 12px;
 }
 
+/* button spinner */
+.cap-spinner {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.4);
+  border-top-color: #fff;
+  animation: cap-spin 0.7s linear infinite;
+  flex-shrink: 0;
+}
+@keyframes cap-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cap-spinner {
+    animation-duration: 2s;
+  }
+}
+
 /* status pills */
 .cap-pill {
   font-size: 12px;
-  padding: 4px 10px;
+  padding: 5px 11px;
   border-radius: 9999px;
   font-weight: 500;
   white-space: nowrap;
@@ -112,32 +239,45 @@
   color: #a32d2d;
 }
 
-/* ── tab bar ───────────────────────────────────────────── */
+/* ── tab bar — segmented control ───────────────────────── */
 .cap-tabbar {
   display: flex;
-  gap: 4px;
-  border-bottom: 0.5px solid var(--border);
+  gap: 2px;
   overflow-x: auto;
-  margin-bottom: 14px;
+  margin-bottom: 16px;
+  background: rgba(11, 11, 11, 0.045);
+  border-radius: 10px;
+  padding: 3px;
+  scrollbar-width: none;
+}
+.cap-tabbar::-webkit-scrollbar {
+  display: none;
 }
 .cap-tab {
   border: none;
   background: none;
-  padding: 10px 12px;
-  font-size: 14px;
-  color: #777;
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-secondary);
   cursor: pointer;
   font-family: inherit;
-  border-bottom: 2px solid transparent;
+  border-radius: 7px;
   white-space: nowrap;
+  transition: background 0.15s ease, color 0.15s ease;
 }
-.cap-tab:hover {
-  color: #333;
+.cap-tab:hover:not(.active) {
+  color: var(--text-primary);
+  background: rgba(11, 11, 11, 0.04);
+}
+.cap-tab:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(15, 110, 86, 0.4);
 }
 .cap-tab.active {
-  color: #1a1a1a;
-  font-weight: 500;
-  border-bottom-color: var(--accent);
+  color: var(--accent);
+  background: var(--card);
+  box-shadow: var(--shadow-sm);
 }
 
 /* ── content ───────────────────────────────────────────── */
@@ -152,11 +292,21 @@
   gap: 14px;
 }
 .cap-section-head {
-  font-size: 12px;
-  letter-spacing: 0.04em;
+  font-size: 11px;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: var(--text-secondary);
-  font-weight: 500;
+  color: var(--text-muted);
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+/* hairline rule filling the width beside the section label */
+.cap-section-head::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--border);
 }
 .cap-subhead {
   font-size: 13px;
@@ -188,20 +338,23 @@
 
 /* card / section */
 .cap-card {
-  background: #fff;
-  border: 0.5px solid var(--border);
-  border-radius: 8px;
-  padding: 12px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+  padding: 14px 16px;
 }
 .cap-card-title {
-  font-size: 14px;
+  font-size: 13.5px;
   font-weight: 600;
+  letter-spacing: -0.005em;
   margin-bottom: 12px;
+  color: var(--text-primary);
 }
 
-/* ── progress bars (shared ProgressBar component) ──────── */
+/* ── progress bars / meters (shared ProgressBar component) ──────── */
 .pbar-row {
-  margin-bottom: 12px;
+  margin-bottom: 13px;
 }
 .pbar-row:last-child {
   margin-bottom: 0;
@@ -210,27 +363,38 @@
   display: flex;
   justify-content: space-between;
   align-items: baseline;
-  margin-bottom: 5px;
+  gap: 10px;
+  margin-bottom: 6px;
 }
 .pbar-label {
-  font-size: 13px;
-  color: #333;
+  font-size: 12.5px;
+  color: var(--text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .pbar-count {
-  font-size: 13px;
-  color: #666;
-  font-weight: 500;
+  font-size: 12.5px;
+  color: var(--text-primary);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
 }
+/* track is tinted with the fill's own hue inline, so severity reads full-width */
 .pbar-track {
-  height: 5px;
+  height: 6px;
   border-radius: 9999px;
-  background: var(--surface-1);
   overflow: hidden;
 }
 .pbar-fill {
   height: 100%;
   border-radius: 9999px;
   transition: width 0.4s ease;
+}
+@media (prefers-reduced-motion: reduce) {
+  .pbar-fill {
+    transition: none;
+  }
 }
 
 /* ── event list (shared EventList component) ───────────── */
@@ -385,10 +549,11 @@
 
 /* ── agent table ───────────────────────────────────────── */
 .cap-table-wrap {
-  background: #fff;
-  border: 0.5px solid var(--border);
-  border-radius: 8px;
-  padding: 4px 12px 12px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+  padding: 4px 14px 12px;
   overflow-x: auto;
 }
 .cap-table {
@@ -530,18 +695,17 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 12px 4px 4px;
-  border-top: 0.5px solid var(--border);
-  background: var(--surface-1);
-  border-radius: 0 0 8px 8px;
+  padding: 10px 14px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
   flex-wrap: wrap;
-  margin: 0 -4px;
-  padding-left: 12px;
-  padding-right: 12px;
 }
 .cap-export-label {
-  font-size: 13px;
-  color: #666;
+  font-size: 12.5px;
+  color: var(--text-secondary);
+  font-weight: 500;
 }
 .cap-period {
   font-size: 13px;
@@ -554,9 +718,10 @@
 
 /* ── empty / error / skeleton ──────────────────────────── */
 .cap-empty-state {
-  background: #fff;
-  border: 0.5px solid var(--border);
-  border-radius: 8px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
   padding: 48px 24px;
   display: flex;
   flex-direction: column;
@@ -584,10 +749,11 @@
 }
 .cap-error-banner {
   background: #fcebeb;
-  border: 0.5px solid #f1c9c9;
+  border: 1px solid #f1c9c9;
+  border-left: 3px solid #d03b3b;
   color: #a32d2d;
-  border-radius: 8px;
-  padding: 16px;
+  border-radius: var(--radius);
+  padding: 14px 16px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -709,6 +875,25 @@
   }
   .cap-two-col,
   .cap-proto-grid {
+    grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 640px) {
+  .cap-page {
+    padding: 14px 12px 12px;
+  }
+  /* stack the search panel; the button spans the full width at the end */
+  .cap-controls {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .cap-field-grow {
+    max-width: none;
+  }
+  .cap-btn-search {
+    width: 100%;
+  }
+  .cap-statrow {
     grid-template-columns: 1fr;
   }
 }
