@@ -13,7 +13,7 @@ from sqlalchemy import desc ,select, func
 from db.db import  get_async_db
 from auth.jwt_auth import verify_token
 from datetime import datetime
-# from schemas.v1.standard_schema import standard_success_response
+from schemas.v1.standard_schema import standard_success_response
 # from schemas.v1.dashboard_schema import (
 #     Soc2ReportResponse , AgentsInfo , 
 #     Soc2ReportRecentEvent , Soc2ReportSummary ,
@@ -21,6 +21,9 @@ from datetime import datetime
 #     Soc2ReportNetwork , Soc2ReportProcess ,
 #     Soc2ReportBars 
 # )
+from schemas.v1.agent_visualisation_schema import (
+    CapacityMonitoringOverviewResponse , CapacityMonitoringOverviewSummary
+)
 from models.agent_model import Agents
 from models.event_model import CapacityMonitoringEvents
 
@@ -31,7 +34,7 @@ agent_visualisation_router = APIRouter()
 
 
 
-@agent_visualisation_router.get("/capacity-monitoring/overview" , status_code = 200)
+@agent_visualisation_router.get("/capacity-monitoring/overview" ,response_model = standard_success_response[CapacityMonitoringOverviewResponse] , status_code = 200)
 async def capacityMonitoringOverview(agent_name: str = Query(..., description="Agent to report on"),
                                      from_dt: datetime = Query(..., description="Window start (ISO-8601)"),
                                      to_dt: datetime = Query(..., description="Window end (ISO-8601)"),
@@ -70,6 +73,7 @@ async def capacityMonitoringOverview(agent_name: str = Query(..., description="A
             M.agent_cpu_percent,  
             M.agent_rss_mb,
             M.memory_percent,
+            M.bandwidth_mbps
         )
         .where(*base_filter)
         .order_by(M.timestamp.asc())
@@ -77,39 +81,51 @@ async def capacityMonitoringOverview(agent_name: str = Query(..., description="A
     rows = (await db.execute(series_q)).all()
 
     def r(v):  # round or pass None through
-        return round(v, 2) if v is not None else None
+        return round(v, 2) if v is not None else 0.0
+        
+    cap_summary = CapacityMonitoringOverviewSummary(
+        avg_cpu_percent = r(summary.avg_cpu),
+        avg_memory = r(summary.avg_mem),
+        avg_agent_cpu_percent = r(summary.avg_agent_cpu_pct),
+        avg_agent_memory = r(summary.avg_agent_mem),
+        avg_bandwidth_mbps = r(summary.avg_bandwidth)
+    )
 
-    return {
-        "agent_name": agent_name,
-        "from": from_dt,
-        "to": to_dt,
-        "sample_count": summary.sample_count,
-        "summary": {
-            "avg_cpu_percent": r(summary.avg_cpu),
-            "avg_memory": r(summary.avg_mem),
-            "avg_agent_cpu_percent" : r(summary.avg_agent_cpu_pct),
-            "avg_agent_memory" : r(summary.avg_agent_mem),
-            "avg_bandwidth_mbps": r(summary.avg_bandwidth),
-        },
-        "cpu_utilization_series": [
-            {"t": row.timestamp, "value": r(row.cpu_percent)} for row in rows
-        ],
-        "memory_utilization_series": [
-            {"t": row.timestamp, "value": r(row.memory_percent)} for row in rows
-        ],
-        "storage_utilization_series": [
-            {"t": row.timestamp, "value": r(row.disk_percent)} for row in rows
-        ],
-        "agent_cpu_utilization_series": [
-            {"t": row.timestamp, "value": r(row.agent_cpu_percent)} for row in rows
-        ],
-        "agent_memory_utilization_series": [
-            {"t": row.timestamp, "value": r(row.agent_rss_mb)} for row in rows
-        ],
-    }
+    cpu_utilization = [
+        {"t": row.timestamp, "value": r(row.cpu_percent)} for row in rows
+    ]
+    memory_utilization = [
+        {"t": row.timestamp, "value": r(row.memory_percent)} for row in rows
+    ]
+    storage_utilization = [
+        {"t": row.timestamp, "value": r(row.disk_percent)} for row in rows
+    ]
+    agent_cpu_utilization = [
+        {"t": row.timestamp, "value": r(row.agent_cpu_percent)} for row in rows
+    ]
+    agent_memory_utilization = [
+        {"t": row.timestamp, "value": r(row.agent_rss_mb)} for row in rows
+    ]
+    agent_bandwidth_mbps = [
+        {"t": row.timestamp, "value": r(row.bandwidth_mbps)} for row in rows
+    ]
 
+    response = CapacityMonitoringOverviewResponse(
+        agent_name = agent_name,
+        from_dt = from_dt,
+        to_dt = to_dt,
+        sample_count = summary.sample_count,
+        summary = cap_summary,
+        cpu_utilization_series = cpu_utilization,
+        memory_utilization_series = memory_utilization,
+        storage_utilization_series = storage_utilization,
+        agent_cpu_utilization_series = agent_cpu_utilization,
+        agent_memory_utilization_series = agent_memory_utilization,
+        agent_bandwidth_mbps_series = agent_bandwidth_mbps
+    )
+    return standard_success_response(data=response , message= "Capacity monitoring overview data get successfully" )
 
-
+        
 # @dashboard_router.get("/soc2-report" , response_model = standard_success_response[Soc2ReportResponse] , status_code = 200)
 # async def soc2Report(db: AsyncSession = Depends(get_async_db) , user:dict = Depends(verify_token)):
 #     all_agents_query = await db.execute(select(Agents))
