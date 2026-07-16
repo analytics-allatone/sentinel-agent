@@ -2,7 +2,7 @@ from contextlib import asynccontextmanager
 import asyncio
 
 import os
-from fastapi import FastAPI, HTTPException, Query , Request , APIRouter , Depends
+from fastapi import FastAPI, HTTPException, Query , Request  , Depends
 from fastapi.responses import PlainTextResponse , FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import select
