@@ -17,6 +17,7 @@ import SOC2Report from "./Reports/SOC2Report";
 import CapacityDashboard from "./Reports/CapacityDashboard";
 import { AccessProvider } from "./Access/AccessContext";
 import AccessManagement from "./Access/AccessManagement";
+import CapacityDashboard1 from "./Reports/CapacityDashboard1";
 
 function AppContent() {
   const [isLoading, setIsLoading] = useState(false);
@@ -60,6 +61,10 @@ function AppContent() {
           <Route
             path="/reports/capacity"
             element={<ProtectedRoute element={<CapacityDashboard />} />}
+          />
+          <Route
+            path="/reports/capacity1"
+            element={<ProtectedRoute element={<CapacityDashboard1 />} />}
           />
           {/* RBAC — self-contained, uses its own sign-in / role gate */}
           <Route path="/access"     element={<ProtectedRoute element={<AccessManagement />} />} />

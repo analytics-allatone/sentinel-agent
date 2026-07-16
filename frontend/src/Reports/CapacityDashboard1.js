@@ -660,7 +660,7 @@ function PrintReport({ payload, rows, gaps, stats, periodText, theme }) {
 }
 
 // ── page ───────────────────────────────────────────────────────
-export default function CapacityDashboard() {
+export default function CapacityDashboard1() {
   const initial = defaultLocalRange();
 
   const [agentName, setAgentName] = useState("UpdatedWindowAgent");

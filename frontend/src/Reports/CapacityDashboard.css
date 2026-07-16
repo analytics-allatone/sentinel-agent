@@ -323,32 +323,50 @@
   flex-shrink: 0;
 }
 
-/* ── toolbar ─────────────────────────────────────────────── */
-.capacity-dash__toolbar {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
-  background: var(--cap-panel);
-  border: 1px solid var(--cap-border);
-  border-radius: var(--cap-radius);
-  padding: 10px 12px;
-}
-.capacity-dash__toolbar-label {
-  font-size: 12px;
-  color: var(--cap-text);
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-}
-.capacity-dash__toolbar-actions {
-  display: flex;
-  gap: 6px;
-  flex-wrap: wrap;
-}
+/* ── hints & small buttons ───────────────────────────────── */
 .capacity-dash__hint {
   font-size: 10.5px;
   color: var(--cap-dim);
-  margin-left: auto;
+}
+.capacity-dash__hint--top {
+  margin: 0;
+  padding: 8px 12px;
+  background: var(--cap-panel);
+  border: 1px solid var(--cap-border);
+  border-radius: var(--cap-radius);
+  line-height: 1.5;
+}
+.capacity-dash__hint--top strong {
+  color: var(--cap-text);
+  font-weight: 600;
+}
+
+/* compact button used by the per-pane and Full-range zoom clusters */
+.capacity-dash__btn--sm {
+  height: 26px;
+  padding: 0 9px;
+  font-size: 11px;
+}
+
+/* per-pane zoom cluster, sits between the header and the plot */
+.capacity-dash__pane-tools {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+.capacity-dash__pane-window {
+  font-size: 11px;
+  color: var(--cap-dim);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.capacity-dash__pane-btns {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
 }
 
 /* ── panes ───────────────────────────────────────────────── */
