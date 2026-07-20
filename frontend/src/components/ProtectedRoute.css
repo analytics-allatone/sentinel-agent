@@ -1,0 +1,32 @@
+/* Spinner shown while a role-gated route resolves the current user. */
+.pr-checking {
+  min-height: 60vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+}
+.pr-spinner {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 3px solid rgba(120, 130, 150, 0.25);
+  border-top-color: #4f7cff;
+  animation: pr-spin 0.7s linear infinite;
+}
+.pr-checking-label {
+  font-size: 13px;
+  color: #7a869a;
+  letter-spacing: 0.02em;
+}
+@keyframes pr-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pr-spinner {
+    animation-duration: 2s;
+  }
+}

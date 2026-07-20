@@ -172,6 +172,33 @@
   border-color: transparent;
 }
 
+/* quick-range dropdown — shares the input chrome */
+.capacity-dash__select {
+  height: 34px;
+  min-width: 132px;
+  background: var(--cap-panel);
+  border: 1px solid var(--cap-border);
+  border-radius: 6px;
+  color: var(--cap-text);
+  font-family: var(--cap-mono);
+  font-size: 12.5px;
+  padding: 0 9px;
+  cursor: pointer;
+  color-scheme: var(--cap-scheme);
+}
+.capacity-dash__select:hover {
+  border-color: var(--cap-faint);
+}
+.capacity-dash__select:focus-visible {
+  outline: 2px solid var(--cap-mem);
+  outline-offset: 1px;
+  border-color: transparent;
+}
+.capacity-dash__select:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
 /* ── buttons ─────────────────────────────────────────────── */
 .capacity-dash__btn {
   height: 34px;
@@ -211,6 +238,12 @@
   padding: 0;
   font-size: 14px;
   line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.capacity-dash__icon {
+  display: block;
 }
 
 /* ── error ───────────────────────────────────────────────── */
@@ -323,32 +356,50 @@
   flex-shrink: 0;
 }
 
-/* ── toolbar ─────────────────────────────────────────────── */
-.capacity-dash__toolbar {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
-  background: var(--cap-panel);
-  border: 1px solid var(--cap-border);
-  border-radius: var(--cap-radius);
-  padding: 10px 12px;
-}
-.capacity-dash__toolbar-label {
-  font-size: 12px;
-  color: var(--cap-text);
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-}
-.capacity-dash__toolbar-actions {
-  display: flex;
-  gap: 6px;
-  flex-wrap: wrap;
-}
+/* ── hints & small buttons ───────────────────────────────── */
 .capacity-dash__hint {
   font-size: 10.5px;
   color: var(--cap-dim);
-  margin-left: auto;
+}
+.capacity-dash__hint--top {
+  margin: 0;
+  padding: 8px 12px;
+  background: var(--cap-panel);
+  border: 1px solid var(--cap-border);
+  border-radius: var(--cap-radius);
+  line-height: 1.5;
+}
+.capacity-dash__hint--top strong {
+  color: var(--cap-text);
+  font-weight: 600;
+}
+
+/* compact button used by the per-pane and Full-range zoom clusters */
+.capacity-dash__btn--sm {
+  height: 26px;
+  padding: 0 9px;
+  font-size: 11px;
+}
+
+/* per-pane zoom cluster, sits between the header and the plot */
+.capacity-dash__pane-tools {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+.capacity-dash__pane-window {
+  font-size: 11px;
+  color: var(--cap-dim);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.capacity-dash__pane-btns {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
 }
 
 /* ── panes ───────────────────────────────────────────────── */
@@ -357,6 +408,57 @@
   flex-direction: column;
   gap: 50px;
 }
+/* grid variant whose column count is driven by the --cap-cols custom property
+   (set inline from the per-row toggle); collapses to a single column when the
+   viewport is too narrow for two graphs to stay legible */
+.capacity-dash__panes--cols {
+  display: grid;
+  grid-template-columns: repeat(var(--cap-cols, 2), minmax(0, 1fr));
+  gap: 30px;
+}
+@media (max-width: 1000px) {
+  .capacity-dash__panes--cols {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* header bar above the panes: interaction hint + the per-row layout toggle */
+.capacity-dash__paneshead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 8px 12px;
+  background: var(--cap-panel);
+  border: 1px solid var(--cap-border);
+  border-radius: var(--cap-radius);
+}
+.capacity-dash__paneshead .capacity-dash__hint {
+  line-height: 1.5;
+  margin: 0;
+}
+.capacity-dash__layout {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+.capacity-dash__layout-label {
+  font-size: 10.5px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--cap-dim);
+  white-space: nowrap;
+}
+/* the pressed side of the per-row toggle */
+.capacity-dash__btn--active,
+.capacity-dash__btn--active:hover:not(:disabled) {
+  background: var(--cap-accent-bg);
+  border-color: var(--cap-accent-border);
+  color: var(--cap-accent-text);
+}
+
 .capacity-dash__pane {
   background: var(--cap-panel);
   border: 1px solid var(--cap-border);

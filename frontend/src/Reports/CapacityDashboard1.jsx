@@ -23,7 +23,46 @@ import {
   formatFull,
 } from "./capacityTransform";
 import { CHART_CHROME, GAP_COLOR, SERIES_COLORS } from "./colors";
+import { istInputToApi, lastHoursInputs } from "./timeRange";
 import "./CapacityDashboard.css";
+
+// The default query window: always the most recent 12 hours.
+const DEFAULT_WINDOW_HOURS = 12;
+const WIDEN_WINDOW_HOURS = 24;
+
+/**
+ * Theme-toggle glyph as inline SVG (currentColor) — the previous Unicode
+ * ☀/☾ rendered as an ambiguous asterisk in the monospace font on some
+ * platforms. `mode` is the CURRENT theme; the icon shows the target the click
+ * moves to (sun while dark, moon while light).
+ */
+function ThemeIcon({ mode }) {
+  const common = {
+    className: "capacity-dash__icon",
+    viewBox: "0 0 24 24",
+    width: 16,
+    height: 16,
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: 2,
+    strokeLinecap: "round",
+    strokeLinejoin: "round",
+    "aria-hidden": true,
+  };
+  if (mode === "dark") {
+    return (
+      <svg {...common}>
+        <circle cx="12" cy="12" r="4.2" />
+        <path d="M12 2.5v2.2M12 19.3v2.2M4.6 4.6l1.6 1.6M17.8 17.8l1.6 1.6M2.5 12h2.2M19.3 12h2.2M4.6 19.4l1.6-1.6M17.8 6.2l1.6-1.6" />
+      </svg>
+    );
+  }
+  return (
+    <svg {...common}>
+      <path d="M20 14.6A8 8 0 1 1 9.4 4 6.2 6.2 0 0 0 20 14.6z" />
+    </svg>
+  );
+}
 
 // ── zoom/pan constants ─────────────────────────────────────────
 const MIN_SPAN = 8; // never zoom tighter than 8 samples
@@ -61,13 +100,19 @@ const PANES = [
     ],
   },
   {
-    id: "agent",
-    title: "Agent CPU and memory",
+    id: "agent-cpu",
+    title: "Agent CPU",
     unit: "%",
-    lines: [
-      { key: "acpu", name: "Agent CPU", type: "monotone" },
-      { key: "amem", name: "Agent memory", type: "monotone" },
-    ],
+    lines: [{ key: "acpu", name: "Agent CPU", type: "monotone" }],
+  },
+  // Mb, not percent — its own pane, so it never shares the 0-100 axis above.
+  // Agent memory used to ride the Agent-CPU pane on a shared % axis; once its
+  // unit is Mb that would misstate it, the same reason bandwidth stands alone.
+  {
+    id: "agent-mem",
+    title: "Agent memory",
+    unit: "Mb",
+    lines: [{ key: "amem", name: "Agent memory", type: "monotone" }],
   },
   // Mbps, not percent — hence its own pane. Sharing the 0-100 axis above would
   // flatten a 0.04 Mbps line onto the baseline and imply it is a percentage.
@@ -121,7 +166,7 @@ const STATS = [
   { key: "avg_cpu_percent", label: "Avg CPU", unit: "%", modifier: "cpu" },
   { key: "avg_memory", label: "Avg memory", unit: "MB", modifier: "mem" },
   { key: "avg_agent_cpu_percent", label: "Avg Agent CPU", unit: "%", modifier: "acpu" },
-  { key: "avg_agent_memory", label: "Avg Agent memory", unit: "%", modifier: "amem" },
+  { key: "avg_agent_memory", label: "Avg Agent memory", unit: "Mb", modifier: "amem" },
   { key: "avg_bandwidth_mbps", label: "Avg Bandwidth", unit: "Mbps", modifier: "bw" },
 ];
 
@@ -134,6 +179,14 @@ function clamp01(n) {
 function clampRange(start, end, lastIndex) {
   return clampToBounds(start, end, lastIndex, MIN_SPAN);
 }
+
+/** Zoom a window about its own centre by `factor` (<1 in, >1 out). */
+function zoomAround([start, end], factor, lastIndex) {
+  const centre = (start + end) / 2;
+  return clampRange(centre - (centre - start) * factor, centre + (end - centre) * factor, lastIndex);
+}
+
+const fullRange = (lastIndex) => [0, Math.max(0, lastIndex)];
 
 const THEME_KEY = "capacity-dash-theme";
 
@@ -155,15 +208,9 @@ function initialTheme() {
   return "dark";
 }
 
+/** datetime-local input values for the last 12 hours, in IST (see timeRange.js). */
 function defaultLocalRange() {
-  const now = new Date();
-  const from = new Date(now.getTime() - 864e5);
-  const iso = (d, h, m) =>
-    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(
-      2,
-      "0"
-    )}T${h}:${m}`;
-  return { from: iso(from, "00", "00"), to: iso(now, "23", "59") };
+  return lastHoursInputs(DEFAULT_WINDOW_HOURS);
 }
 
 // ── zoom / pan / box-select ────────────────────────────────────
@@ -310,7 +357,7 @@ function CapacityTooltip({ active, payload, lines, unit }) {
 
   return (
     <div className="capacity-dash__tooltip">
-      <div className="capacity-dash__tooltip-time">{formatFull(row.ms)} UTC</div>
+      <div className="capacity-dash__tooltip-time">{formatFull(row.ms)} IST</div>
       {lines.map((line) => {
         const value = row[line.key];
         return (
@@ -337,8 +384,10 @@ function CapacityTooltip({ active, payload, lines, unit }) {
  * The chart itself, shared by the interactive panes and the printed pages.
  *
  * Pass `width`/`height` to get a fixed-size chart (print); omit them for a
- * ResponsiveContainer (screen). Print charts also drop the syncId so they never
- * link their crosshair to the live panes.
+ * ResponsiveContainer (screen).
+ *
+ * No syncId: each pane now zooms to its own window, so a shared crosshair would
+ * point at a different sample in every pane. Hover is per-pane, like the zoom.
  */
 function ChartBody({ lines, data, rows, gaps, start, end, theme, height, width, unit }) {
   const chrome = CHART_CHROME[theme];
@@ -349,7 +398,6 @@ function ChartBody({ lines, data, rows, gaps, start, end, theme, height, width, 
     <LineChart
       data={data}
       margin={CHART_MARGIN}
-      syncId={print ? undefined : "capacity"}
       width={width}
       height={print ? height : undefined}
     >
@@ -466,7 +514,20 @@ function PaneHeader({ pane, lines, hidden, onToggle }) {
 }
 
 // ── one chart pane ─────────────────────────────────────────────
-function ChartPane({ pane, rows, gaps, range, setRange, lastIndex, hidden, onToggle, loading, theme }) {
+// Each pane owns its zoom window. `masterRange` is the shared window driven by
+// the Full range strip and its buttons; the pane adopts it whenever it changes,
+// but zooming THIS pane (wheel, drag, box, its own buttons) only touches local
+// state — so the graphs zoom independently, and Full range still moves them all.
+function ChartPane({ pane, rows, masterRange, gaps, lastIndex, hidden, onToggle, loading, theme }) {
+  const [range, setRange] = useState(masterRange);
+
+  // Adopt the shared window when it changes (Full range brush / global buttons /
+  // data reload). Local-only zoom leaves masterRange untouched, so this stays
+  // quiet and the pane keeps its own window.
+  useEffect(() => {
+    setRange(masterRange);
+  }, [masterRange]);
+
   const { containerRef, selection, handlers } = useZoomPan({ range, setRange, lastIndex });
 
   const [start, end] = range;
@@ -480,9 +541,48 @@ function ChartPane({ pane, rows, gaps, range, setRange, lastIndex, hidden, onTog
   const painted = useMemo(() => paintLines(pane.lines, theme), [pane.lines, theme]);
   const shown = painted.filter((line) => !hidden[line.key]);
 
+  const windowed = start > 0 || end < lastIndex;
+  const from = rows[start] && rows[start].ms;
+  const to = rows[end] && rows[end].ms;
+
   return (
     <section className="capacity-dash__pane">
       <PaneHeader pane={pane} lines={painted} hidden={hidden} onToggle={onToggle} />
+
+      <div className="capacity-dash__pane-tools">
+        <span className="capacity-dash__pane-window">
+          {windowed ? `${formatClock(from)}–${formatClock(to)} · ${end - start + 1} pts` : "full range"}
+        </span>
+        <div className="capacity-dash__pane-btns">
+          <button
+            className="capacity-dash__btn capacity-dash__btn--sm"
+            type="button"
+            onClick={() => setRange(zoomAround(range, ZOOM_IN, lastIndex))}
+            title="Zoom in"
+            aria-label={`Zoom in on ${pane.title}`}
+          >
+            +
+          </button>
+          <button
+            className="capacity-dash__btn capacity-dash__btn--sm"
+            type="button"
+            onClick={() => setRange(zoomAround(range, ZOOM_OUT, lastIndex))}
+            title="Zoom out"
+            aria-label={`Zoom out on ${pane.title}`}
+          >
+            −
+          </button>
+          <button
+            className="capacity-dash__btn capacity-dash__btn--sm"
+            type="button"
+            onClick={() => setRange(fullRange(lastIndex))}
+            disabled={!windowed}
+            title="Reset this graph"
+          >
+            Reset
+          </button>
+        </div>
+      </div>
 
       <div
         className="capacity-dash__plot"
@@ -533,7 +633,7 @@ function PrintReport({ payload, rows, gaps, stats, periodText, theme }) {
             <header className="capacity-dash__print-head">
               <span className="capacity-dash__print-brand">Capacity report</span>
               <span className="capacity-dash__print-meta">
-                {payload ? payload.agent_name : "—"} · {periodText} · UTC
+                {payload ? payload.agent_name : "—"} · {periodText} · IST
               </span>
             </header>
 
@@ -604,7 +704,9 @@ export default function CapacityDashboard() {
   const [status, setStatus] = useState("loading"); // loading | success | error
   const [error, setError] = useState(null);
   const [hidden, setHidden] = useState({});
-  const [range, setRange] = useState([0, 0]);
+  // the shared window the Full range strip drives; each pane copies it, then may
+  // zoom on its own from there
+  const [masterRange, setMasterRange] = useState([0, 0]);
 
   const [theme, setTheme] = useState(initialTheme);
   const [printing, setPrinting] = useState(false);
@@ -617,9 +719,14 @@ export default function CapacityDashboard() {
   const gaps = useMemo(() => findGaps(rows), [rows]);
   const lastIndex = Math.max(0, rows.length - 1);
 
-  // datetime-local gives "YYYY-MM-DDTHH:MM"; the API wants naive seconds.
+  // The inputs are IST wall clock; the API wants naive UTC — istInputToApi bridges
+  // it and adds the seconds (00 for the window start, 59 for the end).
   const toParams = useCallback(
-    () => ({ agentName: agentName.trim(), fromDt: `${fromLocal}:00`, toDt: `${toLocal}:59` }),
+    () => ({
+      agentName: agentName.trim(),
+      fromDt: istInputToApi(fromLocal, "00"),
+      toDt: istInputToApi(toLocal, "59"),
+    }),
     [agentName, fromLocal, toLocal]
   );
 
@@ -664,9 +771,10 @@ export default function CapacityDashboard() {
     []
   );
 
-  // Reset the window whenever the underlying run changes size.
+  // Reset the shared window whenever the underlying run changes size — every
+  // pane adopts it, so a fresh load starts them all at full range.
   useEffect(() => {
-    setRange([0, Math.max(0, rows.length - 1)]);
+    setMasterRange(fullRange(rows.length - 1));
   }, [rows.length]);
 
   useEffect(() => {
@@ -729,20 +837,23 @@ export default function CapacityDashboard() {
   };
 
   const widenTo24h = () => {
-    const next = defaultLocalRange();
+    const next = lastHoursInputs(WIDEN_WINDOW_HOURS);
     setFromLocal(next.from);
     setToLocal(next.to);
-    load({ agentName: agentName.trim(), fromDt: `${next.from}:00`, toDt: `${next.to}:59` });
+    load({
+      agentName: agentName.trim(),
+      fromDt: istInputToApi(next.from, "00"),
+      toDt: istInputToApi(next.to, "59"),
+    });
   };
 
   const toggle = (key) => setHidden((h) => ({ ...h, [key]: !h[key] }));
 
-  const zoomBy = (factor) => {
-    const [start, end] = range;
-    const centre = (start + end) / 2;
-    setRange(clampRange(centre - (centre - start) * factor, centre + (end - centre) * factor, lastIndex));
-  };
-  const showLast = (n) => setRange(clampRange(lastIndex - n, lastIndex, lastIndex));
+  // These drive the SHARED window from the Full range strip, so they move every
+  // graph together. Per-graph zoom lives inside each ChartPane.
+  const zoomAll = (factor) => setMasterRange((r) => zoomAround(r, factor, lastIndex));
+  const showLastAll = (n) => setMasterRange(clampRange(lastIndex - n, lastIndex, lastIndex));
+  const resetAll = () => setMasterRange(fullRange(lastIndex));
 
   const loading = status === "loading";
   const summary = (payload && payload.summary) || {};
@@ -756,7 +867,7 @@ export default function CapacityDashboard() {
         <div className="capacity-dash__brand">
           <h1 className="capacity-dash__title">Capacity monitoring</h1>
           <p className="capacity-dash__subtitle">
-            {payload ? `${payload.agent_name} · ${rows.length} samples · times in UTC` : "times in UTC"}
+            {payload ? `${payload.agent_name} · ${rows.length} samples · times in IST` : "times in IST"}
           </p>
         </div>
 
@@ -817,7 +928,7 @@ export default function CapacityDashboard() {
             aria-pressed={theme === "light"}
             title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
           >
-            <span aria-hidden="true">{theme === "dark" ? "☀" : "☾"}</span>
+            <ThemeIcon mode={theme} />
             <span className="capacity-dash__sr-only">
               {theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
             </span>
@@ -884,39 +995,10 @@ export default function CapacityDashboard() {
         </div>
       ) : (
         <>
-          <div className="capacity-dash__toolbar">
-            <span className="capacity-dash__toolbar-label">
-              {rows.length
-                ? `${formatClock(rows[range[0]] && rows[range[0]].ms)} – ${formatClock(
-                    rows[range[1]] && rows[range[1]].ms
-                  )} · ${range[1] - range[0] + 1} pts`
-                : "—"}
-            </span>
-            <div className="capacity-dash__toolbar-actions">
-              <button className="capacity-dash__btn" type="button" onClick={() => zoomBy(ZOOM_IN)}>
-                Zoom in
-              </button>
-              <button className="capacity-dash__btn" type="button" onClick={() => zoomBy(ZOOM_OUT)}>
-                Zoom out
-              </button>
-              <button className="capacity-dash__btn" type="button" onClick={() => showLast(30)}>
-                Last 30
-              </button>
-              <button className="capacity-dash__btn" type="button" onClick={() => showLast(100)}>
-                Last 100
-              </button>
-              <button
-                className="capacity-dash__btn"
-                type="button"
-                onClick={() => setRange([0, lastIndex])}
-              >
-                All
-              </button>
-            </div>
-            <span className="capacity-dash__hint">
-              Wheel to zoom · drag to pan · shift-drag to box zoom · double-click to reset
-            </span>
-          </div>
+          <p className="capacity-dash__hint capacity-dash__hint--top">
+            Each graph zooms on its own — wheel to zoom, drag to pan, shift-drag to box zoom,
+            double-click to reset. Use <strong>Full range</strong> below to zoom every graph at once.
+          </p>
 
           <div className="capacity-dash__panes">
             {PANES.map((pane) => (
@@ -925,8 +1007,7 @@ export default function CapacityDashboard() {
                 pane={pane}
                 rows={rows}
                 gaps={gaps}
-                range={range}
-                setRange={setRange}
+                masterRange={masterRange}
                 lastIndex={lastIndex}
                 hidden={hidden}
                 onToggle={toggle}
@@ -940,7 +1021,28 @@ export default function CapacityDashboard() {
             <header className="capacity-dash__pane-header">
               <div className="capacity-dash__pane-titles">
                 <h2 className="capacity-dash__pane-title">Full range</h2>
-                <span className="capacity-dash__pane-unit">host CPU %</span>
+                <span className="capacity-dash__pane-unit">
+                  zooms every graph · {formatClock(rows[masterRange[0]] && rows[masterRange[0]].ms)}–
+                  {formatClock(rows[masterRange[1]] && rows[masterRange[1]].ms)} ·{" "}
+                  {masterRange[1] - masterRange[0] + 1} pts
+                </span>
+              </div>
+              <div className="capacity-dash__pane-btns">
+                <button className="capacity-dash__btn capacity-dash__btn--sm" type="button" onClick={() => zoomAll(ZOOM_IN)}>
+                  Zoom in
+                </button>
+                <button className="capacity-dash__btn capacity-dash__btn--sm" type="button" onClick={() => zoomAll(ZOOM_OUT)}>
+                  Zoom out
+                </button>
+                <button className="capacity-dash__btn capacity-dash__btn--sm" type="button" onClick={() => showLastAll(30)}>
+                  Last 30
+                </button>
+                <button className="capacity-dash__btn capacity-dash__btn--sm" type="button" onClick={() => showLastAll(100)}>
+                  Last 100
+                </button>
+                <button className="capacity-dash__btn capacity-dash__btn--sm" type="button" onClick={resetAll}>
+                  All
+                </button>
               </div>
             </header>
             <ResponsiveContainer width="100%" height={92}>
@@ -965,12 +1067,12 @@ export default function CapacityDashboard() {
                     travellerWidth={8}
                     stroke={CHART_CHROME[theme].cursor}
                     fill="transparent"
-                    startIndex={range[0]}
-                    endIndex={range[1]}
+                    startIndex={masterRange[0]}
+                    endIndex={masterRange[1]}
                     onChange={(next) => {
                       if (!next || next.startIndex == null || next.endIndex == null) return;
-                      if (next.startIndex === range[0] && next.endIndex === range[1]) return;
-                      setRange(clampRange(next.startIndex, next.endIndex, lastIndex));
+                      if (next.startIndex === masterRange[0] && next.endIndex === masterRange[1]) return;
+                      setMasterRange(clampRange(next.startIndex, next.endIndex, lastIndex));
                     }}
                     tickFormatter={(i) => (rows[i] ? formatClock(rows[i].ms) : "")}
                   />

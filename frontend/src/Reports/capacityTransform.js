@@ -4,10 +4,20 @@
  * No React and no network in here — every export is a plain function of its
  * arguments, so this file can be unit-tested on its own.
  *
- * Times are formatted in UTC on purpose. The API returns every sample stamped
- * "+00:00", and from_dt / to_dt go out naive (no zone), so rendering in UTC is
- * the only way the axis agrees with what the user typed into the range inputs.
+ * Times are displayed in India Standard Time (IST, Asia/Kolkata). Samples arrive
+ * as absolute instants (stamped "+00:00"), so `row.ms` is real epoch time; the
+ * formatters below just render that instant in IST. IST is a fixed UTC+5:30 with
+ * no daylight saving, so a constant offset is exact — no timezone library needed.
+ * The API wire format stays UTC; the conversion lives in timeRange.js.
  */
+
+// India Standard Time is UTC+5:30 year-round (no DST).
+const IST_OFFSET_MS = 330 * 60 * 1000;
+
+// Shift an absolute instant so its UTC getters read the IST wall clock.
+function istParts(ms) {
+  return new Date(ms + IST_OFFSET_MS);
+}
 
 /**
  * Payload series key -> the row field it fills.
@@ -104,17 +114,17 @@ export function findGaps(rows) {
   return gaps;
 }
 
-/** Epoch ms -> "17:14" (24h, UTC). */
+/** Epoch ms -> "17:14" (24h, IST). */
 export function formatClock(ms) {
   if (!Number.isFinite(ms)) return "";
-  const d = new Date(ms);
+  const d = istParts(ms);
   return `${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}`;
 }
 
-/** Epoch ms -> "Jul 15, 17:14:34" (UTC). */
+/** Epoch ms -> "Jul 15, 17:14:34" (IST). */
 export function formatFull(ms) {
   if (!Number.isFinite(ms)) return "";
-  const d = new Date(ms);
+  const d = istParts(ms);
   return `${MONTHS[d.getUTCMonth()]} ${d.getUTCDate()}, ${pad(d.getUTCHours())}:${pad(
     d.getUTCMinutes()
   )}:${pad(d.getUTCSeconds())}`;

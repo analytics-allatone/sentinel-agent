@@ -5,6 +5,7 @@ import Login from "./Login/Login";
 import Register from "./Register/Register";
 import Dashboard from "./Dashboard/Dashboard";
 import ForgotPage from "./ForgotPage/forgot-page";
+import EnterOtp from "./EnterOtp/EnterOtp";
 import InstallationProcess from "./InstallationProcess/InstallationProcess";
 import AgentDetails from "./Dashboard/AgentDashboard/AgentDetails";
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -14,9 +15,11 @@ import { useEffect, useState } from "react";
 import { registerLoaderCallbacks } from "./api/api";
 import AgentCardGrid from "./Dashboard/AgentDashboard/AgentCardGrid";
 import SOC2Report from "./Reports/SOC2Report";
-import CapacityDashboard from "./Reports/CapacityDashboard";
+import CapacityDashboard1 from "./Reports/CapacityDashboard1";
 import { AccessProvider } from "./Access/AccessContext";
 import AccessManagement from "./Access/AccessManagement";
+import CapacityDashboard from "./Reports/CapacityDashboard";
+import Unauthorized from "./pages/Unauthorized/Unauthorized";
 
 function AppContent() {
   const [isLoading, setIsLoading] = useState(false);
@@ -39,6 +42,9 @@ function AppContent() {
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/forgot-password" element={<ForgotPage />} />
+          <Route path="/enter-otp" element={<EnterOtp />} />
+          {/* 403 — full-screen, no app chrome; the guard redirects here */}
+          <Route path="/unauthorized" element={<Unauthorized />} />
 
           {/* Protected Routes - Authentication required */}
           <Route
@@ -58,11 +64,37 @@ function AppContent() {
             element={<ProtectedRoute element={<SOC2Report />} />}
           />
           <Route
+            path="/reports/capacity1"
+            element={<ProtectedRoute element={<CapacityDashboard />} />}
+          />
+          <Route
             path="/reports/capacity"
             element={<ProtectedRoute element={<CapacityDashboard />} />}
           />
           {/* RBAC — self-contained, uses its own sign-in / role gate */}
           <Route path="/access"     element={<ProtectedRoute element={<AccessManagement />} />} />
+
+          {/*
+            Role-based protection examples (ProtectedRoute now accepts `roles`
+            and `perm`; omit both for an auth-only route as above):
+
+              // only Admin (super_admin) or Manager (admin) may enter:
+              <Route
+                path="/reports/capacity"
+                element={
+                  <ProtectedRoute roles={["super_admin", "admin"]} element={<CapacityDashboard />} />
+                }
+              />
+
+              // require a specific permission action instead of a role:
+              <Route
+                path="/access"
+                element={<ProtectedRoute perm="manageUsers" element={<AccessManagement />} />}
+              />
+
+            Not signed in        -> /login (the attempted route is remembered).
+            Signed in, no access -> /unauthorized (the 403 page).
+          */}
           <Route
             path="/agentDetails"
             element={
