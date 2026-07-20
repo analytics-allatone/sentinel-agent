@@ -10,6 +10,9 @@ from collectors.network_collector import NetworkCollector
 from collectors.process_collector import ProcessCollector
 from collectors.usb_collector import USBCollector
 from collectors.harddisk_collector import HardDiskCollector
+from collectors.db_detect import run_detect
+from collectors.db_inspector import DatabaseInspector
+
 from collectors.capacity_monitoring_collector import ResourceCollector
 from utils.utils import get_machine_info
 
@@ -146,6 +149,37 @@ class SentinelAgent:
             print("USB Collector started")
         except Exception as e:
             print(f"USB collector error: {e}")
+
+        
+
+
+        found = run_detect(dispatch, self.machine_info)
+
+        # Database discovery collector (detects local engines: postgres/mysql/oracle...)
+        dd_cfg = self.config.get("collectors", {}).get("db_discovery", {})
+        if dd_cfg.get("enabled", True):
+            try:
+                self._db_inspector = DatabaseInspector(
+                dispatch=dispatch, machine_info=self.machine_info,
+                config_file=dd_cfg.get("config_file"),
+                poll_interval=dd_cfg.get("poll_interval", 300.0),
+                control_url=os.getenv("DB_CONTROL_URL"),
+                )
+                self._db_inspector.set_detected(found)
+                self._db_inspector.start()          # exits by itself while nothing is ticked
+                self._collectors.append(self._db_inspector)
+
+                # ddc = DatabaseDiscoveryCollector(
+                #     dispatch      = dispatch,
+                #     machine_info  = self.machine_info,
+                #     config_file   = dd_cfg.get("config_file"),
+                #     poll_interval = dd_cfg.get("poll_interval", 5.0)
+                # )
+                # ddc.start()
+                # self._collectors.append(ddc)
+                # print("Database Discovery Collector started")
+            except Exception as e:
+                print(f"Database discovery collector error: {e}")
 
         # Hard Disk collector
         # hd_cfg = col_cfg.get("harddisk", {})

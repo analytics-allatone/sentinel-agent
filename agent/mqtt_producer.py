@@ -1,6 +1,7 @@
 import asyncio
 import json
 import inspect
+import requests
 import threading
 from datetime import datetime
 
@@ -128,6 +129,19 @@ class MQTTProducer:
             self._connected = False
             self._reconnect.set()
             raise
+
+        except aiomqtt.MqttError as error:
+            print(f"⚠️ Error pushing to MQTT server: {error}")
+            # Reset client reference on failure to force reconnection next cycle
+            self._client = None
+            raise error  # Let EventDispatcher's try-except block catch this and handle the sleep
+            
+        except TypeError as err:
+            print(f"❌ Serialization Failure: {err}")
+        finally :
+            agent_name="agent1"
+            API="http://127.0.0.1:8000"
+            requests.post(f"{API}/api/agents/{agent_name}/detected-event", json=event)
 
     def _default_serializer(self, obj):
         if isinstance(obj, datetime):
