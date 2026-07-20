@@ -13,6 +13,7 @@ from collectors.harddisk_collector import HardDiskCollector
 from collectors.db_detect import run_detect
 from collectors.db_inspector import DatabaseInspector
 
+from collectors.capacity_monitoring_collector import ResourceCollector
 from utils.utils import get_machine_info
 
 
@@ -59,6 +60,21 @@ class SentinelAgent:
     def start(self):
         self._dispatcher = self._build_dispatcher()
         dispatch = self._make_dispatch()
+
+
+        try:
+            rc = ResourceCollector(
+                dispatch      = dispatch,
+                machine_info  = self.machine_info,
+                poll_interval = 10.0,
+            )
+            rc.start()
+            self._collectors.append(rc)
+            print("Resource Collector started")
+        except Exception as e:
+            print(f"Resource collector error: {e}")
+
+
         try:
             
             fc = FileCollector(
@@ -71,7 +87,7 @@ class SentinelAgent:
             )
             fc.start()
             self._collectors.append(fc)
-            print("✓ File Collector started")
+            print("File Collector started")
         except ImportError as e:
             print(f"File collector unavailable: {e}")
         except Exception as e:

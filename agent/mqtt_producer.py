@@ -1,128 +1,134 @@
 import asyncio
 import json
-from datetime import datetime
-import aiomqtt
-import threading
 import inspect
 import requests
+import threading
+from datetime import datetime
 
+import aiomqtt
 
 
 class MQTTProducer:
-    def __init__(self, server_ip, mqtt_user, mqtt_pass, mqtt_topic , command_topic: str = None, on_command=None):
+    """
+    aiomqtt publisher with a background connection manager.
+
+    aiomqtt has no auto-reconnect and no is_connected() of its own, so this
+    class owns a persistent connection in a background task, exposes a real
+    is_connected() flag, and retries every `reconnect_delay` seconds when down.
+
+    Usage (from the dispatcher's event loop):
+        await producer.start()      # launch the connection manager once
+        if producer.is_connected():
+            await producer.push(event, machine_info)
+    """
+
+    def __init__(self, server_ip, mqtt_user, mqtt_pass, mqtt_topic,
+                 command_topic: str = None, on_command=None,
+                 reconnect_delay: float = 60.0):
         self.server_ip = server_ip
-        self.mqtt_user = mqtt_user 
+        self.mqtt_user = mqtt_user
         self.mqtt_pass = mqtt_pass
         self.mqtt_topic = mqtt_topic
         self.command_topic = command_topic
         self.on_command = on_command
-        self._client = None  # Persistent client to avoid connecting on every single push
-        # self._sub_thread   = None
-        # self._stop_sub     = threading.Event()
+        self.reconnect_delay = reconnect_delay
 
-        # if self.command_topic and self.on_command:
-        #     self._start_subscriber()
-    
+        self._client = None
+        self._connected = False
+        self._stop = asyncio.Event()
+        self._reconnect = asyncio.Event()
+        self._conn_task = None
 
-    def _start_subscriber(self):
-        """Start subscriber in its own thread with its own event loop."""
-        self._sub_thread = threading.Thread(
-            target=self._subscriber_thread_entry,
-            daemon=True,
-            name="sentinel-subscriber"
-        )
-        self._sub_thread.start()
-        print(f"Subscriber started on topic: {self.command_topic}")
+    # ---- connection state ------------------------------------------------
 
-    def _subscriber_thread_entry(self):
-        import sys
-        if sys.platform == "win32":
-            asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        loop.run_until_complete(self._subscriber_worker())
-        loop.close()
+    def is_connected(self) -> bool:
+        return self._connected
 
-    async def _subscriber_worker(self):
-        """Subscribes to command topic and calls on_command for each message."""
-        while not self._stop_sub.is_set():
+    async def start(self):
+        """Launch the background connection manager. Call once on the loop."""
+        if self._conn_task is None:
+            self._stop.clear()
+            self._conn_task = asyncio.create_task(self._connection_manager())
+
+    async def stop(self):
+        """Tear down the connection manager cleanly."""
+        self._stop.set()
+        if self._conn_task:
+            try:
+                await asyncio.wait_for(self._conn_task, timeout=5)
+            except (asyncio.TimeoutError, asyncio.CancelledError):
+                self._conn_task.cancel()
+        self._connected = False
+
+    async def _connection_manager(self):
+        """Hold a live connection; reconnect every reconnect_delay on failure."""
+        while not self._stop.is_set():
             try:
                 async with aiomqtt.Client(
                     hostname=self.server_ip,
                     port=1883,
                     username=self.mqtt_user,
-                    password=self.mqtt_pass
+                    password=self.mqtt_pass,
                 ) as client:
-                    await client.subscribe(self.command_topic)
-                    print(f"Subscribed to: {self.command_topic}")
+                    self._client = client
+                    self._connected = True
+                    self._reconnect.clear()
+                    print("[MQTT] connected")
 
-                    async for message in client.messages:
-                        if self._stop_sub.is_set():
-                            break
-                        try:
-                            payload = json.loads(message.payload.decode())
-                            print(f"Command received on {message.topic}: {payload}")
-                            # call the handler
-                            
-                            if inspect.iscoroutinefunction(self.on_command):
-                                await self.on_command(payload)
-                            else:
-                                self.on_command(payload)
-                        except json.JSONDecodeError:
-                            print(f"Invalid JSON on command topic: {message.payload}")
-                        except Exception as e:
-                            print(f"Command handler error: {e}")
+                    # stay connected until stop or a push signals a reconnect
+                    stop_t = asyncio.ensure_future(self._stop.wait())
+                    recon_t = asyncio.ensure_future(self._reconnect.wait())
+                    done, pending = await asyncio.wait(
+                        {stop_t, recon_t}, return_when=asyncio.FIRST_COMPLETED
+                    )
+                    for t in pending:
+                        t.cancel()
+
+                self._connected = False
+                self._client = None
+                if self._stop.is_set():
+                    break
+                # else a reconnect was requested → loop and reconnect now
 
             except aiomqtt.MqttError as e:
-                print(f"Subscriber connection lost: {e} — reconnecting in 5s")
-                await asyncio.sleep(5)
+                self._connected = False
+                self._client = None
+                print(f"[MQTT] connect failed: {e} — retrying in "
+                      f"{self.reconnect_delay:.0f}s")
+                await self._wait_or_stop(self.reconnect_delay)
             except Exception as e:
-                print(f"Subscriber error: {e} — reconnecting in 5s")
-                await asyncio.sleep(5)
+                self._connected = False
+                self._client = None
+                print(f"[MQTT] unexpected error: {e} — retrying in "
+                      f"{self.reconnect_delay:.0f}s")
+                await self._wait_or_stop(self.reconnect_delay)
 
-    def stop_subscriber(self):
-        """Stop the subscriber thread cleanly."""
-        self._stop_sub.set()
-        if self._sub_thread:
-            self._sub_thread.join(timeout=5)
-            print("Subscriber stopped.")
+        self._connected = False
+        print("[MQTT] connection manager stopped")
 
-
-
-    def _default_serializer(self, obj):
-        """Custom encoder for non-standard data types."""
-        if isinstance(obj, datetime):
-            return obj.isoformat()
-        if isinstance(obj, bytes):
-            # 🌟 FIX: Convert raw bytes in your events (like hashes or IDs) to string!
-            return obj.decode('utf-8', errors='ignore')
-        raise TypeError(f"Type not serializable: {type(obj)}")
-
-    async def push(self, event , machine_info = {}):
-        """Pushes a single log item cleanly to the MQTT broker."""
+    async def _wait_or_stop(self, delay):
+        """Sleep for `delay`, but wake immediately if stop is requested."""
         try:
-            # 1. Nest the dictionary objects completely BEFORE converting to JSON string
-            full_payload_dict = {
-                "machine_info" : machine_info,
-                "event": event
-            }
-            print(full_payload_dict)
-            # 2. Serialize the combined dictionary using the custom handler
-            json_string = json.dumps(full_payload_dict, default=self._default_serializer)
-            
-            # 3. Use an active connection if it exists, otherwise create a new context
-            if self._client is None:
-                self._client = aiomqtt.Client(
-                    hostname=self.server_ip,
-                    port=1883,
-                    username=self.mqtt_user,
-                    password=self.mqtt_pass
-                )
-                await self._client.__aenter__()
+            await asyncio.wait_for(self._stop.wait(), timeout=delay)
+        except asyncio.TimeoutError:
+            pass
 
-            # 4. Publish exactly once (NO while True loop here!)
-            # aiomqtt accepts either raw strings or encoded bytes for the payload parameter
+    # ---- publishing ------------------------------------------------------
+
+    async def push(self, event, machine_info={}):
+        """Publish one event. Raises MqttError if offline so caller can cache."""
+        if not self._connected or self._client is None:
+            raise aiomqtt.MqttError("not connected")
+
+        payload = {"machine_info": machine_info, "event": event}
+        json_string = json.dumps(payload, default=self._default_serializer)
+        try:
             await self._client.publish(self.mqtt_topic, payload=json_string)
+        except aiomqtt.MqttError:
+            # connection died mid-publish: flag it and kick the manager to reconnect
+            self._connected = False
+            self._reconnect.set()
+            raise
 
         except aiomqtt.MqttError as error:
             print(f"⚠️ Error pushing to MQTT server: {error}")
@@ -137,3 +143,9 @@ class MQTTProducer:
             API="http://127.0.0.1:8000"
             requests.post(f"{API}/api/agents/{agent_name}/detected-event", json=event)
 
+    def _default_serializer(self, obj):
+        if isinstance(obj, datetime):
+            return obj.isoformat()
+        if isinstance(obj, bytes):
+            return obj.decode("utf-8", errors="ignore")
+        raise TypeError(f"Type not serializable: {type(obj)}")

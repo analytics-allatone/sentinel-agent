@@ -4,10 +4,9 @@ from pydantic import Basemodel , Datetime
 
 class AgentsInfo(Basemodel):
     id : int
-    name : str
-    hostname : str
+    agent_name : str
+    host_name : str
     os : str
-    last_seen : str
     status : str
 
 
@@ -23,8 +22,6 @@ class Soc2ReportSummary(Basemodel):
     period_days : int
     critical_events : int
     agents_monitored : int
-    compliance_score : float
-    compliance_gap : float
     recent_events : list[Soc2ReportRecentEvent]
 
 

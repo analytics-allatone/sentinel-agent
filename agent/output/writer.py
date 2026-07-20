@@ -5,7 +5,7 @@ import os
 import sys
 from queue import Queue, Empty
 from mqtt_producer import MQTTProducer
-from config.unique_info import AGENT_NAME
+from config.unique_info import AGENT_NAME , SERVER_IP
 from utils.utils import handle_command
 import diskcache
 
@@ -61,11 +61,12 @@ class EventDispatcher:
 
     async def _worker(self):
         print("Sentinel Dispatcher Pipeline Engine Active.")
+        await self._mqtt.start()
         await self._flush_retry_cache()
 
         while not self._stop.is_set():
             try:
-                event = self._queue.get(timeout=0.5)
+                event = await self._loop.run_in_executor(None, self._queue.get, True, 0.5)
                 await self._push_with_retry(event)
                 self._queue.task_done()
             except Empty:
@@ -77,8 +78,14 @@ class EventDispatcher:
                 await asyncio.sleep(2)
 
     async def _push_with_retry(self, event: dict):
+        if not self._mqtt.is_connected():
+            self._save_to_cache(event)
+            return
         try:
-            await self._mqtt.push(event.get("event"), event.get("machine_info"))
+            await asyncio.wait_for(
+                self._mqtt.push(event.get("event"), event.get("machine_info")),
+                timeout=5.0,
+            )
             if self._stdout:
                 print(f"Event pushed: {event.get('event', {}).get('type')}")
         except Exception as e:
@@ -101,6 +108,9 @@ class EventDispatcher:
         if len(self._retry_cache) == 0:
             return
 
+        if not self._mqtt.is_connected():
+            return 
+    
         print(f"Retrying {len(self._retry_cache)} cached events...")
         failed = 0
 
@@ -112,7 +122,10 @@ class EventDispatcher:
                     continue
 
                 event = json.loads(raw)
-                await self._mqtt.push(event.get("event"), event.get("machine_info"))
+                await asyncio.wait_for(
+                    self._mqtt.push(event.get("event"), event.get("machine_info")),
+                    timeout=5.0,
+                )
                 self._retry_cache.delete(key)
 
             except Exception as e:

@@ -302,10 +302,40 @@ const InstallationProcess = () => {
   };
 
   // Copy to clipboard
-  const copyToClipboard = (text, type) => {
-    navigator.clipboard.writeText(text);
-    setCopied(type);
-    setTimeout(() => setCopied(""), 2000);
+  const copyToClipboard = async (text, type) => {
+    let ok = false;
+    // navigator.clipboard is only available in a secure context (HTTPS or
+    // localhost). Over plain HTTP it's undefined, so fall back to the legacy
+    // execCommand approach that works everywhere.
+    try {
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(text);
+        ok = true;
+      } else {
+        const textarea = document.createElement("textarea");
+        textarea.value = text;
+        // keep it off-screen and non-disruptive
+        textarea.style.position = "fixed";
+        textarea.style.top = "-9999px";
+        textarea.style.left = "-9999px";
+        textarea.setAttribute("readonly", "");
+        document.body.appendChild(textarea);
+        textarea.select();
+        textarea.setSelectionRange(0, text.length);
+        ok = document.execCommand("copy");
+        document.body.removeChild(textarea);
+      }
+    } catch (err) {
+      console.error("[Copy] Failed to copy to clipboard:", err);
+      ok = false;
+    }
+
+    if (ok) {
+      setCopied(type);
+      setTimeout(() => setCopied(""), 2000);
+    } else {
+      alert("Copy failed. Please select the command and copy it manually.");
+    }
   };
 
   // Reset form

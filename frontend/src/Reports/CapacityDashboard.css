@@ -1,0 +1,808 @@
+/* ─────────────────────────────────────────────────────────────
+   Capacity monitoring dashboard.
+
+   Everything is scoped under .capacity-dash — no bare element selectors — so
+   nothing leaks into the rest of the app, and the app's own globals (App.css
+   ships `.App { text-align: center }`, and the auth pages ship an unscoped
+   `form { flex-direction: column }`) are neutralised here rather than fought
+   selector-by-selector.
+   ───────────────────────────────────────────────────────────── */
+
+.capacity-dash {
+  /* dark is the default theme; .capacity-dash--light re-points these below */
+  --cap-bg: #0c1118;
+  --cap-panel: #121924;
+  --cap-panel-hi: #16202d;
+  --cap-border: #1e2836;
+  --cap-grid: #182231;
+  --cap-text: #c9d4e2;
+  --cap-strong: #e6edf6;
+  --cap-dim: #6b7c93;
+  --cap-faint: #3e4c60;
+  --cap-scheme: dark;
+
+  --cap-cpu: #f2a93b;
+  --cap-mem: #56c7f2;
+  --cap-sto: #8b7fe8;
+  --cap-agent-cpu: #4fd6a0;
+  --cap-agent-mem: #f2748d;
+  --cap-bw: #4a90e2;
+
+  --cap-accent-bg: #1d4e63;
+  --cap-accent-border: #2a6f8c;
+  --cap-accent-text: #dff1fa;
+  --cap-btn-hover: #1c2836;
+
+  --cap-error-bg: #24141a;
+  --cap-error-border: #4a2530;
+  --cap-error-text: #f6c9d2;
+
+  --cap-select: rgba(86, 199, 242, 0.14);
+  --cap-veil: rgba(12, 17, 24, 0.45);
+
+  --cap-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --cap-radius: 8px;
+
+  background: var(--cap-bg);
+  color: var(--cap-text);
+  font-family: var(--cap-mono);
+  min-height: 100vh;
+  padding: 16px;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-bottom: 100px;
+}
+
+/* ── light theme ─────────────────────────────────────────────
+   Selected, not an inversion: the series hexes are re-stepped in colors.js
+   (the dark ones sit under 3:1 on white), and the chrome is re-picked here. */
+.capacity-dash--light {
+  --cap-bg: #f4f5f7;
+  --cap-panel: #ffffff;
+  --cap-panel-hi: #f7f8fa;
+  --cap-border: #dfe3ea;
+  --cap-grid: #e7e9ee;
+  --cap-text: #313947;
+  --cap-strong: #0f141c;
+  --cap-dim: #6b7280;
+  --cap-faint: #aab1bd;
+  --cap-scheme: light;
+
+  --cap-cpu: #b06a00;
+  --cap-mem: #0f7fa6;
+  --cap-sto: #5b4fd6;
+  --cap-agent-cpu: #00704a;
+  --cap-agent-mem: #e8628f;
+  --cap-bw: #1d5fd0;
+
+  --cap-accent-bg: #0f6e8c;
+  --cap-accent-border: #0f6e8c;
+  --cap-accent-text: #ffffff;
+  --cap-btn-hover: #eef0f4;
+
+  --cap-error-bg: #fdeced;
+  --cap-error-border: #f3c6cc;
+  --cap-error-text: #9b1c2e;
+
+  --cap-select: rgba(15, 127, 166, 0.16);
+  --cap-veil: rgba(255, 255, 255, 0.55);
+}
+
+/* visually hidden but read aloud */
+.capacity-dash__sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ── top bar ─────────────────────────────────────────────── */
+.capacity-dash__topbar {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.capacity-dash__brand {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.capacity-dash__title {
+  font-size: 19px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  margin: 0;
+  color: var(--cap-strong);
+}
+.capacity-dash__subtitle {
+  font-size: 12px;
+  color: var(--cap-dim);
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.capacity-dash__controls {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.capacity-dash__field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.capacity-dash__field-label {
+  font-size: 10.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--cap-dim);
+  line-height: 1;
+}
+.capacity-dash__input {
+  height: 34px;
+  min-width: 170px;
+  background: var(--cap-panel);
+  border: 1px solid var(--cap-border);
+  border-radius: 6px;
+  color: var(--cap-text);
+  font-family: var(--cap-mono);
+  font-size: 12.5px;
+  padding: 0 9px;
+  color-scheme: var(--cap-scheme);
+}
+.capacity-dash__input:hover {
+  border-color: var(--cap-faint);
+}
+.capacity-dash__input:focus-visible {
+  outline: 2px solid var(--cap-mem);
+  outline-offset: 1px;
+  border-color: transparent;
+}
+
+/* quick-range dropdown — shares the input chrome */
+.capacity-dash__select {
+  height: 34px;
+  min-width: 132px;
+  background: var(--cap-panel);
+  border: 1px solid var(--cap-border);
+  border-radius: 6px;
+  color: var(--cap-text);
+  font-family: var(--cap-mono);
+  font-size: 12.5px;
+  padding: 0 9px;
+  cursor: pointer;
+  color-scheme: var(--cap-scheme);
+}
+.capacity-dash__select:hover {
+  border-color: var(--cap-faint);
+}
+.capacity-dash__select:focus-visible {
+  outline: 2px solid var(--cap-mem);
+  outline-offset: 1px;
+  border-color: transparent;
+}
+.capacity-dash__select:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* ── buttons ─────────────────────────────────────────────── */
+.capacity-dash__btn {
+  height: 34px;
+  background: var(--cap-panel-hi);
+  border: 1px solid var(--cap-border);
+  border-radius: 6px;
+  color: var(--cap-text);
+  font-family: var(--cap-mono);
+  font-size: 12px;
+  padding: 0 11px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.12s ease, border-color 0.12s ease;
+}
+.capacity-dash__btn:hover:not(:disabled) {
+  background: var(--cap-btn-hover);
+  border-color: var(--cap-faint);
+}
+.capacity-dash__btn:focus-visible {
+  outline: 2px solid var(--cap-mem);
+  outline-offset: 1px;
+}
+.capacity-dash__btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.capacity-dash__btn--primary {
+  background: var(--cap-accent-bg);
+  border-color: var(--cap-accent-border);
+  color: var(--cap-accent-text);
+}
+.capacity-dash__btn--primary:hover:not(:disabled) {
+  background: var(--cap-accent-border);
+}
+.capacity-dash__btn--icon {
+  width: 34px;
+  padding: 0;
+  font-size: 14px;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.capacity-dash__icon {
+  display: block;
+}
+
+/* ── error ───────────────────────────────────────────────── */
+.capacity-dash__error {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: var(--cap-error-bg);
+  border: 1px solid var(--cap-error-border);
+  border-left: 3px solid var(--cap-agent-mem);
+  border-radius: var(--cap-radius);
+  padding: 10px 12px;
+  flex-wrap: wrap;
+}
+.capacity-dash__error-body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.capacity-dash__error-msg {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--cap-error-text);
+}
+.capacity-dash__error-url {
+  font-size: 10.5px;
+  color: var(--cap-dim);
+  word-break: break-all;
+}
+.capacity-dash__error-note {
+  margin: 0;
+  font-size: 10.5px;
+  color: var(--cap-dim);
+}
+
+/* ── stat strip ──────────────────────────────────────────── */
+.capacity-dash__stats {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 10px;
+  transition: opacity 0.15s ease;
+}
+.capacity-dash__stats--loading {
+  opacity: 0.5;
+}
+/* space-between pins the value to the bottom, so every value sits on the same
+   line across the row even when a longer label wraps to two lines */
+.capacity-dash__stat {
+  background: var(--cap-panel);
+  border: 1px solid var(--cap-border);
+  border-left: 4px solid var(--cap-faint);
+  border-radius: var(--cap-radius);
+  padding: 14px 16px;
+  min-height: 96px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 0;
+  transition: border-color 0.12s ease, background 0.12s ease;
+}
+.capacity-dash__stat:hover {
+  background: var(--cap-panel-hi);
+}
+.capacity-dash__stat--cpu {
+  border-left-color: var(--cap-cpu);
+}
+.capacity-dash__stat--mem {
+  border-left-color: var(--cap-mem);
+}
+.capacity-dash__stat--acpu {
+  border-left-color: var(--cap-agent-cpu);
+}
+.capacity-dash__stat--amem {
+  border-left-color: var(--cap-agent-mem);
+}
+.capacity-dash__stat--bw {
+  border-left-color: var(--cap-bw);
+}
+.capacity-dash__stat--samples {
+  border-left-color: var(--cap-faint);
+}
+/* wraps rather than truncating — "Avg Agent memory" does not fit on one line
+   in a six-up row, and an ellipsised metric name is worse than a second line */
+.capacity-dash__stat-label {
+  font-size: 11px;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--cap-dim);
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+.capacity-dash__stat-value {
+  font-size: 26px;
+  line-height: 1;
+  letter-spacing: -0.01em;
+  color: var(--cap-strong);
+  font-variant-numeric: tabular-nums;
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  min-width: 0;
+}
+.capacity-dash__stat-unit {
+  font-size: 12px;
+  letter-spacing: 0;
+  color: var(--cap-dim);
+  flex-shrink: 0;
+}
+
+/* ── hints & small buttons ───────────────────────────────── */
+.capacity-dash__hint {
+  font-size: 10.5px;
+  color: var(--cap-dim);
+}
+.capacity-dash__hint--top {
+  margin: 0;
+  padding: 8px 12px;
+  background: var(--cap-panel);
+  border: 1px solid var(--cap-border);
+  border-radius: var(--cap-radius);
+  line-height: 1.5;
+}
+.capacity-dash__hint--top strong {
+  color: var(--cap-text);
+  font-weight: 600;
+}
+
+/* compact button used by the per-pane and Full-range zoom clusters */
+.capacity-dash__btn--sm {
+  height: 26px;
+  padding: 0 9px;
+  font-size: 11px;
+}
+
+/* per-pane zoom cluster, sits between the header and the plot */
+.capacity-dash__pane-tools {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+.capacity-dash__pane-window {
+  font-size: 11px;
+  color: var(--cap-dim);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.capacity-dash__pane-btns {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+/* ── panes ───────────────────────────────────────────────── */
+.capacity-dash__panes {
+  display: flex;
+  flex-direction: column;
+  gap: 50px;
+}
+/* grid variant whose column count is driven by the --cap-cols custom property
+   (set inline from the per-row toggle); collapses to a single column when the
+   viewport is too narrow for two graphs to stay legible */
+.capacity-dash__panes--cols {
+  display: grid;
+  grid-template-columns: repeat(var(--cap-cols, 2), minmax(0, 1fr));
+  gap: 30px;
+}
+@media (max-width: 1000px) {
+  .capacity-dash__panes--cols {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* header bar above the panes: interaction hint + the per-row layout toggle */
+.capacity-dash__paneshead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 8px 12px;
+  background: var(--cap-panel);
+  border: 1px solid var(--cap-border);
+  border-radius: var(--cap-radius);
+}
+.capacity-dash__paneshead .capacity-dash__hint {
+  line-height: 1.5;
+  margin: 0;
+}
+.capacity-dash__layout {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+.capacity-dash__layout-label {
+  font-size: 10.5px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--cap-dim);
+  white-space: nowrap;
+}
+/* the pressed side of the per-row toggle */
+.capacity-dash__btn--active,
+.capacity-dash__btn--active:hover:not(:disabled) {
+  background: var(--cap-accent-bg);
+  border-color: var(--cap-accent-border);
+  color: var(--cap-accent-text);
+}
+
+.capacity-dash__pane {
+  background: var(--cap-panel);
+  border: 1px solid var(--cap-border);
+  border-radius: var(--cap-radius);
+  padding: 14px 16px 16px;
+}
+.capacity-dash__pane-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+.capacity-dash__pane-titles {
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+  min-width: 0;
+}
+.capacity-dash__pane-title {
+  font-size: 13.5px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  margin: 0;
+  color: var(--cap-strong);
+}
+.capacity-dash__pane-unit {
+  font-size: 11px;
+  color: var(--cap-dim);
+}
+
+.capacity-dash__legend {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  flex-wrap: wrap;
+}
+.capacity-dash__legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  color: var(--cap-text);
+  font-family: var(--cap-mono);
+  font-size: 11.5px;
+  padding: 3px 6px;
+  cursor: pointer;
+}
+.capacity-dash__legend-item:hover {
+  background: var(--cap-panel-hi);
+}
+.capacity-dash__legend-item:focus-visible {
+  outline: 2px solid var(--cap-mem);
+  outline-offset: 1px;
+}
+.capacity-dash__legend-item--off {
+  color: var(--cap-faint);
+}
+.capacity-dash__legend-item--off .capacity-dash__swatch {
+  opacity: 0.28;
+}
+.capacity-dash__swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  flex-shrink: 0;
+  display: inline-block;
+}
+
+/* plot area — the pointer surface for zoom / pan / box select */
+.capacity-dash__plot {
+  position: relative;
+  touch-action: none;
+  cursor: crosshair;
+  user-select: none;
+}
+.capacity-dash__selection {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  background: var(--cap-select);
+  border-left: 1px solid var(--cap-mem);
+  border-right: 1px solid var(--cap-mem);
+  pointer-events: none;
+}
+.capacity-dash__pane-veil {
+  position: absolute;
+  inset: 0;
+  background: var(--cap-veil);
+  pointer-events: none;
+}
+
+/* ── tooltip ─────────────────────────────────────────────── */
+.capacity-dash__tooltip {
+  background: var(--cap-panel);
+  border: 1px solid var(--cap-border);
+  border-radius: 6px;
+  padding: 7px 9px;
+  font-size: 11.5px;
+  min-width: 168px;
+}
+.capacity-dash__tooltip-time {
+  color: var(--cap-strong);
+  margin-bottom: 5px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.capacity-dash__tooltip-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 1px 0;
+}
+.capacity-dash__tooltip-key {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--cap-dim);
+}
+.capacity-dash__tooltip-value {
+  color: var(--cap-text);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── overview strip ──────────────────────────────────────── */
+.capacity-dash__overview {
+  background: var(--cap-panel);
+  border: 1px solid var(--cap-border);
+  border-radius: var(--cap-radius);
+  padding: 10px;
+  margin: 40px 0px;
+}
+
+/* ── empty ───────────────────────────────────────────────── */
+.capacity-dash__empty {
+  background: var(--cap-panel);
+  border: 1px solid var(--cap-border);
+  border-radius: var(--cap-radius);
+  padding: 44px 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 7px;
+}
+.capacity-dash__empty-title {
+  margin: 0;
+  font-size: 14px;
+  color: var(--cap-strong);
+}
+.capacity-dash__empty-sub {
+  margin: 0 0 6px;
+  font-size: 11.5px;
+  color: var(--cap-dim);
+  text-align: center;
+}
+
+/* ── printable report ────────────────────────────────────────
+   Hidden on screen; the tree is only mounted while exporting. */
+.capacity-dash__print {
+  display: none;
+}
+
+/* ── responsive ──────────────────────────────────────────── */
+/* the six-up row needs more room now the cards carry 26px values */
+@media (max-width: 1200px) {
+  .capacity-dash__stats {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+@media (max-width: 1000px) {
+  .capacity-dash__hint {
+    margin-left: 0;
+    width: 100%;
+  }
+}
+@media (max-width: 700px) {
+  .capacity-dash__stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 560px) {
+  .capacity-dash {
+    padding: 12px 10px;
+  }
+  .capacity-dash__pane {
+    padding: 12px 10px 12px;
+  }
+  .capacity-dash__topbar {
+    align-items: stretch;
+  }
+  .capacity-dash__controls {
+    flex-direction: column;
+    align-items: stretch;
+    width: 100%;
+  }
+  .capacity-dash__toolbar-actions {
+    width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .capacity-dash__btn,
+  .capacity-dash__stats {
+    transition: none;
+  }
+}
+
+/* ── print / PDF ─────────────────────────────────────────────
+   One chart per page. Export forces the light theme first, so the charts are
+   already drawn in the light steps by the time this applies. */
+@media print {
+  /* AgentDetails.css ships an unscoped `body { background: var(--bg-primary) }`
+     with --bg-primary #111217, which CRA bundles globally. A body background
+     propagates to the page canvas, so it paints EVERY sheet dark — visible
+     wherever this report's own white box does not reach (i.e. the tail of the
+     last page). Neutralise the canvas for the duration of the print. */
+  html,
+  body {
+    background: #fff;
+  }
+
+  /* hide the live app without unmounting it — visibility keeps layout cheap */
+  body * {
+    visibility: hidden;
+  }
+  .capacity-dash__print,
+  .capacity-dash__print * {
+    visibility: visible;
+  }
+
+  .capacity-dash {
+    background: #fff;
+    padding: 0;
+    display: block;
+    min-height: 0;
+  }
+  .capacity-dash__print {
+    display: block;
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    background: #fff;
+    color: #0f141c;
+  }
+
+  /* the actual "different chart on a different page" rule */
+  .capacity-dash__print-page {
+    break-after: page;
+    page-break-after: always;
+    break-inside: avoid;
+    page-break-inside: avoid;
+    padding-top: 2mm;
+  }
+  .capacity-dash__print-page:last-child {
+    break-after: auto;
+    page-break-after: auto;
+  }
+
+  .capacity-dash__print-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    border-bottom: 1px solid #cfd4de;
+    padding-bottom: 4px;
+    margin-bottom: 10px;
+    font-size: 9px;
+    color: #6b7280;
+  }
+  .capacity-dash__print-brand {
+    font-weight: 700;
+    color: #0f141c;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+  .capacity-dash__print-h2 {
+    font-size: 13px;
+    margin: 0 0 8px;
+    color: #0f141c;
+  }
+  .capacity-dash__print-h2 span {
+    color: #6b7280;
+    font-weight: 400;
+  }
+  .capacity-dash__print-table {
+    border-collapse: collapse;
+    width: 100%;
+    margin-bottom: 12px;
+    font-size: 9px;
+  }
+  .capacity-dash__print-table th {
+    text-align: left;
+    color: #6b7280;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    border-bottom: 1px solid #dfe3ea;
+    padding: 3px 6px 3px 0;
+  }
+  .capacity-dash__print-table td {
+    padding: 4px 6px 4px 0;
+    font-variant-numeric: tabular-nums;
+    color: #0f141c;
+  }
+  .capacity-dash__print-note {
+    font-size: 9px;
+    color: #6b7280;
+    margin: 8px 0 0;
+  }
+  .capacity-dash__print-foot {
+    margin-top: 6px;
+    font-size: 8px;
+    color: #aab1bd;
+    text-align: right;
+  }
+  /* the pane header is reused for the legend; drop its interactive affordances */
+  .capacity-dash__print .capacity-dash__pane-title {
+    color: #0f141c;
+    font-size: 10px;
+  }
+  .capacity-dash__print .capacity-dash__legend-item {
+    color: #313947;
+    padding: 2px 0;
+    margin-right: 10px;
+  }
+  .capacity-dash__print .capacity-dash__pane-unit {
+    display: none;
+  }
+
+  /* keep the series colours — a chart printed in greyscale states nothing */
+  .capacity-dash__print * {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  @page {
+    size: A4 portrait;
+    margin: 12mm;
+  }
+}

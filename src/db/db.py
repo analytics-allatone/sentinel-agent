@@ -12,6 +12,8 @@ from models.event_model import AuthEvents , ProcessEvents , NetworkEvents , USBE
 from models.db_events_models import (
     PostgresDbEvents, MysqlDbEvents, OracleDbEvents, RedisDbEvents, MongoDbEvents,
 )
+from models.agent_model import AgentGroups , Agents , ServicesCredentials
+from models.event_model import AuthEvents , ProcessEvents , NetworkEvents , USBEvents , FileEvents , CapacityMonitoringEvents
 import json
 from datetime import datetime
 
@@ -82,21 +84,21 @@ CATEGORIES_TABLE_MAPPING = {
     "redis_health":    RedisDbEvents,
     "mongodb_health":  MongoDbEvents,
     
+    "resource" : CapacityMonitoringEvents
     }
 
         
-async def push_data_to_db(data_to_push , agents_map):
+async def push_data_to_db(data_to_push):
     meta_data = data_to_push.get("meta_data")
     events_data = data_to_push.get("event_data")
 
     agent_name = meta_data.get("agent_name")
-    agent_id = agents_map.get(agent_name)
     category_wise_data = {}
     available_categories = []
     for ed in events_data:
         cat = ed.get("category")
         if cat:
-            ed["agent_id"] = agent_id
+            ed["agent_name"] = agent_name
             if not category_wise_data.get(cat):
                 available_categories.append(cat)
                 category_wise_data[cat] = []
@@ -109,7 +111,9 @@ async def push_data_to_db(data_to_push , agents_map):
             category_wise_data[cat].append(ed)
     try:
         for cat, records in category_wise_data.items():
-                model_class = CATEGORIES_TABLE_MAPPING[cat]
+                model_class = CATEGORIES_TABLE_MAPPING.get(cat)
+                if not model_class:
+                    return
                 
                 # 1. Get valid column names for this specific SQLAlchemy model
                 valid_columns = set(model_class.__table__.columns.keys())

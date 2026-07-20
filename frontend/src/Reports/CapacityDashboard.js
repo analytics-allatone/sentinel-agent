@@ -1,0 +1,1176 @@
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  Area,
+  AreaChart,
+  Brush,
+  CartesianGrid,
+  Line,
+  LineChart,
+  ReferenceLine,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
+
+import { absoluteOverviewUrl, fetchOverview } from "./capacityApi";
+import {
+  buildRows,
+  clampRange as clampToBounds,
+  findGaps,
+  formatClock,
+  formatDuration,
+  formatFull,
+} from "./capacityTransform";
+import { CHART_CHROME, GAP_COLOR, SERIES_COLORS } from "./colors";
+import { istInputToApi, lastHoursInputs } from "./timeRange";
+import "./CapacityDashboard.css";
+
+// ── zoom/pan constants ─────────────────────────────────────────
+const MIN_SPAN = 8; // never zoom tighter than 8 samples
+const ZOOM_IN = 0.8;
+const ZOOM_OUT = 1.25;
+const MIN_BOX_PX = 12; // ignore box-zoom smudges
+
+// The default query window, and the presets the "Range" dropdown offers (hours).
+const DEFAULT_WINDOW_HOURS = 12;
+const WIDEN_WINDOW_HOURS = 24;
+const PRESET_HOURS = [1, 2, 3, 6, 12, 24];
+const presetLabel = (h) => `Last ${h} hour${h > 1 ? "s" : ""}`;
+
+/**
+ * Theme-toggle glyph as inline SVG (currentColor) — the previous Unicode
+ * ☀/☾ rendered as an ambiguous asterisk in the monospace font on some
+ * platforms. `mode` is the CURRENT theme; the icon shows the target the click
+ * moves to (sun while dark, moon while light).
+ */
+function ThemeIcon({ mode }) {
+  const common = {
+    className: "capacity-dash__icon",
+    viewBox: "0 0 24 24",
+    width: 16,
+    height: 16,
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: 2,
+    strokeLinecap: "round",
+    strokeLinejoin: "round",
+    "aria-hidden": true,
+  };
+  if (mode === "dark") {
+    return (
+      <svg {...common}>
+        <circle cx="12" cy="12" r="4.2" />
+        <path d="M12 2.5v2.2M12 19.3v2.2M4.6 4.6l1.6 1.6M17.8 17.8l1.6 1.6M2.5 12h2.2M19.3 12h2.2M4.6 19.4l1.6-1.6M17.8 6.2l1.6-1.6" />
+      </svg>
+    );
+  }
+  return (
+    <svg {...common}>
+      <path d="M20 14.6A8 8 0 1 1 9.4 4 6.2 6.2 0 0 0 20 14.6z" />
+    </svg>
+  );
+}
+
+// Recharts lays the plot out inside these; the pointer maths needs the plot
+// box, not the container box, or the cursor anchor drifts.
+const CHART_MARGIN = { top: 10, right: 14, bottom: 4, left: 4 };
+const Y_AXIS_WIDTH = 44;
+const PLOT_INSET_LEFT = CHART_MARGIN.left + Y_AXIS_WIDTH;
+const PLOT_INSET_RIGHT = CHART_MARGIN.right;
+
+// ── pane definitions ───────────────────────────────────────────
+// Storage steps because its jumps (82.4 -> 86.3 -> 82.4) are real deploy /
+// cleanup events; smoothing them would state something untrue.
+//
+// A line's `key` is both its row field and its slot in the palette, so colour
+// follows the entity and stays put when the theme changes.
+const PANES = [
+  {
+    id: "host-cpu",
+    title: "Host CPU",
+    unit: "%",
+    lines: [{ key: "cpu", name: "Host CPU", type: "monotone" }],
+  },
+  {
+    id: "host-mem",
+    title: "Host memory ",
+    unit: "%",
+    lines: [
+      { key: "mem", name: "Host memory", type: "monotone" },
+    
+    ],
+  },
+   {
+    id: "host-mem",
+    title: "Host storage",
+    unit: "%",
+    lines: [
+     
+      { key: "sto", name: "Storage", type: "stepAfter" },
+    ],
+  },
+  {
+    id: "agent-cpu",
+    title: "Agent CPU",
+    unit: "%",
+    lines: [{ key: "acpu", name: "Agent CPU", type: "monotone" }],
+  },
+  // Mb, not percent — its own pane, so it never shares the 0-100 axis above.
+  // Agent memory used to ride the Agent-CPU pane on a shared % axis; once its
+  // unit is Mb that would misstate it, the same reason bandwidth stands alone.
+  {
+    id: "agent-mem",
+    title: "Agent memory",
+    unit: "Mb",
+    lines: [{ key: "amem", name: "Agent memory", type: "monotone" }],
+  },
+  // Mbps, not percent — hence its own pane. Sharing the 0-100 axis above would
+  // flatten a 0.04 Mbps line onto the baseline and imply it is a percentage.
+  {
+    id: "agent-bw",
+    title: "Agent bandwidth",
+    unit: "Mbps",
+    lines: [{ key: "bw", name: "Agent bandwidth", type: "monotone" }],
+  },
+];
+
+/**
+ * Values on this page span 0-100 percentages and sub-1 Mbps readings, so the
+ * decimal count follows the magnitude — %.toFixed(1) would render 0.04 Mbps as
+ * "0.0" and the whole bandwidth pane would read as zero.
+ */
+function formatValue(value, unit) {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return "—";
+  const abs = Math.abs(n);
+  const decimals = abs >= 10 ? 1 : abs >= 1 ? 2 : 3;
+  return unit === "%" ? `${n.toFixed(decimals)}%` : `${n.toFixed(decimals)} ${unit}`;
+}
+
+/** Axis ticks: same magnitude rule, without the unit suffix. */
+function formatTick(value) {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return "";
+  if (n === 0) return "0"; // a bare zero, never "0.00" — the baseline on a % axis
+  const abs = Math.abs(n);
+  if (abs >= 10) return String(Math.round(n));
+  if (abs >= 1) return n.toFixed(1);
+  return n.toFixed(2);
+}
+
+/** Resolve a pane's lines against the active theme's palette. */
+function paintLines(lines, theme) {
+  const palette = SERIES_COLORS[theme];
+  return lines.map((line) => ({ ...line, color: palette[line.key] }));
+}
+
+// ── print layout ───────────────────────────────────────────────
+// A4 portrait at 96dpi minus 12mm margins is ~715px of usable width. The print
+// charts are given explicit pixel sizes rather than a ResponsiveContainer:
+// ResponsiveContainer measures the DOM through a ResizeObserver, which does not
+// re-measure for the print box, so it would print the charts at screen size.
+const PRINT_W = 700;
+const PRINT_H = 430;
+
+const STATS = [
+  { key: "avg_cpu_percent", label: "Avg CPU", unit: "%", modifier: "cpu" },
+  { key: "avg_memory", label: "Avg memory", unit: "MB", modifier: "mem" },
+  { key: "avg_agent_cpu_percent", label: "Avg Agent CPU", unit: "%", modifier: "acpu" },
+  { key: "avg_agent_memory", label: "Avg Agent memory", unit: "Mb", modifier: "amem" },
+  { key: "avg_bandwidth_mbps", label: "Avg Bandwidth", unit: "Mbps", modifier: "bw" },
+];
+
+// ── range helpers ──────────────────────────────────────────────
+function clamp01(n) {
+  return Math.min(1, Math.max(0, n));
+}
+
+/** Bind the shared MIN_SPAN to the pure clamp from capacityTransform. */
+function clampRange(start, end, lastIndex) {
+  return clampToBounds(start, end, lastIndex, MIN_SPAN);
+}
+
+/** Zoom a window about its own centre by `factor` (<1 in, >1 out). */
+function zoomAround([start, end], factor, lastIndex) {
+  const centre = (start + end) / 2;
+  return clampRange(centre - (centre - start) * factor, centre + (end - centre) * factor, lastIndex);
+}
+
+const fullRange = (lastIndex) => [0, Math.max(0, lastIndex)];
+
+const THEME_KEY = "capacity-dash-theme";
+
+/** Saved choice wins; otherwise follow the OS. */
+function initialTheme() {
+  try {
+    const saved = window.localStorage.getItem(THEME_KEY);
+    if (saved === "light" || saved === "dark") return saved;
+  } catch (_) {
+    /* storage can be blocked; fall through to the OS preference */
+  }
+  try {
+    if (window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches) {
+      return "light";
+    }
+  } catch (_) {
+    /* matchMedia missing */
+  }
+  return "dark";
+}
+
+/** datetime-local input values for the last 12 hours, in IST (see timeRange.js). */
+function defaultLocalRange() {
+  return lastHoursInputs(DEFAULT_WINDOW_HOURS);
+}
+
+// ── zoom / pan / box-select ────────────────────────────────────
+function useZoomPan({ range, setRange, lastIndex }) {
+  const containerRef = useRef(null);
+  const dragRef = useRef(null);
+  const rangeRef = useRef(range);
+  rangeRef.current = range;
+
+  const [selection, setSelection] = useState(null);
+
+  const geometry = useCallback(() => {
+    const rect = containerRef.current.getBoundingClientRect();
+    const left = rect.left + PLOT_INSET_LEFT;
+    const width = Math.max(1, rect.width - PLOT_INSET_LEFT - PLOT_INSET_RIGHT);
+    return { rect, left, width };
+  }, []);
+
+  // Wheel must be a native non-passive listener: React's onWheel is passive, so
+  // preventDefault there is ignored and the page scrolls under the cursor.
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return undefined;
+
+    const onWheel = (event) => {
+      if (lastIndex <= 0) return;
+      event.preventDefault();
+
+      const { left, width } = geometry();
+      const [start, end] = rangeRef.current;
+      // The sample under the pointer has to stay under the pointer, so zoom
+      // about that index rather than the middle of the pane.
+      const anchor = start + clamp01((event.clientX - left) / width) * (end - start);
+      const factor = event.deltaY < 0 ? ZOOM_IN : ZOOM_OUT;
+
+      setRange(
+        clampRange(anchor - (anchor - start) * factor, anchor + (end - anchor) * factor, lastIndex)
+      );
+    };
+
+    el.addEventListener("wheel", onWheel, { passive: false });
+    return () => el.removeEventListener("wheel", onWheel);
+  }, [geometry, lastIndex, setRange]);
+
+  const onPointerDown = (event) => {
+    if (lastIndex <= 0 || event.button !== 0) return;
+    const { rect } = geometry();
+    const x = event.clientX - rect.left;
+
+    try {
+      containerRef.current.setPointerCapture(event.pointerId);
+    } catch (_) {
+      /* capture is best-effort */
+    }
+
+    if (event.shiftKey) {
+      dragRef.current = { mode: "box", x0: x };
+      setSelection({ x0: x, x1: x });
+    } else {
+      dragRef.current = { mode: "pan", startX: event.clientX, range: rangeRef.current };
+    }
+  };
+
+  const onPointerMove = (event) => {
+    const drag = dragRef.current;
+    if (!drag) return;
+    const { rect, width } = geometry();
+
+    if (drag.mode === "pan") {
+      const [start, end] = drag.range;
+      const deltaIndex = ((event.clientX - drag.startX) / width) * (end - start);
+      setRange(clampRange(start - deltaIndex, end - deltaIndex, lastIndex));
+    } else {
+      const x = event.clientX - rect.left;
+      setSelection((current) => (current ? { x0: current.x0, x1: x } : current));
+    }
+  };
+
+  const finishDrag = (event) => {
+    const drag = dragRef.current;
+    dragRef.current = null;
+    try {
+      containerRef.current.releasePointerCapture(event.pointerId);
+    } catch (_) {
+      /* nothing captured */
+    }
+    if (!drag || drag.mode !== "box") return;
+
+    const { rect, left, width } = geometry();
+    const x = event.clientX - rect.left;
+    const x0 = Math.min(drag.x0, x);
+    const x1 = Math.max(drag.x0, x);
+    setSelection(null);
+
+    if (x1 - x0 < MIN_BOX_PX) return;
+
+    const [start, end] = rangeRef.current;
+    const toIndex = (px) => start + clamp01((px + rect.left - left) / width) * (end - start);
+    const nextStart = toIndex(x0);
+    const nextEnd = toIndex(x1);
+    if (nextEnd - nextStart < MIN_SPAN) return;
+
+    setRange(clampRange(nextStart, nextEnd, lastIndex));
+  };
+
+  const onDoubleClick = () => setRange([0, Math.max(0, lastIndex)]);
+
+  return {
+    containerRef,
+    selection,
+    handlers: {
+      onPointerDown,
+      onPointerMove,
+      onPointerUp: finishDrag,
+      onPointerCancel: finishDrag,
+      onDoubleClick,
+    },
+  };
+}
+
+/**
+ * A sample whose neighbours are both null has nothing to draw a segment to, so
+ * with connectNulls={false} it renders as literally nothing. That happens
+ * whenever a series reports on a coarser cadence than the joined timeline — the
+ * agent series against the host series, for instance — and it silently blanks
+ * the whole pane. Dots are drawn for those points only: a lone reading stays
+ * visible, and a run of samples still costs zero dots.
+ */
+function makeDotRenderer(dataKey, color, data) {
+  return function renderDot(props) {
+    const { cx, cy, index } = props;
+    if (cx == null || cy == null || data[index] == null) return null;
+    const prev = index > 0 ? data[index - 1][dataKey] : null;
+    const next = index < data.length - 1 ? data[index + 1][dataKey] : null;
+    if (prev != null || next != null) return null; // already part of a segment
+    return <circle cx={cx} cy={cy} r={1.7} fill={color} stroke="none" />;
+  };
+}
+
+// ── tooltip ────────────────────────────────────────────────────
+function CapacityTooltip({ active, payload, lines, unit }) {
+  if (!active || !payload || !payload.length) return null;
+  const row = payload[0].payload;
+
+  return (
+    <div className="capacity-dash__tooltip">
+      <div className="capacity-dash__tooltip-time">{formatFull(row.ms)} IST</div>
+      {lines.map((line) => {
+        const value = row[line.key];
+        return (
+          <div className="capacity-dash__tooltip-row" key={line.key}>
+            <span className="capacity-dash__tooltip-key">
+              <span
+                className="capacity-dash__swatch"
+                style={{ backgroundColor: line.color }}
+                aria-hidden="true"
+              />
+              {line.name}
+            </span>
+            <span className="capacity-dash__tooltip-value">
+              {value == null ? "no sample" : formatValue(value, unit)}
+            </span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+/**
+ * The chart itself, shared by the interactive panes and the printed pages.
+ *
+ * Pass `width`/`height` to get a fixed-size chart (print); omit them for a
+ * ResponsiveContainer (screen).
+ *
+ * No syncId: each pane now zooms to its own window, so a shared crosshair would
+ * point at a different sample in every pane. Hover is per-pane, like the zoom.
+ */
+function ChartBody({ lines, data, rows, gaps, start, end, theme, height, width, unit }) {
+  const chrome = CHART_CHROME[theme];
+  const gapColor = GAP_COLOR[theme];
+  const print = width != null;
+
+  const chart = (
+    <LineChart
+      data={data}
+      margin={CHART_MARGIN}
+      width={width}
+      height={print ? height : undefined}
+    >
+      <CartesianGrid stroke={chrome.grid} strokeDasharray="0" vertical={false} />
+      <XAxis
+        dataKey="i"
+        type="number"
+        domain={[start, end]}
+        allowDataOverflow
+        tickFormatter={(i) => (rows[i] ? formatClock(rows[i].ms) : "")}
+        minTickGap={40}
+        stroke={chrome.axis}
+        tick={{ fill: chrome.tick, fontSize: 10 }}
+      />
+      <YAxis
+        width={Y_AXIS_WIDTH}
+        domain={["auto", "auto"]}
+        stroke={chrome.axis}
+        tick={{ fill: chrome.tick, fontSize: 10 }}
+        tickFormatter={formatTick}
+      />
+      {!print && (
+        <Tooltip
+          content={<CapacityTooltip lines={lines} unit={unit} />}
+          cursor={{ stroke: chrome.cursor, strokeWidth: 1 }}
+          isAnimationActive={false}
+        />
+      )}
+      {false && gaps.map((gap) => (
+        <ReferenceLine
+          key={gap.at}
+          x={gap.at}
+          stroke={gapColor}
+          strokeDasharray="4 3"
+          strokeWidth={1.5}
+          label={{
+            value: `no data · ${formatDuration(gap.ms)}`,
+            position: "insideTop",
+            fill: gapColor,
+            fontSize: 11,
+            fontWeight: 600,
+          }}
+        />
+      ))}
+      {lines.map((line) => (
+        <Line
+          key={line.key}
+          type={line.type}
+          dataKey={line.key}
+          name={line.name}
+          stroke={line.color}
+          strokeWidth={1.6}
+          dot={makeDotRenderer(line.key, line.color, data)}
+          activeDot={print ? false : { r: 2.6, strokeWidth: 0 }}
+          isAnimationActive={false}
+          connectNulls={false}
+        />
+      ))}
+    </LineChart>
+  );
+
+  if (print) return chart;
+  return (
+    <ResponsiveContainer width="100%" height={height}>
+      {chart}
+    </ResponsiveContainer>
+  );
+}
+
+/** Pane title + unit + toggleable legend, shared by screen and print. */
+function PaneHeader({ pane, lines, hidden, onToggle }) {
+  return (
+    <header className="capacity-dash__pane-header">
+      <div className="capacity-dash__pane-titles">
+        <h2 className="capacity-dash__pane-title">{pane.title}</h2>
+        <span className="capacity-dash__pane-unit">{pane.unit}</span>
+      </div>
+      <ul className="capacity-dash__legend">
+        {lines.map((line) => {
+          const off = hidden ? Boolean(hidden[line.key]) : false;
+          const swatch = (
+            <span
+              className="capacity-dash__swatch"
+              style={{ backgroundColor: line.color }}
+              aria-hidden="true"
+            />
+          );
+          return (
+            <li key={line.key}>
+              {onToggle ? (
+                <button
+                  type="button"
+                  className={`capacity-dash__legend-item${
+                    off ? " capacity-dash__legend-item--off" : ""
+                  }`}
+                  onClick={() => onToggle(line.key)}
+                  aria-pressed={!off}
+                >
+                  {swatch}
+                  {line.name}
+                </button>
+              ) : (
+                <span className="capacity-dash__legend-item">
+                  {swatch}
+                  {line.name}
+                </span>
+              )}
+            </li>
+          );
+        })}
+      </ul>
+    </header>
+  );
+}
+
+// ── one chart pane ─────────────────────────────────────────────
+// Each pane owns its zoom window. `masterRange` is the shared window driven by
+// the Full range strip and its buttons; the pane adopts it whenever it changes,
+// but zooming THIS pane (wheel, drag, box, its own buttons) only touches local
+// state — so the graphs zoom independently, and Full range still moves them all.
+function ChartPane({ pane, rows, masterRange, gaps, lastIndex, hidden, onToggle, loading, theme }) {
+  const [range, setRange] = useState(masterRange);
+
+  // Adopt the shared window when it changes (Full range brush / global buttons /
+  // data reload). Local-only zoom leaves masterRange untouched, so this stays
+  // quiet and the pane keeps its own window.
+  useEffect(() => {
+    setRange(masterRange);
+  }, [masterRange]);
+
+  const { containerRef, selection, handlers } = useZoomPan({ range, setRange, lastIndex });
+
+  const [start, end] = range;
+  // Slicing is what makes the Y axis rescale to the window instead of the whole run.
+  const visible = useMemo(() => rows.slice(start, end + 1), [rows, start, end]);
+  const visibleGaps = useMemo(
+    () => gaps.filter((gap) => gap.at > start && gap.at < end),
+    [gaps, start, end]
+  );
+
+  const painted = useMemo(() => paintLines(pane.lines, theme), [pane.lines, theme]);
+  const shown = painted.filter((line) => !hidden[line.key]);
+
+  const windowed = start > 0 || end < lastIndex;
+  const from = rows[start] && rows[start].ms;
+  const to = rows[end] && rows[end].ms;
+
+  return (
+    <section className="capacity-dash__pane">
+      <PaneHeader pane={pane} lines={painted} hidden={hidden} onToggle={onToggle} />
+
+      <div className="capacity-dash__pane-tools">
+        <span className="capacity-dash__pane-window">
+          {windowed ? `${formatClock(from)}–${formatClock(to)} · ${end - start + 1} pts` : "full range"}
+        </span>
+        <div className="capacity-dash__pane-btns">
+          <button
+            className="capacity-dash__btn capacity-dash__btn--sm"
+            type="button"
+            onClick={() => setRange(zoomAround(range, ZOOM_IN, lastIndex))}
+            title="Zoom in"
+            aria-label={`Zoom in on ${pane.title}`}
+          >
+            +
+          </button>
+          <button
+            className="capacity-dash__btn capacity-dash__btn--sm"
+            type="button"
+            onClick={() => setRange(zoomAround(range, ZOOM_OUT, lastIndex))}
+            title="Zoom out"
+            aria-label={`Zoom out on ${pane.title}`}
+          >
+            −
+          </button>
+          <button
+            className="capacity-dash__btn capacity-dash__btn--sm"
+            type="button"
+            onClick={() => setRange(fullRange(lastIndex))}
+            disabled={!windowed}
+            title="Reset this graph"
+          >
+            Reset
+          </button>
+        </div>
+      </div>
+
+      <div
+        className="capacity-dash__plot"
+        ref={containerRef}
+        {...handlers}
+        role="presentation"
+      >
+        <ChartBody
+          lines={shown}
+          data={visible}
+          rows={rows}
+          gaps={visibleGaps}
+          start={start}
+          end={end}
+          theme={theme}
+          unit={pane.unit}
+          height={215}
+        />
+
+        {selection && (
+          <div
+            className="capacity-dash__selection"
+            style={{
+              left: Math.min(selection.x0, selection.x1),
+              width: Math.abs(selection.x1 - selection.x0),
+            }}
+          />
+        )}
+        {loading && <div className="capacity-dash__pane-veil" />}
+      </div>
+    </section>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════
+//  Printable report — one chart per page, screen-hidden
+// ════════════════════════════════════════════════════════════════
+function PrintReport({ payload, rows, gaps, stats, periodText, theme }) {
+  const summary = (payload && payload.summary) || {};
+  const lastIndex = Math.max(0, rows.length - 1);
+
+  return (
+    <div className="capacity-dash__print" aria-hidden="true">
+      {PANES.map((pane, index) => {
+        const lines = paintLines(pane.lines, theme);
+        return (
+          <section className="capacity-dash__print-page" key={pane.id}>
+            <header className="capacity-dash__print-head">
+              <span className="capacity-dash__print-brand">Capacity report</span>
+              <span className="capacity-dash__print-meta">
+                {payload ? payload.agent_name : "—"} · {periodText} · IST
+              </span>
+            </header>
+
+            <h2 className="capacity-dash__print-h2">
+              {index + 1}. {pane.title} <span>({pane.unit})</span>
+            </h2>
+
+            {/* the summary rides page 1 only */}
+            {index === 0 && (
+              <table className="capacity-dash__print-table">
+                <tbody>
+                  <tr>
+                    {stats.map((stat) => (
+                      <th key={stat.key}>{stat.label}</th>
+                    ))}
+                    <th>Samples</th>
+                  </tr>
+                  <tr>
+                    {stats.map((stat) => (
+                      <td key={stat.key}>
+                        {summary[stat.key] == null ? "—" : Number(summary[stat.key]).toFixed(2)}{" "}
+                        {stat.unit}
+                      </td>
+                    ))}
+                    <td>{payload && payload.sample_count != null ? payload.sample_count : "—"}</td>
+                  </tr>
+                </tbody>
+              </table>
+            )}
+
+            <PaneHeader pane={pane} lines={lines} />
+            <ChartBody
+              lines={lines}
+              data={rows}
+              rows={rows}
+              gaps={gaps}
+              start={0}
+              end={lastIndex}
+              theme={theme}
+              unit={pane.unit}
+              width={PRINT_W}
+              height={PRINT_H}
+            />
+
+            <p className="capacity-dash__print-note">
+              Full range, {rows.length} samples.
+              {gaps.length
+                ? ` ${gaps.length} reporting gap${gaps.length > 1 ? "s" : ""} marked on the chart.`
+                : " No reporting gaps."}
+            </p>
+            <footer className="capacity-dash__print-foot">Page {index + 1} of {PANES.length}</footer>
+          </section>
+        );
+      })}
+    </div>
+  );
+}
+
+// ── page ───────────────────────────────────────────────────────
+export default function CapacityDashboard() {
+  const initial = defaultLocalRange();
+
+  const [agentName, setAgentName] = useState("UpdatedWindowAgent");
+  const [fromLocal, setFromLocal] = useState(initial.from);
+  const [toLocal, setToLocal] = useState(initial.to);
+  // the selected "Range" preset in hours ("12"), or "custom" once From/To is edited
+  const [preset, setPreset] = useState(String(DEFAULT_WINDOW_HOURS));
+  // graphs per row: 1 (stacked) or 2 (side by side)
+  const [perRow, setPerRow] = useState(2);
+
+  const [payload, setPayload] = useState(null);
+  const [status, setStatus] = useState("loading"); // loading | success | error
+  const [error, setError] = useState(null);
+  const [hidden, setHidden] = useState({});
+  // the shared window the Full range strip drives; each pane copies it, then may
+  // zoom on its own from there
+  const [masterRange, setMasterRange] = useState([0, 0]);
+
+  const [theme, setTheme] = useState(initialTheme);
+  const [printing, setPrinting] = useState(false);
+
+  const abortRef = useRef(null);
+  const requestRef = useRef(0);
+  const themeBeforePrint = useRef(theme);
+
+  const rows = useMemo(() => buildRows(payload), [payload]);
+  const gaps = useMemo(() => findGaps(rows), [rows]);
+  const lastIndex = Math.max(0, rows.length - 1);
+
+  // The inputs are IST wall clock; the API wants naive UTC — istInputToApi bridges
+  // it and adds the seconds (00 for the window start, 59 for the end).
+  const toParams = useCallback(
+    () => ({
+      agentName: agentName.trim(),
+      fromDt: istInputToApi(fromLocal, "00"),
+      toDt: istInputToApi(toLocal, "59"),
+    }),
+    [agentName, fromLocal, toLocal]
+  );
+
+  const load = useCallback(
+    async (params) => {
+      if (!params.agentName) {
+        setError({ message: "Enter an agent name to load.", status: 0, url: "" });
+        setStatus("error");
+        return;
+      }
+      if (params.fromDt >= params.toDt) {
+        setError({ message: "From must be earlier than To.", status: 0, url: "" });
+        setStatus("error");
+        return;
+      }
+
+      if (abortRef.current) abortRef.current.abort();
+      const controller = new AbortController();
+      abortRef.current = controller;
+      const ticket = ++requestRef.current;
+
+      setStatus("loading");
+      setError(null);
+
+      try {
+        const data = await fetchOverview(params, { signal: controller.signal });
+        if (ticket !== requestRef.current) return; // a newer load won
+        setPayload(data);
+        setStatus("success");
+      } catch (err) {
+        if (err && (err.code === "ERR_CANCELED" || err.name === "CanceledError")) return;
+        if (ticket !== requestRef.current) return;
+        // The last good payload stays in state, so the charts stay on screen.
+        setError({
+          message: err.message,
+          status: err.status || 0,
+          url: err.url || absoluteOverviewUrl(params),
+        });
+        setStatus("error");
+      }
+    },
+    []
+  );
+
+  // Reset the shared window whenever the underlying run changes size — every
+  // pane adopts it, so a fresh load starts them all at full range.
+  useEffect(() => {
+    setMasterRange(fullRange(rows.length - 1));
+  }, [rows.length]);
+
+  useEffect(() => {
+    load(toParams());
+    return () => {
+      if (abortRef.current) abortRef.current.abort();
+    };
+    // Load once on mount; every later load is driven by the Load button.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // persist the theme choice
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(THEME_KEY, theme);
+    } catch (_) {
+      /* storage blocked — the choice just will not survive a reload */
+    }
+  }, [theme]);
+
+  /**
+   * Export to PDF via the browser's own print-to-PDF, so there is no PDF
+   * dependency to ship. The print tree only mounts while `printing` is true —
+   * mounting it always would render four extra 283-point charts on every load.
+   * The dialog is opened one frame after the commit so the charts are in the DOM
+   * and laid out before the browser snapshots the page.
+   */
+  useEffect(() => {
+    if (!printing) return undefined;
+
+    let raf2 = 0;
+    const raf1 = window.requestAnimationFrame(() => {
+      raf2 = window.requestAnimationFrame(() => {
+        try {
+          window.print();
+        } finally {
+          setPrinting(false);
+          setTheme(themeBeforePrint.current);
+        }
+      });
+    });
+    return () => {
+      window.cancelAnimationFrame(raf1);
+      if (raf2) window.cancelAnimationFrame(raf2);
+    };
+  }, [printing]);
+
+  const exportPdf = () => {
+    if (!rows.length || printing) return;
+    // Paper is white: print the light palette whatever the screen is showing,
+    // then put the user's theme back.
+    themeBeforePrint.current = theme;
+    setTheme("light");
+    setPrinting(true);
+  };
+
+  const onSubmit = (event) => {
+    event.preventDefault();
+    load(toParams());
+  };
+
+  // Seed From/To to the last `hours` (IST) and load immediately — the dropdown.
+  const applyPreset = (hours) => {
+    const next = lastHoursInputs(hours);
+    setFromLocal(next.from);
+    setToLocal(next.to);
+    setPreset(String(hours));
+    load({
+      agentName: agentName.trim(),
+      fromDt: istInputToApi(next.from, "00"),
+      toDt: istInputToApi(next.to, "59"),
+    });
+  };
+
+  // Editing a field by hand means the window no longer matches a preset.
+  const onFromChange = (value) => {
+    setFromLocal(value);
+    setPreset("custom");
+  };
+  const onToChange = (value) => {
+    setToLocal(value);
+    setPreset("custom");
+  };
+
+  const widenTo24h = () => applyPreset(WIDEN_WINDOW_HOURS);
+
+  const toggle = (key) => setHidden((h) => ({ ...h, [key]: !h[key] }));
+
+  // These drive the SHARED window from the Full range strip, so they move every
+  // graph together. Per-graph zoom lives inside each ChartPane.
+  const zoomAll = (factor) => setMasterRange((r) => zoomAround(r, factor, lastIndex));
+  const showLastAll = (n) => setMasterRange(clampRange(lastIndex - n, lastIndex, lastIndex));
+  const resetAll = () => setMasterRange(fullRange(lastIndex));
+
+  const loading = status === "loading";
+  const summary = (payload && payload.summary) || {};
+  const isEmpty = status !== "loading" && payload != null && rows.length === 0;
+
+  const periodText = `${fromLocal.replace("T", " ")} – ${toLocal.replace("T", " ")}`;
+
+  return (
+    <div className={`capacity-dash capacity-dash--${theme}`}>
+      <header className="capacity-dash__topbar">
+        <div className="capacity-dash__brand">
+          <h1 className="capacity-dash__title">Capacity monitoring</h1>
+          <p className="capacity-dash__subtitle">
+            {payload ? `${payload.agent_name} · ${rows.length} samples · times in IST` : "times in IST"}
+          </p>
+        </div>
+
+        <form className="capacity-dash__controls" onSubmit={onSubmit}>
+          <label className="capacity-dash__field">
+            <span className="capacity-dash__field-label">Agent name</span>
+            <input
+              className="capacity-dash__input"
+              type="text"
+              value={agentName}
+              onChange={(e) => setAgentName(e.target.value)}
+              placeholder="Please enter an agent name"
+              autoComplete="off"
+            />
+          </label>
+          <label className="capacity-dash__field">
+            <span className="capacity-dash__field-label">Range</span>
+            <select
+              className="capacity-dash__select"
+              value={preset}
+              onChange={(e) => {
+                if (e.target.value !== "custom") applyPreset(Number(e.target.value));
+              }}
+              disabled={loading}
+              aria-label="Quick range"
+            >
+              {PRESET_HOURS.map((h) => (
+                <option key={h} value={String(h)}>
+                  {presetLabel(h)}
+                </option>
+              ))}
+              {preset === "custom" && <option value="custom">Custom</option>}
+            </select>
+          </label>
+          <label className="capacity-dash__field">
+            <span className="capacity-dash__field-label">From</span>
+            <input
+              className="capacity-dash__input"
+              type="datetime-local"
+              value={fromLocal}
+              max={toLocal}
+              onChange={(e) => onFromChange(e.target.value)}
+            />
+          </label>
+          <label className="capacity-dash__field">
+            <span className="capacity-dash__field-label">To</span>
+            <input
+              className="capacity-dash__input"
+              type="datetime-local"
+              value={toLocal}
+              min={fromLocal}
+              onChange={(e) => onToChange(e.target.value)}
+            />
+          </label>
+          <button
+            className="capacity-dash__btn capacity-dash__btn--primary"
+            type="submit"
+            disabled={loading}
+          >
+            {loading ? "Loading…" : "Load"}
+          </button>
+
+          <button
+            className="capacity-dash__btn"
+            type="button"
+            onClick={exportPdf}
+            disabled={!rows.length || printing}
+            title={rows.length ? "Open the print dialog — choose Save as PDF" : "Load data first"}
+          >
+            {printing ? "Preparing…" : "Export PDF"}
+          </button>
+
+          <button
+            className="capacity-dash__btn capacity-dash__btn--icon"
+            type="button"
+            onClick={() => setTheme((t) => (t === "dark" ? "light" : "dark"))}
+            aria-pressed={theme === "light"}
+            title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+          >
+            <ThemeIcon mode={theme} />
+            <span className="capacity-dash__sr-only">
+              {theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+            </span>
+          </button>
+        </form>
+      </header>
+
+      {status === "error" && error && (
+        <div className="capacity-dash__error" role="alert">
+          <div className="capacity-dash__error-body">
+            <p className="capacity-dash__error-msg">
+              {error.status ? `HTTP ${error.status} — ` : ""}
+              {error.message}
+            </p>
+            {error.url && <code className="capacity-dash__error-url">{error.url}</code>}
+            {payload && <p className="capacity-dash__error-note">Showing the last window that loaded.</p>}
+          </div>
+          <button
+            className="capacity-dash__btn"
+            type="button"
+            onClick={() => load(toParams())}
+            disabled={loading}
+          >
+            Retry
+          </button>
+        </div>
+      )}
+
+      <div className={`capacity-dash__stats${loading ? " capacity-dash__stats--loading" : ""}`}>
+        {STATS.map((stat) => {
+          const value = summary[stat.key];
+          return (
+            <div
+              className={`capacity-dash__stat capacity-dash__stat--${stat.modifier}`}
+              key={stat.key}
+            >
+              <span className="capacity-dash__stat-label">{stat.label}</span>
+              <span className="capacity-dash__stat-value">
+                {value == null ? "—" : Number(value).toFixed(2)}
+                <span className="capacity-dash__stat-unit">{stat.unit}</span>
+              </span>
+            </div>
+          );
+        })}
+        <div className="capacity-dash__stat capacity-dash__stat--samples">
+          <span className="capacity-dash__stat-label">Samples</span>
+          <span className="capacity-dash__stat-value">
+            {payload && payload.sample_count != null ? payload.sample_count : "—"}
+            <span className="capacity-dash__stat-unit">pts</span>
+          </span>
+        </div>
+      </div>
+
+      {isEmpty ? (
+        <div className="capacity-dash__empty">
+          <p className="capacity-dash__empty-title">No samples in this window</p>
+          <p className="capacity-dash__empty-sub">
+            The agent reported nothing between {fromLocal.replace("T", " ")} and{" "}
+            {toLocal.replace("T", " ")}.
+          </p>
+          <button className="capacity-dash__btn" type="button" onClick={widenTo24h}>
+            Widen to last 24h
+          </button>
+        </div>
+      ) : (
+        <>
+          <div className="capacity-dash__paneshead">
+            <p className="capacity-dash__hint">
+              Each graph zooms on its own — wheel to zoom, drag to pan, shift-drag to box zoom,
+              double-click to reset. Use <strong>Full range</strong> below to zoom every graph at once.
+            </p>
+            <div className="capacity-dash__layout" role="group" aria-label="Graphs per row">
+              <span className="capacity-dash__layout-label">Per row</span>
+              <button
+                type="button"
+                className={`capacity-dash__btn capacity-dash__btn--sm${
+                  perRow === 1 ? " capacity-dash__btn--active" : ""
+                }`}
+                onClick={() => setPerRow(1)}
+                aria-pressed={perRow === 1}
+                title="One graph per row"
+              >
+                1
+              </button>
+              <button
+                type="button"
+                className={`capacity-dash__btn capacity-dash__btn--sm${
+                  perRow === 2 ? " capacity-dash__btn--active" : ""
+                }`}
+                onClick={() => setPerRow(2)}
+                aria-pressed={perRow === 2}
+                title="Two graphs per row"
+              >
+                2
+              </button>
+            </div>
+          </div>
+
+          <div
+            className="capacity-dash__panes capacity-dash__panes--cols"
+            style={{ "--cap-cols": perRow }}
+          >
+            {PANES.map((pane) => (
+              <ChartPane
+                key={pane.id}
+                pane={pane}
+                rows={rows}
+                gaps={gaps}
+                masterRange={masterRange}
+                lastIndex={lastIndex}
+                hidden={hidden}
+                onToggle={toggle}
+                loading={loading}
+                theme={theme}
+              />
+            ))}
+          </div>
+
+          <section className="capacity-dash__overview">
+            <header className="capacity-dash__pane-header">
+              <div className="capacity-dash__pane-titles">
+                <h2 className="capacity-dash__pane-title">Full range</h2>
+                <span className="capacity-dash__pane-unit">
+                  zooms every graph · {formatClock(rows[masterRange[0]] && rows[masterRange[0]].ms)}–
+                  {formatClock(rows[masterRange[1]] && rows[masterRange[1]].ms)} ·{" "}
+                  {masterRange[1] - masterRange[0] + 1} pts
+                </span>
+              </div>
+              <div className="capacity-dash__pane-btns">
+                <button className="capacity-dash__btn capacity-dash__btn--sm" type="button" onClick={() => zoomAll(ZOOM_IN)}>
+                  Zoom in
+                </button>
+                <button className="capacity-dash__btn capacity-dash__btn--sm" type="button" onClick={() => zoomAll(ZOOM_OUT)}>
+                  Zoom out
+                </button>
+                <button className="capacity-dash__btn capacity-dash__btn--sm" type="button" onClick={() => showLastAll(30)}>
+                  Last 30
+                </button>
+                <button className="capacity-dash__btn capacity-dash__btn--sm" type="button" onClick={() => showLastAll(100)}>
+                  Last 100
+                </button>
+                <button className="capacity-dash__btn capacity-dash__btn--sm" type="button" onClick={resetAll}>
+                  All
+                </button>
+              </div>
+            </header>
+            <ResponsiveContainer width="100%" height={92}>
+              <AreaChart data={rows} margin={{ top: 4, right: 14, bottom: 0, left: 4 }}>
+                <YAxis hide domain={["auto", "auto"]} />
+                <XAxis dataKey="i" type="number" domain={[0, lastIndex]} hide />
+                <Area
+                  type="monotone"
+                  dataKey="cpu"
+                  stroke={SERIES_COLORS[theme].cpu}
+                  fill={SERIES_COLORS[theme].cpu}
+                  fillOpacity={0.14}
+                  strokeWidth={1.2}
+                  dot={false}
+                  isAnimationActive={false}
+                  connectNulls={false}
+                />
+                {rows.length > 1 && (
+                  <Brush
+                    dataKey="i"
+                    height={22}
+                    travellerWidth={8}
+                    stroke={CHART_CHROME[theme].cursor}
+                    fill="transparent"
+                    startIndex={masterRange[0]}
+                    endIndex={masterRange[1]}
+                    onChange={(next) => {
+                      if (!next || next.startIndex == null || next.endIndex == null) return;
+                      if (next.startIndex === masterRange[0] && next.endIndex === masterRange[1]) return;
+                      setMasterRange(clampRange(next.startIndex, next.endIndex, lastIndex));
+                    }}
+                    tickFormatter={(i) => (rows[i] ? formatClock(rows[i].ms) : "")}
+                  />
+                )}
+              </AreaChart>
+            </ResponsiveContainer>
+          </section>
+        </>
+      )}
+
+      {printing && (
+        <PrintReport
+          payload={payload}
+          rows={rows}
+          gaps={gaps}
+          stats={STATS}
+          periodText={periodText}
+          theme={theme}
+        />
+      )}
+    </div>
+  );
+}
