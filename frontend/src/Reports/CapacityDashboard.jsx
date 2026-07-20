@@ -23,7 +23,46 @@ import {
   formatFull,
 } from "./capacityTransform";
 import { CHART_CHROME, GAP_COLOR, SERIES_COLORS } from "./colors";
+import { istInputToApi, lastHoursInputs } from "./timeRange";
 import "./CapacityDashboard.css";
+
+// The default query window: always the most recent 12 hours.
+const DEFAULT_WINDOW_HOURS = 12;
+const WIDEN_WINDOW_HOURS = 24;
+
+/**
+ * Theme-toggle glyph as inline SVG (currentColor) — the previous Unicode
+ * ☀/☾ rendered as an ambiguous asterisk in the monospace font on some
+ * platforms. `mode` is the CURRENT theme; the icon shows the target the click
+ * moves to (sun while dark, moon while light).
+ */
+function ThemeIcon({ mode }) {
+  const common = {
+    className: "capacity-dash__icon",
+    viewBox: "0 0 24 24",
+    width: 16,
+    height: 16,
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: 2,
+    strokeLinecap: "round",
+    strokeLinejoin: "round",
+    "aria-hidden": true,
+  };
+  if (mode === "dark") {
+    return (
+      <svg {...common}>
+        <circle cx="12" cy="12" r="4.2" />
+        <path d="M12 2.5v2.2M12 19.3v2.2M4.6 4.6l1.6 1.6M17.8 17.8l1.6 1.6M2.5 12h2.2M19.3 12h2.2M4.6 19.4l1.6-1.6M17.8 6.2l1.6-1.6" />
+      </svg>
+    );
+  }
+  return (
+    <svg {...common}>
+      <path d="M20 14.6A8 8 0 1 1 9.4 4 6.2 6.2 0 0 0 20 14.6z" />
+    </svg>
+  );
+}
 
 // ── zoom/pan constants ─────────────────────────────────────────
 const MIN_SPAN = 8; // never zoom tighter than 8 samples
@@ -169,15 +208,9 @@ function initialTheme() {
   return "dark";
 }
 
+/** datetime-local input values for the last 12 hours, in IST (see timeRange.js). */
 function defaultLocalRange() {
-  const now = new Date();
-  const from = new Date(now.getTime() - 864e5);
-  const iso = (d, h, m) =>
-    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(
-      2,
-      "0"
-    )}T${h}:${m}`;
-  return { from: iso(from, "00", "00"), to: iso(now, "23", "59") };
+  return lastHoursInputs(DEFAULT_WINDOW_HOURS);
 }
 
 // ── zoom / pan / box-select ────────────────────────────────────
@@ -324,7 +357,7 @@ function CapacityTooltip({ active, payload, lines, unit }) {
 
   return (
     <div className="capacity-dash__tooltip">
-      <div className="capacity-dash__tooltip-time">{formatFull(row.ms)} UTC</div>
+      <div className="capacity-dash__tooltip-time">{formatFull(row.ms)} IST</div>
       {lines.map((line) => {
         const value = row[line.key];
         return (
@@ -600,7 +633,7 @@ function PrintReport({ payload, rows, gaps, stats, periodText, theme }) {
             <header className="capacity-dash__print-head">
               <span className="capacity-dash__print-brand">Capacity report</span>
               <span className="capacity-dash__print-meta">
-                {payload ? payload.agent_name : "—"} · {periodText} · UTC
+                {payload ? payload.agent_name : "—"} · {periodText} · IST
               </span>
             </header>
 
@@ -686,9 +719,14 @@ export default function CapacityDashboard() {
   const gaps = useMemo(() => findGaps(rows), [rows]);
   const lastIndex = Math.max(0, rows.length - 1);
 
-  // datetime-local gives "YYYY-MM-DDTHH:MM"; the API wants naive seconds.
+  // The inputs are IST wall clock; the API wants naive UTC — istInputToApi bridges
+  // it and adds the seconds (00 for the window start, 59 for the end).
   const toParams = useCallback(
-    () => ({ agentName: agentName.trim(), fromDt: `${fromLocal}:00`, toDt: `${toLocal}:59` }),
+    () => ({
+      agentName: agentName.trim(),
+      fromDt: istInputToApi(fromLocal, "00"),
+      toDt: istInputToApi(toLocal, "59"),
+    }),
     [agentName, fromLocal, toLocal]
   );
 
@@ -799,10 +837,14 @@ export default function CapacityDashboard() {
   };
 
   const widenTo24h = () => {
-    const next = defaultLocalRange();
+    const next = lastHoursInputs(WIDEN_WINDOW_HOURS);
     setFromLocal(next.from);
     setToLocal(next.to);
-    load({ agentName: agentName.trim(), fromDt: `${next.from}:00`, toDt: `${next.to}:59` });
+    load({
+      agentName: agentName.trim(),
+      fromDt: istInputToApi(next.from, "00"),
+      toDt: istInputToApi(next.to, "59"),
+    });
   };
 
   const toggle = (key) => setHidden((h) => ({ ...h, [key]: !h[key] }));
@@ -825,7 +867,7 @@ export default function CapacityDashboard() {
         <div className="capacity-dash__brand">
           <h1 className="capacity-dash__title">Capacity monitoring</h1>
           <p className="capacity-dash__subtitle">
-            {payload ? `${payload.agent_name} · ${rows.length} samples · times in UTC` : "times in UTC"}
+            {payload ? `${payload.agent_name} · ${rows.length} samples · times in IST` : "times in IST"}
           </p>
         </div>
 
@@ -886,7 +928,7 @@ export default function CapacityDashboard() {
             aria-pressed={theme === "light"}
             title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
           >
-            <span aria-hidden="true">{theme === "dark" ? "☀" : "☾"}</span>
+            <ThemeIcon mode={theme} />
             <span className="capacity-dash__sr-only">
               {theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
             </span>

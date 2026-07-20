@@ -18,6 +18,7 @@ import CapacityDashboard from "./Reports/CapacityDashboard";
 import { AccessProvider } from "./Access/AccessContext";
 import AccessManagement from "./Access/AccessManagement";
 import CapacityDashboard1 from "./Reports/CapacityDashboard1";
+import Unauthorized from "./pages/Unauthorized/Unauthorized";
 
 function AppContent() {
   const [isLoading, setIsLoading] = useState(false);
@@ -40,6 +41,8 @@ function AppContent() {
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/forgot-password" element={<ForgotPage />} />
+          {/* 403 — full-screen, no app chrome; the guard redirects here */}
+          <Route path="/unauthorized" element={<Unauthorized />} />
 
           {/* Protected Routes - Authentication required */}
           <Route
@@ -68,6 +71,28 @@ function AppContent() {
           />
           {/* RBAC — self-contained, uses its own sign-in / role gate */}
           <Route path="/access"     element={<ProtectedRoute element={<AccessManagement />} />} />
+
+          {/*
+            Role-based protection examples (ProtectedRoute now accepts `roles`
+            and `perm`; omit both for an auth-only route as above):
+
+              // only Admin (super_admin) or Manager (admin) may enter:
+              <Route
+                path="/reports/capacity"
+                element={
+                  <ProtectedRoute roles={["super_admin", "admin"]} element={<CapacityDashboard />} />
+                }
+              />
+
+              // require a specific permission action instead of a role:
+              <Route
+                path="/access"
+                element={<ProtectedRoute perm="manageUsers" element={<AccessManagement />} />}
+              />
+
+            Not signed in        -> /login (the attempted route is remembered).
+            Signed in, no access -> /unauthorized (the 403 page).
+          */}
           <Route
             path="/agentDetails"
             element={
