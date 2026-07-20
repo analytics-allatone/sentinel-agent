@@ -5,6 +5,7 @@ import Login from "./Login/Login";
 import Register from "./Register/Register";
 import Dashboard from "./Dashboard/Dashboard";
 import ForgotPage from "./ForgotPage/forgot-page";
+import EnterOtp from "./EnterOtp/EnterOtp";
 import InstallationProcess from "./InstallationProcess/InstallationProcess";
 import AgentDetails from "./Dashboard/AgentDashboard/AgentDetails";
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -14,10 +15,10 @@ import { useEffect, useState } from "react";
 import { registerLoaderCallbacks } from "./api/api";
 import AgentCardGrid from "./Dashboard/AgentDashboard/AgentCardGrid";
 import SOC2Report from "./Reports/SOC2Report";
-import CapacityDashboard from "./Reports/CapacityDashboard";
+import CapacityDashboard1 from "./Reports/CapacityDashboard1";
 import { AccessProvider } from "./Access/AccessContext";
 import AccessManagement from "./Access/AccessManagement";
-import CapacityDashboard1 from "./Reports/CapacityDashboard1";
+import CapacityDashboard from "./Reports/CapacityDashboard";
 import Unauthorized from "./pages/Unauthorized/Unauthorized";
 
 function AppContent() {
@@ -41,6 +42,7 @@ function AppContent() {
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/forgot-password" element={<ForgotPage />} />
+          <Route path="/enter-otp" element={<EnterOtp />} />
           {/* 403 — full-screen, no app chrome; the guard redirects here */}
           <Route path="/unauthorized" element={<Unauthorized />} />
 
@@ -62,12 +64,12 @@ function AppContent() {
             element={<ProtectedRoute element={<SOC2Report />} />}
           />
           <Route
-            path="/reports/capacity"
+            path="/reports/capacity1"
             element={<ProtectedRoute element={<CapacityDashboard />} />}
           />
           <Route
-            path="/reports/capacity1"
-            element={<ProtectedRoute element={<CapacityDashboard1 />} />}
+            path="/reports/capacity"
+            element={<ProtectedRoute element={<CapacityDashboard />} />}
           />
           {/* RBAC — self-contained, uses its own sign-in / role gate */}
           <Route path="/access"     element={<ProtectedRoute element={<AccessManagement />} />} />
