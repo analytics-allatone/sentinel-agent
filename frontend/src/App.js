@@ -6,6 +6,8 @@ import Register from "./Register/Register";
 import Dashboard from "./Dashboard/Dashboard";
 import ForgotPage from "./ForgotPage/forgot-page";
 import EnterOtp from "./EnterOtp/EnterOtp";
+import ScanQR from "./ScanQR/ScanQR";
+import VerifyOtp from "./VerifyOtp/VerifyOtp";
 import InstallationProcess from "./InstallationProcess/InstallationProcess";
 import AgentDetails from "./Dashboard/AgentDashboard/AgentDetails";
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -43,6 +45,8 @@ function AppContent() {
           <Route path="/register" element={<Register />} />
           <Route path="/forgot-password" element={<ForgotPage />} />
           <Route path="/enter-otp" element={<EnterOtp />} />
+          <Route path="/scan-qr" element={<ScanQR />} />
+          <Route path="/verify-otp" element={<VerifyOtp />} />
           {/* 403 — full-screen, no app chrome; the guard redirects here */}
           <Route path="/unauthorized" element={<Unauthorized />} />
 
