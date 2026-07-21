@@ -59,6 +59,17 @@ class GetAgentsResponse(BaseModel):
 
 
 
+
+class AvailableEngines(BaseModel):
+    engine: str
+    service_name : Optional[str] = None
+    username:  Optional[str] = None
+    password: Optional[str] = None
+    is_enable : Optional[bool] = False
+
+class AvailableEnginesResponse(BaseModel):
+    available_engines : list[AvailableEngines]
+
 class IsValidAgentNameResponse(BaseModel):
     valid : bool
 

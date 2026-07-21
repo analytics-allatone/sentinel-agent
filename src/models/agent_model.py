@@ -47,5 +47,6 @@ class ServicesCredentials(Base):
     service_name = Column(String)
     username = Column(String)
     password = Column(String)
+    is_enable = Column(Boolean , default = False)
 
 
