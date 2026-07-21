@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import api, { setCookie } from "../api/api";
+import api from "../api/api";
 import Header from "../Header/Header";
 import "./Login.css";
 
@@ -32,20 +32,16 @@ function Login() {
       const accessToken = response.data.data?.access_token;
       const refreshToken = response.data.data?.refresh_token;
 
-      if (accessToken) {
-        setCookie("token", accessToken, 7);
-        console.log("[Login] ✅ Access token stored");
-      }
-
-      // Remember the signed-in email so the RBAC layer can identify the user.
-      localStorage.setItem("auth_email", email.trim().toLowerCase());
-
-      if (refreshToken) {
-        setCookie("refresh_token", refreshToken, 30);
-        console.log("[Login] ✅ Refresh token stored");
-      }
-
-      navigate("/dashboard");
+      // Second step: send the user to the QR + OTP verification page. The tokens
+      // are held in navigation state and only stored as cookies once they scan
+      // the QR with their authenticator app and enter the 6-digit code.
+      navigate("/verify-otp", {
+        state: {
+          email: email.trim().toLowerCase(),
+          pendingAccessToken: accessToken,
+          pendingRefreshToken: refreshToken,
+        },
+      });
     } catch (err) {
       console.log("[Login] ❌ Error:", err.response?.data);
       setError(

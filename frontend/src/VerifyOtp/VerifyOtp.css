@@ -1,0 +1,283 @@
+/* Verify OTP (QR + code) Page */
+.votp-page {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.votp-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex: 1;
+  padding: 40px 20px;
+}
+
+.votp-page .card {
+  background: white;
+  padding: 40px;
+  border-radius: 16px;
+  width: 100%;
+  max-width: 460px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  animation: votpSlideUp 0.5s ease-out;
+}
+
+@keyframes votpSlideUp {
+  from { opacity: 0; transform: translateY(30px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.votp-page .card-header {
+  text-align: center;
+  margin-bottom: 22px;
+}
+
+.votp-icon {
+  width: 60px;
+  height: 60px;
+  margin: 0 auto 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 26px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  box-shadow: 0 8px 20px rgba(102, 126, 234, 0.35);
+}
+
+.votp-page .card-header h1 {
+  margin: 0 0 8px 0;
+  font-size: 24px;
+  color: #333;
+  font-weight: 700;
+}
+
+.votp-page .card-header p {
+  margin: 0;
+  font-size: 14px;
+  color: #666;
+  line-height: 1.6;
+}
+
+/* Messages */
+.votp-page .error-message {
+  background: #fee;
+  border: 1px solid #fcc;
+  color: #c33;
+  padding: 12px;
+  border-radius: 8px;
+  margin-bottom: 18px;
+  font-size: 14px;
+  text-align: center;
+}
+
+.votp-page .success-message {
+  background: #efe;
+  border: 1px solid #cfc;
+  color: #3c3;
+  padding: 12px;
+  border-radius: 8px;
+  margin-bottom: 18px;
+  font-size: 14px;
+  text-align: center;
+}
+
+/* QR panel */
+.qr-panel {
+  display: flex;
+  gap: 18px;
+  align-items: center;
+  background: #fafbff;
+  border: 1px solid #eceef3;
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 14px;
+}
+
+.qr-box {
+  flex-shrink: 0;
+  background: #fff;
+  padding: 8px;
+  border-radius: 10px;
+  border: 1px solid #eceef3;
+  line-height: 0;
+}
+
+.qr-steps {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 13px;
+  color: #4b5563;
+  line-height: 1.7;
+}
+
+.qr-steps strong {
+  color: #333;
+}
+
+/* Manual key */
+.manual-key {
+  margin-bottom: 22px;
+  font-size: 13px;
+}
+
+.manual-key summary {
+  cursor: pointer;
+  color: #667eea;
+  font-weight: 600;
+  user-select: none;
+}
+
+.manual-key code {
+  display: block;
+  margin-top: 10px;
+  font-family: 'Courier New', monospace;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  color: #1f2333;
+  background: #f1f2f6;
+  padding: 10px 12px;
+  border-radius: 8px;
+  word-break: break-all;
+  text-align: center;
+}
+
+/* OTP inputs */
+.otp-inputs {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin: 6px 0 24px 0;
+}
+
+.otp-box {
+  width: 48px;
+  height: 56px;
+  text-align: center;
+  font-size: 24px;
+  font-weight: 700;
+  color: #333;
+  border: 2px solid #e0e0e0;
+  border-radius: 10px;
+  outline: none;
+  transition: all 0.2s ease;
+  background: #fafafe;
+}
+
+.otp-box:focus {
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.15);
+  background: #f8f9ff;
+}
+
+.otp-box.filled {
+  border-color: #667eea;
+  background: #f8f9ff;
+}
+
+.otp-box:disabled {
+  background: #f5f5f5;
+  cursor: not-allowed;
+}
+
+/* Verify button */
+.verify-btn {
+  width: 100%;
+  padding: 14px;
+  border: none;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  font-weight: 600;
+  font-size: 15px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.verify-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px rgba(102, 126, 234, 0.4);
+}
+
+.verify-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.verify-btn.loading {
+  position: relative;
+}
+
+.verify-btn.loading::after {
+  content: '';
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  top: 50%;
+  right: 20px;
+  margin-top: -8px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  border-top-color: white;
+  animation: votpSpin 0.8s linear infinite;
+}
+
+@keyframes votpSpin {
+  to { transform: rotate(360deg); }
+}
+
+.votp-signin-as {
+  text-align: center;
+  font-size: 13px;
+  color: #666;
+  margin: 18px 0 6px;
+}
+
+.votp-signin-as strong {
+  color: #333;
+}
+
+/* Back link */
+.votp-page .login-link {
+  text-align: center;
+  font-size: 14px;
+  margin-top: 6px;
+}
+
+.votp-page .login-link a {
+  color: #667eea;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.votp-page .login-link a:hover {
+  color: #764ba2;
+  text-decoration: underline;
+}
+
+@media (max-width: 480px) {
+  .votp-page .card {
+    padding: 28px 20px;
+  }
+  .qr-panel {
+    flex-direction: column;
+    text-align: center;
+  }
+  .qr-steps {
+    text-align: left;
+  }
+  .otp-inputs {
+    gap: 7px;
+  }
+  .otp-box {
+    width: 42px;
+    height: 50px;
+    font-size: 20px;
+  }
+}
