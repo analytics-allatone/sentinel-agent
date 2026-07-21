@@ -1,0 +1,14 @@
+{
+     "poll_interval": 100,
+     "allow_auto_auth": false,             
+     "enabled_engines": [],         
+     "engines": {                          
+       "mysql": { "user": "monitor", "password_env": "MYSQL_PW", "port": 3306 }
+     },
+     "targets": [
+    {"name": "prod-pg-server", "engine": "postgresql", "host": "141.148.220.11", "port": 5432, "user": "developer", "password_env": "password", "dbname": "developmentdb"},
+    {"name": "prod-pg-server2", "engine": "postgresql", "host": "141.148.220.11", "port": 5433, "user": "developer", "password_env": "password", "dbname": "developmentdb"},
+    {"name": "prod-oracle", "engine" : "oracle", "host": "141.148.220.11", "port": 1521, "user": "system", "password_env": "AdminPass2026" ,"service_name":"freepdb1"}
+    ]
+                 
+   }

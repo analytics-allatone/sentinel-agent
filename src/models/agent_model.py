@@ -43,8 +43,10 @@ class ServicesCredentials(Base):
 
     id = Column(Integer , primary_key=True , autoincrement=True)
     agent_name = Column(String)
+    engine = Column(String)
     service_name = Column(String)
     username = Column(String)
     password = Column(String)
+    is_enable = Column(Boolean , default = False)
 
 

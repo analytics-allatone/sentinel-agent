@@ -1,6 +1,7 @@
 import socket
 import platform
 import uuid
+from collectors.dbprobe.detect import detect_engines
 
 
 def get_mac_address() -> str:
@@ -52,7 +53,10 @@ def get_machine_info() -> dict:
 
 
 async def handle_command(payload):
-    return
+    if payload.get("command") ==  "list_services":
+        return detect_engines()
+    
+    return []
 
 if __name__ == "__main__":
     print(get_machine_info())

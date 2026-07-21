@@ -7,6 +7,11 @@ from sqlalchemy import insert
 from contextlib import asynccontextmanager
 from db.base import Base
 from models.user_model import Users
+from models.agent_model import AgentGroups , Agents
+from models.event_model import AuthEvents , ProcessEvents , NetworkEvents , USBEvents , FileEvents
+from models.db_events_models import (
+    PostgresDbEvents, MysqlDbEvents, OracleDbEvents, RedisDbEvents, MongoDbEvents,
+)
 from models.agent_model import AgentGroups , Agents , ServicesCredentials
 from models.event_model import AuthEvents , ProcessEvents , NetworkEvents , USBEvents , FileEvents , CapacityMonitoringEvents
 import json
@@ -73,10 +78,14 @@ CATEGORIES_TABLE_MAPPING = {
     "network": NetworkEvents,
     "process": ProcessEvents ,
     "usb" : USBEvents,
+    "postgres_health": PostgresDbEvents,
+    "mysql_health":    MysqlDbEvents,
+    "oracle_health":   OracleDbEvents,
+    "redis_health":    RedisDbEvents,
+    "mongodb_health":  MongoDbEvents,
+    
     "resource" : CapacityMonitoringEvents
     }
-
-
 
         
 async def push_data_to_db(data_to_push):

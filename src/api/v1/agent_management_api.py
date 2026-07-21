@@ -14,17 +14,16 @@ from sqlalchemy import desc ,select, func
 from db.db import  get_async_db
 from schemas.v1.standard_schema import standard_success_response
 from schemas.v1.agent_management_schema import (
-    AddAgentRequest , AddAgentResponse,
-
     GetAgentsResponse , AgentData, AgentStatusCount,
     AgentGroupCount , AgentOSCount, IsValidAgentNameResponse,
-    ExistingGroup , ExistingGroupsResponse , AgentInstallationCommandResponse
+    ExistingGroup , ExistingGroupsResponse , AgentInstallationCommandResponse,
+    AvailableEnginesResponse , AvailableEngines
 )
 
-from models.agent_model import Agents , AgentGroups
+from models.agent_model import Agents , AgentGroups , ServicesCredentials
 
 from auth.jwt_auth import verify_token , verify_admin_token
-
+from utils.mqtt_utils import mqtt_request
 
 
 
@@ -117,6 +116,52 @@ async def getAgents(db: AsyncSession = Depends(get_async_db) , user:dict = Depen
 
 
 
+
+
+
+
+
+@agent_management_router.get("/available-services", response_model = standard_success_response[AvailableEnginesResponse] , status_code=200)
+async def get_available_services(agent_name: str = Query() ,  db: AsyncSession = Depends(get_async_db)):
+    agent_name = agent_name.strip()
+
+    result = await mqtt_request(agent_name, "list_services", timeout=10.0)
+    if result is None:
+        raise HTTPException(504, "Agent did not respond (may be offline)")
+    
+    result = result.get("result")
+    engines = [r.get("engine") for r in result]
+
+    res = await db.execute(select(ServicesCredentials).where(ServicesCredentials.agent_name == agent_name))
+    res = res.scalars().all()
+
+    curr_services = {}
+    ser_list = []
+    for s in res:
+        this_ser = {
+            "service_name" : s.service_name,
+            "username" : s.username,
+            "password" : s.password,
+            "is_enable" : s.is_enable
+        }
+        curr_services[s.agent_name] = this_ser
+        ser_list.append(s.agent_name)
+
+    engines_list = []
+
+    for en in engines:
+        this_en = AvailableEngines(engine = en )
+        if en in ser_list:
+            curr_ser = curr_services.get(en)
+            this_en.service_name = curr_ser.get("service_name")
+            this_en.username = curr_ser.get("username")
+            this_en.password = curr_ser.get("password")
+            this_en.is_enable = curr_ser.get("is_enable")
+        
+        engines_list.append(this_en)
+
+    data_res = AvailableEnginesResponse(available_engines=engines_list)
+    return standard_success_response(data = data_res , message = "Available services fetched successfully")
 
 
 
