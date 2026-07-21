@@ -24,7 +24,7 @@ from schemas.v1.agent_management_schema import (
 from models.agent_model import Agents , AgentGroups
 
 from auth.jwt_auth import verify_token , verify_admin_token
-
+from utils.mqtt_utils import mqtt_request
 
 
 
@@ -117,6 +117,20 @@ async def getAgents(db: AsyncSession = Depends(get_async_db) , user:dict = Depen
 
 
 
+
+
+
+
+
+@agent_management_router.get("/available-services", status_code=200)
+async def get_available_services(agent_name: str = Query()):
+    agent_name = agent_name.strip()
+
+    result = await mqtt_request(agent_name, "list_services", timeout=10.0)
+    if result is None:
+        raise HTTPException(504, "Agent did not respond (may be offline)")
+
+    return result
 
 
 

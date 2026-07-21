@@ -40,7 +40,7 @@ class EventDispatcher:
             mqtt_user=MQTT_USER,
             mqtt_pass=MQTT_PASS,
             mqtt_topic=MQTT_TOPIC,
-            command_topic=MQTT_COMMAND_TOPIC,
+            agent_name=AGENT_NAME,
             on_command=handle_command
         )
 

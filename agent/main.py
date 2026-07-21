@@ -9,7 +9,6 @@ from config.unique_info import AGENT_NAME
 def main():
 
     config = DEFAULT_CONFIG.copy()
-
     agent = SentinelAgent(config , AGENT_NAME)
 
     def _sig_handler(sig, frame):

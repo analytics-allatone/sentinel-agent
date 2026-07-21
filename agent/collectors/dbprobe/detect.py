@@ -17,6 +17,7 @@ Detection signatures (extend SIGNATURES to add engines):
 """
 
 from typing import List, Dict, Any, Optional
+import psutil
 
 # port -> engine (first match wins; mysql/mariadb share 3306 and are
 # disambiguated by process name below)
@@ -64,8 +65,7 @@ def _sid_from_pmon(name: str) -> Optional[str]:
 
 
 def detect_engines() -> List[Dict[str, Any]]:
-    import psutil
-
+    
     found: Dict[str, Dict[str, Any]] = {}
 
     def add(engine, port=None, pid=None, exe=None, service=None):
@@ -112,5 +112,4 @@ def detect_engines() -> List[Dict[str, Any]]:
     # name is authoritative — drop the generic mysql entry.
     if "mariadb" in found and "mysql" in found and found["mysql"].get("pid") is None:
         found.pop("mysql", None)
-
     return list(found.values())

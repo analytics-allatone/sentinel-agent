@@ -73,7 +73,8 @@ class DatabaseInspector:
         self._dispatch = dispatch
         self._machine_info = machine_info
         self._config_file = _resolve_config_file(config_file)
-        self._control_url = control_url or os.getenv("DB_CONTROL_URL")
+        self._control_url = control_url 
+        # or os.getenv("DB_CONTROL_URL")
         self._poll_interval = poll_interval
         self._control_interval = 10.0
         self._engines_cfg: Dict[str, Any] = {}

@@ -25,10 +25,6 @@ DEFAULT_CONFIG = {
     "output": {
         "stdout": False,
 
-        "kafka": {
-            "brokers": "80.225.239.163:9092",
-            "topic": "agent-events"
-        }
     },
     
     "collectors": {

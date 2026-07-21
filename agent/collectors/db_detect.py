@@ -22,57 +22,29 @@ def _os_resources() -> Dict[str, Any]:
         return {"error": str(ex)}
 
 
-def build_detect_event(d: Dict[str, Any], os_res: Optional[Dict[str, Any]] = None):
-    """One detect event for one found engine. Returns None if we have no event
-    class for that engine."""
-    from schema.db_events import EVENT_FOR_ENGINE
-    from schema.db_event_base import EventOutcome
+# def build_detect_event(d: Dict[str, Any], os_res: Optional[Dict[str, Any]] = None):
+#     """One detect event for one found engine. Returns None if we have no event
+#     class for that engine."""
+#     from schema.db_events import EVENT_FOR_ENGINE
+#     from schema.db_event_base import EventOutcome
 
-    EventCls = EVENT_FOR_ENGINE.get(d["engine"])
-    if EventCls is None:
-        return None
-    ev = EventCls()
-    ev.action = "db_detected"
-    ev.outcome = EventOutcome.SUCCESS
-    ev.detected = True
-    ev.running = bool(d.get("running", True))
-    ev.db_host = d.get("host")
-    ev.db_port = d.get("port")
-    ev.process_pid = d.get("pid")
-    ev.exe_path = d.get("exe_path")
-    ev.service_name = d.get("service_name")
-    ev.system_resources = os_res or None
-    ev.target_name = d.get("name") or d.get("target_name")
-    ev.tags = ["database", "discovery", d["engine"]]
-    ev.inspected = False
-    ev.notes = "detected — awaiting user selection (enable in dashboard to inspect)"
-    return ev
+#     EventCls = EVENT_FOR_ENGINE.get(d["engine"])
+#     if EventCls is None:
+#         return None
+#     ev = EventCls()
+#     ev.action = "db_detected"
+#     ev.outcome = EventOutcome.SUCCESS
+#     ev.detected = True
+#     ev.running = bool(d.get("running", True))
+#     ev.db_host = d.get("host")
+#     ev.db_port = d.get("port")
+#     ev.process_pid = d.get("pid")
+#     ev.exe_path = d.get("exe_path")
+#     ev.service_name = d.get("service_name")
+#     ev.system_resources = os_res or None
+#     ev.target_name = d.get("name") or d.get("target_name")
+#     ev.tags = ["database", "discovery", d["engine"]]
+#     ev.inspected = False
+#     ev.notes = "detected — awaiting user selection (enable in dashboard to inspect)"
+#     return ev
 
-
-def run_detect(dispatch: Callable, machine_info: dict,
-               emit: bool = True) -> List[Dict[str, Any]]:
-    """THE FUNCTION. Detect local DB engines once and emit a detect event each.
-
-        found = run_detect(dispatch, machine_info)
-
-    Args:
-        dispatch: the agent's dispatch(event_dict, machine_info)
-        emit:     False -> just return the list, send nothing
-    Returns:
-        list of dicts: [{"engine":"mysql","running":True,"port":3306,"pid":..,...}]
-    """
-    from collectors.dbprobe.detect import detect_engines
-
-    os_res = _os_resources()
-    try:
-        found = detect_engines()
-    except Exception as ex:
-        print(f"[detect] error: {ex}")
-        return []
-    print(f"[detect] found {len(found)} -> {[d.get('engine') for d in found]}")
-    if emit:
-        for d in found:
-            ev = build_detect_event(d, os_res)
-            if ev is not None:
-                dispatch(ev.to_dict(), machine_info)
-    return found
