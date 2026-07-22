@@ -15,6 +15,7 @@ from collectors.harddisk_collector import HardDiskCollector
 
 from collectors.capacity_monitoring_collector import ResourceCollector
 from utils.utils import get_machine_info
+from collectors.log_inspector import LogInspector
 
 
 
@@ -150,7 +151,14 @@ class SentinelAgent:
         except Exception as e:
             print(f"USB collector error: {e}")
 
-        
+        try:
+            db=LogInspector(dispatch=dispatch, machine_info=self.machine_info,)
+            db.start({"name": "prod-oracle", "engine" : "oracle", "host": "141.148.220.11", "port": 1521, "user_name": "system", "password": "AdminPass2026" ,"service_name":"freepdb1"})
+            self._collectors.append(db)
+        except Exception as e:
+                print(f"DB discovery error: {e}")
+
+
 
 
         # found = run_detect(dispatch, self.machine_info)

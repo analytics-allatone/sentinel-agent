@@ -1,6 +1,8 @@
-from pydantic import BaseModel
+# from pydantic import BaseModel
 from typing import Optional
-
+from pydantic import BaseModel, Field, field_validator
+ 
+from utils.crypto import VALID_ENGINES, canon_engine
 
 class AddAgentRequest(BaseModel):
     agent_name : str
@@ -87,4 +89,50 @@ class ExistingGroupsResponse(BaseModel):
 class AgentInstallationCommandResponse(BaseModel):
     installation_command : str
 
-    
+class AddCredentialRequest(BaseModel):
+    engine: str = Field(..., description="mysql | mariadb | postgresql | oracle | redis | mongodb")
+    user_name: Optional[str] = Field(None, max_length=255)
+    password: Optional[str] = Field(None, description="stored encrypted, never returned")
+    service_name: Optional[str] = Field(None, description="Oracle service name / SID")
+    dbname: Optional[str] = Field(None, description="mysql / postgres / mongo database")
+    host: str = "127.0.0.1"
+    port: Optional[int] = None
+    agent_name: Optional[str] = None
+    is_active: bool = True
+ 
+    @field_validator("engine")
+    @classmethod
+    def _check_engine(cls, v):
+        e = canon_engine(v)
+        if e not in VALID_ENGINES:
+            raise ValueError(f"unsupported engine '{v}'; expected one of {sorted(VALID_ENGINES)}")
+        return e
+ 
+    @field_validator("port")
+    @classmethod
+    def _check_port(cls, v):
+        if v is not None and not (1 <= v <= 65535):
+            raise ValueError("port must be between 1 and 65535")
+        return v
+ 
+ 
+class CredentialData(BaseModel):
+    id: int
+    agent_name: Optional[str] = None
+    engine: str
+    host: str
+    port: Optional[int] = None
+    user_name: Optional[str] = None
+    service_name: Optional[str] = None
+    dbname: Optional[str] = None
+    is_active: bool
+    has_password: bool
+ 
+ 
+class AddCredentialResponse(BaseModel):
+    credential: CredentialData
+    created: bool
+ 
+ 
+class GetCredentialsResponse(BaseModel):
+    credentials: list[CredentialData]
