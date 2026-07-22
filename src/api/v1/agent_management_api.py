@@ -3,7 +3,7 @@ from fastapi import APIRouter , Depends , HTTPException , status , Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from pathlib import Path
 import base64
-from typing import Optional
+from typing import Optional , List
 from sqlalchemy import desc ,select, func
 
 ###############################################
@@ -24,7 +24,11 @@ from models.agent_model import Agents , AgentGroups , ServicesCredentials
 
 from auth.jwt_auth import verify_token , verify_admin_token
 from utils.mqtt_utils import mqtt_request
-
+from models.credential_model import CredentialStorage
+from schemas.v1.agent_management_schema import (
+        AddCredentialRequest, AddCredentialResponse,
+        GetCredentialsResponse, CredentialData)
+from utils.crypto import encrypt, canon_engine
 
 
 agent_management_router = APIRouter()
@@ -217,3 +221,107 @@ async def agent_installation_command(os : str,
        
 
     return standard_success_response(data = res_data , message = "Instalation command get Successfully")
+
+def _credential_data(row) -> "CredentialData":
+    """Row -> response model. The password is never included."""
+    return CredentialData(
+        id=row.id,
+        agent_name=row.agent_name,
+        engine=row.engine,
+        host=row.host,
+        port=row.port,
+        user_name=row.user_name,
+        service_name=row.service_name,
+        dbname=row.dbname,
+        is_active=row.is_active,
+        has_password=bool(row.password_enc),
+    )
+
+
+@agent_management_router.post("/add-credential",
+                              response_model=standard_success_response[AddCredentialResponse],
+                              status_code=201)
+async def add_credential(req: AddCredentialRequest,
+                         db: AsyncSession = Depends(get_async_db),
+                         user: dict = Depends(verify_token)):
+    """Store user_name / password / service_name / dbname for an engine."""
+
+    # Oracle needs one of these to build a connect string.
+    if req.engine == "oracle" and not (req.service_name or req.dbname):
+        raise HTTPException(status_code=422,
+                            detail="service_name is required for oracle")
+
+    # Re-posting the same target updates it instead of creating a duplicate.
+    result = await db.execute(
+        select(CredentialStorage).where(
+            CredentialStorage.agent_name == req.agent_name,
+            CredentialStorage.engine == req.engine,
+            CredentialStorage.host == req.host,
+            CredentialStorage.service_name == req.service_name))
+    credential = result.scalars().first()
+
+    created = credential is None
+    if created:
+        credential = CredentialStorage(
+            agent_name=req.agent_name,
+            engine=req.engine,
+            host=req.host,
+            service_name=req.service_name)
+        db.add(credential)
+
+    credential.user_name = req.user_name
+    credential.dbname = req.dbname
+    credential.port = req.port
+    credential.is_active = req.is_active
+    if req.password is not None:
+        credential.password_enc = encrypt(req.password)     # encrypted here
+
+    await db.commit()
+    await db.refresh(credential)
+
+    res_data = AddCredentialResponse(
+        credential=_credential_data(credential),
+        created=created)
+    return standard_success_response(data=res_data,
+                                     message="Credential saved successfully")
+
+
+@agent_management_router.get("/get-credentials",
+                             response_model=standard_success_response[GetCredentialsResponse],
+                             status_code=200)
+async def get_credentials(engine: Optional[str] = Query(None),
+                          agent_name: Optional[str] = Query(None),
+                          db: AsyncSession = Depends(get_async_db),
+                          user: dict = Depends(verify_token)):
+    """List stored credentials. Passwords are never returned."""
+
+    query = select(CredentialStorage)
+    if engine:
+        query = query.where(CredentialStorage.engine == canon_engine(engine))
+    if agent_name:
+        query = query.where(CredentialStorage.agent_name == agent_name)
+
+    result = await db.execute(query.order_by(CredentialStorage.id))
+    credentials = result.scalars().all()
+
+    res_data = GetCredentialsResponse(
+        credentials=[_credential_data(c) for c in credentials])
+    return standard_success_response(data=res_data,
+                                     message="Credentials fetched successfully")
+
+
+@agent_management_router.delete("/delete-credential", status_code=200)
+async def delete_credential(credential_id: int = Query(),
+                            db: AsyncSession = Depends(get_async_db),
+                            user: dict = Depends(verify_token)):
+    """Remove a stored credential."""
+
+    credential = await db.get(CredentialStorage, credential_id)
+    if not credential:
+        raise HTTPException(status_code=404, detail="Credential not found")
+
+    await db.delete(credential)
+    await db.commit()
+
+    return standard_success_response(data={"id": credential_id},
+                                     message="Credential deleted successfully")
