@@ -129,7 +129,7 @@ async def getAgents(db: AsyncSession = Depends(get_async_db) , user:dict = Depen
 async def get_available_services(agent_name: str = Query() ,  db: AsyncSession = Depends(get_async_db)):
     agent_name = agent_name.strip()
 
-    result = await mqtt_request(agent_name, "list_services", timeout=10.0)
+    result = await mqtt_request(agent_name=agent_name, command =  "list_services",timeout=10.0)
     if result is None:
         raise HTTPException(504, "Agent did not respond (may be offline)")
     
@@ -279,6 +279,19 @@ async def add_credential(req: AddCredentialRequest,
 
     await db.commit()
     await db.refresh(credential)
+    starting_args = {
+        "engine": req.engine,
+        "user_name":req.user_name,
+        "password": req.password,
+        "service_name": req.service_name,
+        "dbname": req.dbname,
+        "host": req.host,
+        "port": req.port
+    }
+    result = await mqtt_request(agent_name=req.agent_name, command="stop_engine",args=starting_args , timeout=10.0)
+    print(result)
+    result = await mqtt_request(agent_name=req.agent_name, command="start_engine",args={"engine" : req.engine} , timeout=10.0)
+    print(result)
 
     res_data = AddCredentialResponse(
         credential=_credential_data(credential),
@@ -320,7 +333,8 @@ async def delete_credential(credential_id: int = Query(),
     credential = await db.get(CredentialStorage, credential_id)
     if not credential:
         raise HTTPException(status_code=404, detail="Credential not found")
-
+    result = await mqtt_request(agent_name=credential.agent_name, command="stop_engine",args={"engine" : credential.engine} , timeout=10.0)
+    print(result)
     await db.delete(credential)
     await db.commit()
 
