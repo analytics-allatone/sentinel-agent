@@ -11,11 +11,11 @@ from collectors.process_collector import ProcessCollector
 from collectors.usb_collector import USBCollector
 from collectors.harddisk_collector import HardDiskCollector
 
-# from collectors.db_inspector import DatabaseInspector
 
 from collectors.capacity_monitoring_collector import ResourceCollector
 from utils.utils import get_machine_info
-from collectors.log_inspector import LogInspector
+from collectors.engines_handler import EnginesHandler
+from utils.command_registry import register
 
 
 
@@ -62,6 +62,12 @@ class SentinelAgent:
         self._dispatcher = self._build_dispatcher()
         dispatch = self._make_dispatch()
 
+        try:
+            eh = EnginesHandler(dispatch=dispatch, machine_info=self.machine_info)
+            register("engines_handler", eh)
+            self._collectors.append(eh)
+        except Exception as e:
+            print(f"Engine Handler error: {e}")
 
         try:
             rc = ResourceCollector(
@@ -150,13 +156,6 @@ class SentinelAgent:
             print("USB Collector started")
         except Exception as e:
             print(f"USB collector error: {e}")
-
-        try:
-            db=LogInspector(dispatch=dispatch, machine_info=self.machine_info,)
-            db.start({"name": "prod-oracle", "engine" : "oracle", "host": "141.148.220.11", "port": 1521, "user_name": "system", "password": "AdminPass2026" ,"service_name":"freepdb1"})
-            self._collectors.append(db)
-        except Exception as e:
-                print(f"DB discovery error: {e}")
 
 
 
