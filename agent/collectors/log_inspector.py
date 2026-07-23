@@ -155,7 +155,7 @@ class LogInspector:
         #     ev.inspected = False
         #     ev.severity = Severity.LOW
         #     ev.notes = f"driver '{probe.DRIVER}' not installed (pip install {probe.DRIVER})"
-            return ev
+            # return ev
 
         try:
             print(params)

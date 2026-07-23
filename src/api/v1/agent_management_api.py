@@ -136,7 +136,7 @@ async def get_available_services(agent_name: str = Query() ,  db: AsyncSession =
     result = result.get("result")
     engines = [r.get("engine") for r in result]
 
-    res = await db.execute(select(ServicesCredentials).where(ServicesCredentials.agent_name == agent_name))
+    res = await db.execute(select(CredentialStorage).where(CredentialStorage.agent_name == agent_name))
     res = res.scalars().all()
 
     curr_services = {}
@@ -144,8 +144,8 @@ async def get_available_services(agent_name: str = Query() ,  db: AsyncSession =
     for s in res:
         this_ser = {
             "service_name" : s.service_name,
-            "username" : s.username,
-            "password" : s.password,
+            "username" : s.user_name,
+            "password" : s.password_enc,
             "is_enable" : s.is_enable
         }
         curr_services[s.agent_name] = this_ser
@@ -236,6 +236,7 @@ def _credential_data(row) -> "CredentialData":
         is_active=row.is_active,
         has_password=bool(row.password_enc),
     )
+
 
 
 @agent_management_router.post("/add-credential",
