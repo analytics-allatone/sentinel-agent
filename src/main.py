@@ -99,10 +99,11 @@ async def get_binary(
     if existing_agent:
         if existing_agent.mac_address:
             raise HTTPException(status_code=409, detail=f"Agent already installed with this name , use another name")
-    this_agent = Agents(agent_name = agent_name)
-    if group_id :
-        this_agent.group_id = group_id
-    db.add(this_agent)
+    else:
+        this_agent = Agents(agent_name = agent_name)
+        if group_id :
+            this_agent.group_id = group_id
+        db.add(this_agent)
     await db.commit()
     return FileResponse(path, media_type="application/octet-stream", filename=safe)
 

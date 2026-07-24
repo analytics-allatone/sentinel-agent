@@ -2,6 +2,7 @@ import socket
 import platform
 import uuid
 from collectors.dbprobe.detect import detect_engines
+from command_registry import get_handler
 
 
 def get_mac_address() -> str:
@@ -53,8 +54,20 @@ def get_machine_info() -> dict:
 
 
 async def handle_command(payload):
-    if payload.get("command") ==  "list_services":
+    command = payload.get("command")
+    args = payload.get("args")
+    if command ==  "list_services":
         return detect_engines()
+    
+    inspector = get_handler("engines_handler")
+
+    if inspector is None:
+        return {"error": "log inspector not ready"}
+
+    if command == "start_engine":
+        return inspector.start(args)
+    if command == "stop_engine":
+        return inspector.stop(args.get("engine"))
     
     return []
 

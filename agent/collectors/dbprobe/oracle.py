@@ -1,5 +1,9 @@
 from typing import Dict, Any ,List
 from collectors.dbprobe._util import jsonable, na, safe
+from . import _thin_guard
+_thin_guard.install() 
+import oracledb
+
 DRIVER = "oracledb"
 def _as_list(v) -> List:
     if isinstance(v, list):
@@ -7,7 +11,7 @@ def _as_list(v) -> List:
     return [] if v is None else [v] 
 
 def inspect(params: Dict[str, Any]) -> Dict[str, Any]:
-    import oracledb
+
     print("conning")
     host = params.get("host", "127.0.0.1"); port = int(params.get("port", 1521))
     if params.get("service_name"): dsn = oracledb.makedsn(host, port, service_name=params["service_name"])

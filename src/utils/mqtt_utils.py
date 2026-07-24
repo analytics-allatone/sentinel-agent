@@ -12,7 +12,7 @@ MQTT_PASS = "mqttpassword"
 
 
 
-async def mqtt_request(agent_name: str, command: str, timeout: float = 10.0) -> dict | None:
+async def mqtt_request(agent_name: str, command: str,args: dict|None = None, timeout: float = 10.0) -> dict | None:
     """
     Publish a command to an agent and wait for its response.
     Returns the response dict, or None if the agent doesn't answer in time.
@@ -20,7 +20,7 @@ async def mqtt_request(agent_name: str, command: str, timeout: float = 10.0) -> 
     request_id = str(uuid.uuid4())
     command_topic  = f"server/command/{agent_name}"
     response_topic = f"agent/response/{agent_name}"
-    payload = json.dumps({"command": command, "request_id": request_id})
+    payload = json.dumps({"command": command, "args" : args ,  "request_id": request_id})
 
     try:
         async with aiomqtt.Client(

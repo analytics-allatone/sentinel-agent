@@ -11,10 +11,11 @@ from collectors.process_collector import ProcessCollector
 from collectors.usb_collector import USBCollector
 from collectors.harddisk_collector import HardDiskCollector
 
-# from collectors.db_inspector import DatabaseInspector
 
 from collectors.capacity_monitoring_collector import ResourceCollector
 from utils.utils import get_machine_info
+from collectors.engines_handler import EnginesHandler
+from utils.command_registry import register
 
 
 
@@ -61,6 +62,12 @@ class SentinelAgent:
         self._dispatcher = self._build_dispatcher()
         dispatch = self._make_dispatch()
 
+        try:
+            eh = EnginesHandler(dispatch=dispatch, machine_info=self.machine_info)
+            register("engines_handler", eh)
+            self._collectors.append(eh)
+        except Exception as e:
+            print(f"Engine Handler error: {e}")
 
         try:
             rc = ResourceCollector(
@@ -150,7 +157,7 @@ class SentinelAgent:
         except Exception as e:
             print(f"USB collector error: {e}")
 
-        
+
 
 
         # found = run_detect(dispatch, self.machine_info)
