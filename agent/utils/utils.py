@@ -2,7 +2,8 @@ import socket
 import platform
 import uuid
 from collectors.dbprobe.detect import detect_engines
-from command_registry import get_handler
+from collectors.webprobe.detect import detect_servers
+from utils.command_registry import get_handler
 
 
 def get_mac_address() -> str:
@@ -57,15 +58,23 @@ async def handle_command(payload):
     command = payload.get("command")
     args = payload.get("args")
     if command ==  "list_services":
-        return detect_engines()
+        det=[]
+        # print(detect_engines())
+        print(detect_servers())
+        det=(detect_engines()+detect_servers())
+        # print(det)
+        return det
     
     inspector = get_handler("engines_handler")
-
+    web_inspector=get_handler("web_inspector")
     if inspector is None:
         return {"error": "log inspector not ready"}
+    if web_inspector is None:
+        return {"error": "web inspector not ready"}
 
     if command == "start_engine":
         return inspector.start(args)
+    
     if command == "stop_engine":
         return inspector.stop(args.get("engine"))
     

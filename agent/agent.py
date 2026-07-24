@@ -16,6 +16,8 @@ from collectors.capacity_monitoring_collector import ResourceCollector
 from utils.utils import get_machine_info
 from collectors.engines_handler import EnginesHandler
 from utils.command_registry import register
+from collectors.web_inspector import WebInspector
+from utils.command_registry import register
 
 
 
@@ -68,7 +70,14 @@ class SentinelAgent:
             self._collectors.append(eh)
         except Exception as e:
             print(f"Engine Handler error: {e}")
-
+        try:
+            wi = WebInspector(dispatch=dispatch, machine_info=self.machine_info)
+            # wi.start({"server": "apache", "host": "127.0.0.1", "port": 8080})
+            print("nech")
+            register("web_inspector", wi)
+            self._collectors.append(wi)
+        except Exception as e:
+            print(f"Web_Server inspector error: {e}")
         try:
             rc = ResourceCollector(
                 dispatch      = dispatch,
@@ -176,8 +185,8 @@ class SentinelAgent:
         #         self._db_inspector.start()          # exits by itself while nothing is ticked
         #         self._collectors.append(self._db_inspector)
 
-            # except Exception as e:
-            #     print(f"Database discovery collector error: {e}")
+        #     except Exception as e:
+        #         print(f"Database discovery collector error: {e}")
 
 
         # Hard Disk collector

@@ -1,8 +1,10 @@
 from sqlalchemy.future import select
-from fastapi import APIRouter , Depends , HTTPException , status , Query
+from fastapi import APIRouter , Depends , HTTPException , status , Query, Header
+
 from sqlalchemy.ext.asyncio import AsyncSession
 from pathlib import Path
 import base64
+import os
 from typing import Optional , List
 from sqlalchemy import desc ,select, func
 
@@ -24,12 +26,15 @@ from models.agent_model import Agents , AgentGroups , ServicesCredentials
 
 from auth.jwt_auth import verify_token , verify_admin_token
 from utils.mqtt_utils import mqtt_request
-from models.credential_model import CredentialStorage
+from models.credential_model import CredentialStorage,WebInspectConfig
 from schemas.v1.agent_management_schema import (
         AddCredentialRequest, AddCredentialResponse,
-        GetCredentialsResponse, CredentialData)
+        GetCredentialsResponse, CredentialData,AddWebConfigRequest,
+        UpdateWebConfigRequest,WebConfigData,AddWebConfigResponse,
+        GetWebConfigsResponse)
 from utils.crypto import encrypt, canon_engine
-
+from utils.web_config import (canon_server, clean, load_tls_hosts,
+                                  dump_tls_hosts, build_control_json)
 
 agent_management_router = APIRouter()
 
@@ -145,8 +150,8 @@ async def get_available_services(agent_name: str = Query() ,  db: AsyncSession =
         this_ser = {
             "service_name" : s.service_name,
             "username" : s.user_name,
-            "password" : s.password_enc,
-            "is_enable" : s.is_enable
+            "password" : s.password_enc
+            # "is_enable" : s.is_enable
         }
         curr_services[s.agent_name] = this_ser
         ser_list.append(s.agent_name)
@@ -243,8 +248,8 @@ def _credential_data(row) -> "CredentialData":
                               response_model=standard_success_response[AddCredentialResponse],
                               status_code=201)
 async def add_credential(req: AddCredentialRequest,
-                         db: AsyncSession = Depends(get_async_db),
-                         user: dict = Depends(verify_token)):
+                         db: AsyncSession = Depends(get_async_db),):
+                        #  user: dict = Depends(verify_token)):
     """Store user_name / password / service_name / dbname for an engine."""
 
     # Oracle needs one of these to build a connect string.
@@ -288,10 +293,13 @@ async def add_credential(req: AddCredentialRequest,
         "host": req.host,
         "port": req.port
     }
-    result = await mqtt_request(agent_name=req.agent_name, command="stop_engine",args=starting_args , timeout=10.0)
+    print(req.agent_name)
+    print(starting_args)
+    await mqtt_request(agent_name=req.agent_name, command="stop_engine",args={"engine" : req.engine} , timeout=10.0)
+    result = await mqtt_request(agent_name=req.agent_name, command="start_engine",args=starting_args , timeout=10.0)
     print(result)
-    result = await mqtt_request(agent_name=req.agent_name, command="start_engine",args={"engine" : req.engine} , timeout=10.0)
-    print(result)
+    # result = await mqtt_request(agent_name=req.agent_name, command="stop_engine",args={"engine" : req.engine} , timeout=10.0)
+    # print(result)
 
     res_data = AddCredentialResponse(
         credential=_credential_data(credential),
@@ -305,8 +313,8 @@ async def add_credential(req: AddCredentialRequest,
                              status_code=200)
 async def get_credentials(engine: Optional[str] = Query(None),
                           agent_name: Optional[str] = Query(None),
-                          db: AsyncSession = Depends(get_async_db),
-                          user: dict = Depends(verify_token)):
+                          db: AsyncSession = Depends(get_async_db),):
+                        #   user: dict = Depends(verify_token)):
     """List stored credentials. Passwords are never returned."""
 
     query = select(CredentialStorage)
@@ -326,8 +334,8 @@ async def get_credentials(engine: Optional[str] = Query(None),
 
 @agent_management_router.delete("/delete-credential", status_code=200)
 async def delete_credential(credential_id: int = Query(),
-                            db: AsyncSession = Depends(get_async_db),
-                            user: dict = Depends(verify_token)):
+                            db: AsyncSession = Depends(get_async_db),):
+                            # user: dict = Depends(verify_token)):
     """Remove a stored credential."""
 
     credential = await db.get(CredentialStorage, credential_id)
@@ -340,3 +348,162 @@ async def delete_credential(credential_id: int = Query(),
 
     return standard_success_response(data={"id": credential_id},
                                      message="Credential deleted successfully")
+
+def _web_config_data(row) -> "WebConfigData":
+    """Row -> response model. The password is never included."""
+    return WebConfigData(
+        id=row.id,
+        agent_name=row.agent_name,
+        server=row.server,
+        target_name=row.target_name,
+        host=row.host,
+        port=row.port,
+        status_url=row.status_url,
+        access_log=row.access_log,
+        error_log=row.error_log,
+        tls_hosts=load_tls_hosts(row.tls_hosts),
+        user_name=row.user_name,
+        has_password=bool(row.password_enc),
+        is_active=row.is_active,
+    )
+
+
+def require_agent_token(x_agent_token: Optional[str] = Header(default=None)):
+    """Guard for the endpoint that hands back decrypted passwords."""
+    expected = os.getenv("AGENT_API_TOKEN")
+    if not expected:
+        raise HTTPException(status_code=500,
+                            detail="AGENT_API_TOKEN is not configured on the server")
+    if x_agent_token != expected:
+        raise HTTPException(status_code=401,
+                            detail="invalid or missing X-Agent-Token")
+    return True
+
+
+# ── save (upsert) ───────────────────────────────────
+@agent_management_router.post("/add-web-config",
+                              response_model=standard_success_response[AddWebConfigResponse],
+                              status_code=201)
+async def add_web_config(req: AddWebConfigRequest,
+                         db: AsyncSession = Depends(get_async_db)):
+    """Store status_url / log paths / tls_hosts for an nginx or apache server."""
+
+    # Without at least one of these there is nothing for the probe to inspect.
+    if not (req.status_url or req.access_log or req.error_log or req.tls_hosts):
+        raise HTTPException(
+            status_code=422,
+            detail="provide at least one of status_url, access_log, "
+                   "error_log or tls_hosts")
+
+    # Re-posting the same target updates it instead of creating a duplicate.
+    result = await db.execute(
+        select(WebInspectConfig).where(
+            WebInspectConfig.agent_name == req.agent_name,
+            WebInspectConfig.server == req.server,
+            WebInspectConfig.host == req.host,
+            WebInspectConfig.target_name == req.target_name))
+    row = result.scalars().first()
+
+    created = row is None
+    if created:
+        row = WebInspectConfig(agent_name=req.agent_name, server=req.server,
+                               host=req.host, target_name=req.target_name)
+        db.add(row)
+
+    row.port = req.port
+    row.status_url = req.status_url
+    row.access_log = req.access_log
+    row.error_log = req.error_log
+    row.tls_hosts = dump_tls_hosts(req.tls_hosts)
+    row.user_name = req.user_name
+    row.is_active = req.is_active
+    if req.password is not None:
+        row.password_enc = encrypt(req.password)     # encrypted before storage
+
+    await db.commit()
+    await db.refresh(row)
+
+    res_data = AddWebConfigResponse(created=created,
+                                    web_config=_web_config_data(row))
+    return standard_success_response(
+        data=res_data,
+        message="Web config saved successfully" if not created
+                else "Web config added successfully")
+
+
+# ── list ────────────────────────────────────────────
+@agent_management_router.get("/get-web-configs",
+                             response_model=standard_success_response[GetWebConfigsResponse],
+                             status_code=200)
+async def get_web_configs(server: Optional[str] = Query(None),
+                          agent_name: Optional[str] = Query(None),
+                          db: AsyncSession = Depends(get_async_db)):
+    """List stored web configs. Passwords are never returned."""
+    stmt = select(WebInspectConfig)
+    if server:
+        stmt = stmt.where(WebInspectConfig.server == canon_server(server))
+    if agent_name:
+        stmt = stmt.where(WebInspectConfig.agent_name == agent_name)
+
+    result = await db.execute(stmt.order_by(WebInspectConfig.id))
+    rows = result.scalars().all()
+
+    res_data = GetWebConfigsResponse(
+        total=len(rows),
+        web_configs=[_web_config_data(r) for r in rows])
+    return standard_success_response(data=res_data,
+                                     message="Web configs fetched successfully")
+
+
+# ── update ──────────────────────────────────────────
+@agent_management_router.patch("/update-web-config/{config_id}",
+                               response_model=standard_success_response[WebConfigData],
+                               status_code=200)
+async def update_web_config(config_id: int, req: UpdateWebConfigRequest,
+                            db: AsyncSession = Depends(get_async_db)):
+    """Update selected fields, including rotating the status_url password."""
+    row = await db.get(WebInspectConfig, config_id)
+    if not row:
+        raise HTTPException(status_code=404, detail="Web config not found")
+
+    data = req.model_dump(exclude_unset=True)
+    if "password" in data:
+        row.password_enc = encrypt(data.pop("password"))
+    if "tls_hosts" in data:
+        row.tls_hosts = dump_tls_hosts(data.pop("tls_hosts"))
+    for key, value in data.items():
+        setattr(row, key, clean(value))
+
+    await db.commit()
+    await db.refresh(row)
+    return standard_success_response(data=_web_config_data(row),
+                                     message="Web config updated successfully")
+
+
+# ── delete ──────────────────────────────────────────
+@agent_management_router.delete("/delete-web-config/{config_id}", status_code=200)
+async def delete_web_config(config_id: int,
+                            db: AsyncSession = Depends(get_async_db)):
+    row = await db.get(WebInspectConfig, config_id)
+    if not row:
+        raise HTTPException(status_code=404, detail="Web config not found")
+    await db.delete(row)
+    await db.commit()
+    return standard_success_response(data={"deleted_id": config_id},
+                                     message="Web config deleted successfully")
+
+
+# ── agent-only: control JSON for WebDiscoveryCollector ──
+@agent_management_router.get("/agents/{agent_name}/web-config/resolve",
+                             status_code=200)
+async def resolve_web_config(agent_name: str,
+                             db: AsyncSession = Depends(get_async_db),
+                             _=Depends(require_agent_token)):
+    
+    result = await db.execute(
+        select(WebInspectConfig).where(
+            WebInspectConfig.is_active.is_(True),
+            (WebInspectConfig.agent_name == agent_name) |
+            (WebInspectConfig.agent_name.is_(None))))
+    rows = result.scalars().all()
+    return build_control_json(rows)

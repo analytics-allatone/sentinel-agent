@@ -123,17 +123,13 @@ class EnginesHandler:
         ev.db_name  = params.get("dbname") 
         ev.service_name = params.get("service_name")        
         ev.target_name = f"{engine}@{host}"
-        print(ev.target_name)
         ev.tags = ["database", "inspect", engine]
         try:
             probe = importlib.import_module(f"collectors.dbprobe.{INSPECTORS[engine]}")
             status, msg = _driver_status(getattr(probe, "DRIVER", None))
             if status != "ok":
                 raise ImportError(msg)
-            # probe = importlib.import_module(f"collectors.dbprobe.{INSPECTORS[engine]}")
-            # if importlib.util.find_spec(probe.DRIVER) is None:
-            #     raise ImportError(f"driver '{probe.DRIVER}' not installed "
-            #                       f"(pip install {probe.DRIVER})")
+            
         except BaseException as e:
             # BaseException: a blocked DLL surfaces as OSError/ImportError, but
             # some loaders raise SystemError — none of them should kill the thread.
@@ -145,23 +141,13 @@ class EnginesHandler:
             ev.inspect_error = msg
             ev.notes = f"driver unavailable for {engine}: {msg}"
             return ev
-        # print(ev)
-        # print(engine)
-        # probe = print(importlib.import_module(f"collectors.dbprobe.{INSPECTORS[engine]}"))
-        # print(probe)
-        # if importlib.util.find_spec(probe.DRIVER) is None:
-        #     print("soni")
-        #     ev.running = False
-        #     ev.inspected = False
-        #     ev.severity = Severity.LOW
-        #     ev.notes = f"driver '{probe.DRIVER}' not installed (pip install {probe.DRIVER})"
-            # return ev
+        
 
         try:
             print(params)
             print(probe)
             res = probe.inspect(params)          # whole dict goes to the probe
-            print(res)
+            # print(res)
             ev.running = True
             ev.auth_method = "configured"
             ev.apply_inspect(res)

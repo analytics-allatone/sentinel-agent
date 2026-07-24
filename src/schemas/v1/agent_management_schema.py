@@ -1,12 +1,14 @@
 # from pydantic import BaseModel
-from typing import Optional
+from typing import Optional ,List
 from pydantic import BaseModel, Field, field_validator
  
 from utils.crypto import VALID_ENGINES, canon_engine
+from utils.web_config import VALID_SERVERS, canon_server, clean
+
 
 class AddAgentRequest(BaseModel):
     agent_name : str
-    group_id : Optional[int] = None
+    group_id : Optional[int] = None 
 
 
 class AddAgentResponse(BaseModel):
@@ -136,3 +138,94 @@ class AddCredentialResponse(BaseModel):
  
 class GetCredentialsResponse(BaseModel):
     credentials: list[CredentialData]
+
+
+class AddWebConfigRequest(BaseModel):
+    server: str = Field(..., description="nginx | apache")
+    agent_name: Optional[str] = Field(None, description="which agent this applies to")
+    target_name: Optional[str] = Field(
+        None, description="name a remote target, e.g. 'edge-nginx'. "
+                          "Leave empty for the agent's local server.")
+    host: str = "127.0.0.1"
+    port: Optional[int] = None
+ 
+    status_url: Optional[str] = Field(
+        None, description="e.g. http://127.0.0.1/nginx_status "
+                          "or http://127.0.0.1/server-status?auto")
+    access_log: Optional[str] = None
+    error_log: Optional[str] = None
+    tls_hosts: Optional[List[str]] = Field(
+        None, description='certificate checks, e.g. ["example.com:443"]')
+ 
+    user_name: Optional[str] = Field(None, description="basic-auth user for status_url")
+    password: Optional[str] = Field(None, description="stored encrypted, never returned")
+    is_active: bool = True
+ 
+    @field_validator("server")
+    @classmethod
+    def _check_server(cls, v):
+        s = canon_server(v)
+        if s not in VALID_SERVERS:
+            raise ValueError(f"unsupported server '{v}'; "
+                             f"expected one of {sorted(VALID_SERVERS)}")
+        return s
+ 
+    @field_validator("port")
+    @classmethod
+    def _check_port(cls, v):
+        if v is not None and not (1 <= v <= 65535):
+            raise ValueError("port must be between 1 and 65535")
+        return v
+ 
+    @field_validator("status_url")
+    @classmethod
+    def _check_url(cls, v):
+        v = clean(v)
+        if v and not str(v).startswith(("http://", "https://")):
+            raise ValueError("status_url must start with http:// or https://")
+        return v
+ 
+    @field_validator("target_name", "access_log", "error_log", "user_name")
+    @classmethod
+    def _strip_placeholder(cls, v):
+        return clean(v)
+ 
+ 
+class UpdateWebConfigRequest(BaseModel):
+    target_name: Optional[str] = None
+    host: Optional[str] = None
+    port: Optional[int] = None
+    status_url: Optional[str] = None
+    access_log: Optional[str] = None
+    error_log: Optional[str] = None
+    tls_hosts: Optional[List[str]] = None
+    user_name: Optional[str] = None
+    password: Optional[str] = None
+    is_active: Optional[bool] = None
+ 
+ 
+class WebConfigData(BaseModel):
+    """Safe view of a stored row — the password is never included."""
+    id: int
+    agent_name: Optional[str] = None
+    server: str
+    target_name: Optional[str] = None
+    host: str
+    port: Optional[int] = None
+    status_url: Optional[str] = None
+    access_log: Optional[str] = None
+    error_log: Optional[str] = None
+    tls_hosts: List[str] = []
+    user_name: Optional[str] = None
+    has_password: bool = False
+    is_active: bool = True
+ 
+ 
+class AddWebConfigResponse(BaseModel):
+    created: bool
+    web_config: WebConfigData
+ 
+ 
+class GetWebConfigsResponse(BaseModel):
+    total: int
+    web_configs: List[WebConfigData]

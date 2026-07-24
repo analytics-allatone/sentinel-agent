@@ -7,8 +7,8 @@ from sqlalchemy import insert
 from contextlib import asynccontextmanager
 from db.base import Base
 from models.user_model import Users
-from models.agent_model import AgentGroups , Agents
-from models.event_model import AuthEvents , ProcessEvents , NetworkEvents , USBEvents , FileEvents
+# from models.agent_model import AgentGroups , Agents
+# from models.event_model import AuthEvents , ProcessEvents , NetworkEvents , USBEvents , FileEvents
 from models.db_events_models import (
     PostgresDbEvents, MysqlDbEvents, OracleDbEvents, RedisDbEvents, MongoDbEvents,
 )
@@ -17,14 +17,15 @@ from models.event_model import AuthEvents , ProcessEvents , NetworkEvents , USBE
 import json
 from datetime import datetime
 
+from models.web_server_events_model import WebServerEvents
 load_dotenv()
 
 
 dbuser = os.environ.get("DB_USER")
 dbpassword = os.environ.get("DB_PASSWORD")
 dbendpoint = os.environ.get("DB_ENDPOINT")
-# dbname = os.environ.get("DB_NAME")
-dbname = "testdb"
+dbname = os.environ.get("DB_NAME")
+# dbname = "testdb"
 
 
 DATABASE_URL_ASYNC=f"postgresql+asyncpg://{dbuser}:{dbpassword}@{dbendpoint}:5432/{dbname}"
@@ -83,22 +84,26 @@ CATEGORIES_TABLE_MAPPING = {
     "oracle_health":   OracleDbEvents,
     "redis_health":    RedisDbEvents,
     "mongodb_health":  MongoDbEvents,
-    
+    "web_server_health": WebServerEvents,
+   
     "resource" : CapacityMonitoringEvents
     }
 
         
-async def push_data_to_db(data_to_push):
+async def push_data_to_db(data_to_push,agents_map):
     meta_data = data_to_push.get("meta_data")
     events_data = data_to_push.get("event_data")
 
     agent_name = meta_data.get("agent_name")
+    agent_id = agents_map.get(agent_name)
+
     category_wise_data = {}
     available_categories = []
     for ed in events_data:
         cat = ed.get("category")
         if cat:
-            ed["agent_name"] = agent_name
+            ed["agent_id"] = agent_id
+            # ed["agent_name"] = agent_name
             if not category_wise_data.get(cat):
                 available_categories.append(cat)
                 category_wise_data[cat] = []
