@@ -22,6 +22,7 @@ import { AccessProvider } from "./Access/AccessContext";
 import AccessManagement from "./Access/AccessManagement";
 import CapacityDashboard from "./Reports/CapacityDashboard";
 import Unauthorized from "./pages/Unauthorized/Unauthorized";
+import Messaging from "./Messaging/Messaging";
 
 function AppContent() {
   const [isLoading, setIsLoading] = useState(false);
@@ -77,6 +78,9 @@ function AppContent() {
           />
           {/* RBAC — self-contained, uses its own sign-in / role gate */}
           <Route path="/access"     element={<ProtectedRoute element={<AccessManagement />} />} />
+
+          {/* Messaging / Notifications — frontend-only broadcast composer */}
+          <Route path="/messages"   element={<ProtectedRoute element={<Messaging />} />} />
 
           {/*
             Role-based protection examples (ProtectedRoute now accepts `roles`

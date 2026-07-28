@@ -10,6 +10,7 @@ const Sidebar = ({ isOpen, onClose }) => {
     { id: 'assets', label: 'Assets', icon: '📦', href: '/assets' },
     { id: 'monitoring', label: 'Monitoring', icon: '👁️', href: '/monitoring' },
     { id: 'reports', label: 'Reports', icon: '📈', href: '/reports' },
+    { id: 'messages', label: 'Messages', icon: '📨', href: '/messages' },
     { id: 'users', label: 'Users', icon: '👥', href: '/access' },
   ];
 
