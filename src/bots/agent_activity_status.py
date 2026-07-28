@@ -28,7 +28,7 @@ async def check_active_status():
                             a.status = "active"
                         else:
                             a.is_active = False
-                            a.status = "disconnected"
+                            a.status = "disconnected" if a.mac_address is not None else "never_connected"
                     await session.commit()
 
         asyncio.sleep(300)
