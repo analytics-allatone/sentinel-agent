@@ -350,6 +350,829 @@
   color: #333;
 }
 
+/* ── Expand ("+") column: shows an agent's available services ─────────────── */
+.col-expand {
+  width: 34px;
+  text-align: center;
+}
+
+.btn-expand {
+  width: 24px;
+  height: 24px;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #d7dae3;
+  border-radius: 50%;
+  background: #fff;
+  color: #4a5568;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.22s ease;
+}
+
+.btn-expand:hover {
+  border-color: #667eea;
+  color: #667eea;
+  background: #f5f6ff;
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.25);
+}
+
+.btn-expand.open {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-color: transparent;
+  color: #fff;
+  box-shadow: 0 3px 10px rgba(102, 126, 234, 0.4);
+}
+
+/* Expanded row */
+.services-row > td {
+  background: linear-gradient(180deg, #f2f4fb 0%, #f7f9fc 100%);
+  padding: 0;
+  box-shadow: inset 0 3px 6px -3px rgba(20, 30, 60, 0.12);
+}
+
+.services-panel {
+  padding: 14px 18px 18px;
+  animation: servicesSlide 0.22s ease-out;
+}
+
+@keyframes servicesSlide {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.services-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: #667085;
+  margin-bottom: 12px;
+}
+
+.services-title-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: #fff;
+  font-size: 13px;
+  box-shadow: 0 3px 8px rgba(102, 126, 234, 0.3);
+}
+
+.services-title strong {
+  color: #1f2333;
+}
+
+.services-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.services-status {
+  font-size: 13px;
+  color: #667085;
+  padding: 8px 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.services-error {
+  color: #c0392b;
+}
+
+.services-retry {
+  border: 1px solid #d7dae3;
+  background: #fff;
+  color: #4a5568;
+  border-radius: 6px;
+  padding: 4px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.services-retry:hover {
+  border-color: #4a9fd8;
+  color: #4a9fd8;
+}
+
+.services-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #fff;
+  border: 1px solid #e6e9f0;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.services-table th {
+  text-align: left;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #667085;
+  background: #f1f4f9;
+  padding: 9px 12px;
+  border-bottom: 1px solid #e6e9f0;
+}
+
+.services-table td {
+  padding: 9px 12px;
+  font-size: 13px;
+  color: #333;
+  border-bottom: 1px solid #f0f2f6;
+}
+
+.services-table tr:last-child td {
+  border-bottom: none;
+}
+
+.svc-engine {
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+/* Whole service row is clickable: opens the credentials popup */
+.svc-row {
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.svc-row:hover {
+  background: #f5f6ff !important;
+}
+
+.svc-engine-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.engine-avatar-sm {
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  font-size: 11px;
+}
+
+.svc-engine-name {
+  font-weight: 700;
+  color: #1f2333;
+  text-transform: capitalize;
+}
+
+.svc-th-action {
+  width: 130px;
+}
+
+.svc-td-action {
+  text-align: right;
+}
+
+.svc-view-hint {
+  font-size: 12px;
+  font-weight: 600;
+  color: #667eea;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+  white-space: nowrap;
+}
+
+.svc-row:hover .svc-view-hint {
+  opacity: 1;
+}
+
+.svc-chevron {
+  display: inline-block;
+  transition: transform 0.15s ease;
+}
+
+.svc-row:hover .svc-chevron {
+  transform: translateX(2px);
+}
+
+/* ── Credentials popup ────────────────────────────────────────────────────── */
+.cred-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 20, 35, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+.cred-modal {
+  background: #fff;
+  border-radius: 16px;
+  width: 100%;
+  max-width: 1150px;
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.4);
+  animation: credPop 0.22s cubic-bezier(0.18, 1.25, 0.4, 1);
+  display: flex;
+  flex-direction: column;
+  max-height: 84vh;
+  overflow: hidden;
+}
+
+@keyframes credPop {
+  from { opacity: 0; transform: translateY(12px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.cred-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 20px 22px 16px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.cred-title {
+  margin: 0 0 4px;
+  font-size: 18px;
+  font-weight: 700;
+  color: #fff;
+  text-transform: capitalize;
+  letter-spacing: 0.2px;
+}
+
+.cred-sub {
+  margin: 0;
+  font-size: 12.5px;
+  color: rgba(255, 255, 255, 0.78);
+}
+
+.cred-sub strong {
+  color: #fff;
+  font-weight: 600;
+}
+
+.cred-close {
+  background: rgba(255, 255, 255, 0.14);
+  border: none;
+  font-size: 14px;
+  color: #fff;
+  cursor: pointer;
+  width: 30px;
+  height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  transition: background 0.2s ease;
+}
+
+.cred-close:hover {
+  background: rgba(255, 255, 255, 0.28);
+}
+
+/* Count row above the cards */
+.cred-count {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #667085;
+  margin-bottom: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+}
+
+.cred-count-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.cred-body {
+  padding: 16px 20px;
+  overflow-y: auto;
+  background: #f6f8fc;
+}
+
+.cred-status {
+  font-size: 14px;
+  color: #667085;
+  padding: 10px 0;
+}
+
+.cred-error {
+  color: #c0392b;
+}
+
+/* Credential cards */
+.cred-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.cred-card {
+  position: relative;
+  background: #fff;
+  border: 1px solid #e6e9f0;
+  border-radius: 12px;
+  padding: 14px 16px 14px 20px;
+  box-shadow: 0 1px 3px rgba(20, 30, 60, 0.05);
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+  overflow: hidden;
+}
+
+.cred-card:hover {
+  box-shadow: 0 8px 22px rgba(20, 30, 60, 0.12);
+  transform: translateY(-2px);
+}
+
+/* Engine-colored strip down the card's left edge */
+.cred-card-accent {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+}
+
+.cred-card-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-bottom: 12px;
+  margin-bottom: 12px;
+  border-bottom: 1px solid #f0f2f6;
+}
+
+.engine-avatar {
+  flex-shrink: 0;
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 0.3px;
+  box-shadow: inset 0 -8px 14px rgba(0, 0, 0, 0.14);
+}
+
+.cred-card-titles {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.cred-card-engine {
+  font-size: 15px;
+  font-weight: 700;
+  color: #1f2333;
+  line-height: 1.25;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.cred-id {
+  font-size: 10.5px;
+  font-weight: 700;
+  color: #98a1b3;
+  background: #f1f3f8;
+  border-radius: 5px;
+  padding: 2px 6px;
+  letter-spacing: 0.4px;
+}
+
+/* Status chips with a colored dot */
+.cred-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.chip-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.cred-chip.chip-on {
+  background: #e7f7ee;
+  color: #1a8a4f;
+}
+
+.cred-chip.chip-off {
+  background: #f1f2f6;
+  color: #6b7280;
+}
+
+.cred-chip.chip-warn {
+  background: #fff4e5;
+  color: #b26a00;
+}
+
+/* Edit button on each credential card */
+.cred-edit-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 11px;
+  border-radius: 999px;
+  border: 1px solid #d7dae3;
+  background: #fff;
+  color: #4a5568;
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.cred-edit-btn:hover {
+  border-color: #667eea;
+  color: #667eea;
+  background: #f5f6ff;
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.2);
+}
+
+/* Delete button + inline confirmation */
+.cred-del-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 11px;
+  border-radius: 999px;
+  border: 1px solid #f0c4c4;
+  background: #fff;
+  color: #c0392b;
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.cred-del-btn:hover {
+  background: #c0392b;
+  border-color: #c0392b;
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(192, 57, 43, 0.3);
+}
+
+.cred-del-confirm {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 6px 3px 10px;
+  border-radius: 999px;
+  background: #fdecec;
+  border: 1px solid #f0c4c4;
+  color: #c0392b;
+  font-size: 11.5px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.cred-del-yes,
+.cred-del-no {
+  border: none;
+  border-radius: 999px;
+  padding: 3px 10px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.cred-del-yes {
+  background: #c0392b;
+  color: #fff;
+}
+
+.cred-del-yes:hover:not(:disabled) {
+  background: #a93226;
+}
+
+.cred-del-no {
+  background: #fff;
+  color: #4a5568;
+  border: 1px solid #d7dae3;
+}
+
+.cred-del-no:hover:not(:disabled) {
+  color: #1f2333;
+}
+
+.cred-del-yes:disabled,
+.cred-del-no:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Success notice after saving */
+.cred-saved-notice {
+  background: #e7f7ee;
+  border: 1px solid #b7e6cb;
+  color: #1a8a4f;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 10px 14px;
+  border-radius: 8px;
+  margin-bottom: 12px;
+}
+
+/* ── Edit credential form ─────────────────────────────────────────────────── */
+.cred-form {
+  background: #fff;
+  border: 1px solid #e6e9f0;
+  border-radius: 12px;
+  padding: 18px;
+}
+
+.cred-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 14px 16px;
+}
+
+.form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+}
+
+.form-field label {
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.7px;
+  color: #667085;
+}
+
+.form-field input {
+  padding: 9px 12px;
+  border: 1.5px solid #e0e3ee;
+  border-radius: 8px;
+  font-size: 13.5px;
+  color: #1f2333;
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  box-sizing: border-box;
+  width: 100%;
+}
+
+.form-field input:focus {
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.12);
+}
+
+.form-field input:disabled {
+  background: #f5f6fa;
+  color: #98a1b3;
+  cursor: not-allowed;
+}
+
+.form-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 16px;
+  font-size: 13.5px;
+  color: #374151;
+  cursor: pointer;
+  user-select: none;
+}
+
+.form-toggle input {
+  width: 16px;
+  height: 16px;
+  accent-color: #667eea;
+  cursor: pointer;
+}
+
+.cred-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid #f0f2f6;
+}
+
+.btn-form-cancel {
+  background: #fff;
+  border: 1px solid #d7dae3;
+  color: #4a5568;
+  border-radius: 8px;
+  padding: 9px 18px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-form-cancel:hover:not(:disabled) {
+  border-color: #98a1b3;
+  color: #1f2333;
+}
+
+.btn-form-cancel:disabled,
+.cred-form button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+@media (max-width: 560px) {
+  .cred-form-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.cred-card-agent {
+  font-size: 12px;
+  color: #667085;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cred-card-chips {
+  margin-left: auto;
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.cred-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 10px 16px;
+}
+
+.cred-field {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.cred-field-label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.7px;
+  color: #5b5b5b;
+}
+
+.cred-field-value {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+  min-height: 22px;
+}
+
+.cred-field-text {
+  font-family: 'Courier New', monospace;
+  font-size: 13px;
+  font-weight: 600;
+  color: #1f2333;
+  word-break: break-all;
+}
+
+/* Copy button — appears when hovering a field */
+.copy-btn {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 5px;
+  background: transparent;
+  color: #98a1b3;
+  font-size: 12px;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s ease, background 0.15s ease, color 0.15s ease;
+}
+
+.cred-field:hover .copy-btn,
+.copy-btn.copied {
+  opacity: 1;
+}
+
+.copy-btn:hover {
+  background: #eef1f8;
+  color: #667eea;
+}
+
+.copy-btn.copied {
+  color: #1a8a4f;
+  background: #e7f7ee;
+}
+
+@media (max-width: 560px) {
+  .cred-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .cred-card-head {
+    flex-wrap: wrap;
+  }
+
+  .cred-card-chips {
+    margin-left: 0;
+    width: 100%;
+  }
+}
+
+.cred-foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 12px 20px 16px;
+  border-top: 1px solid #eef0f5;
+}
+
+.cred-ok {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border: none;
+  color: #fff;
+  border-radius: 8px;
+  padding: 9px 22px;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.4px;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.cred-ok:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
+}
+
+.svc-badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.svc-badge.on {
+  background: #e7f7ee;
+  color: #1a8a4f;
+}
+
+.svc-badge.off {
+  background: #f1f2f6;
+  color: #6b7280;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
   .dashboard-header {

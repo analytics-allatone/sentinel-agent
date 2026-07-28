@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api, { logout } from "../api/api";
 import "./Dashboard.css";
@@ -39,6 +39,29 @@ function Dashboard() {
 
   // Search
   const [searchTerm, setSearchTerm] = useState("");
+
+  // Available-services expansion: which agent row is open, plus a per-agent
+  // cache of { loading, error, list } so re-opening a row doesn't refetch.
+  const [expandedAgent, setExpandedAgent] = useState(null);
+  const [services, setServices] = useState({});
+
+  // Credentials popup: opened by clicking an engine inside the services panel.
+  // null when closed, else { agentName, engine, loading, error, data }.
+  const [credModal, setCredModal] = useState(null);
+  // Which field was just copied to the clipboard (e.g. "2-host"), for the ✓ flash.
+  const [copiedField, setCopiedField] = useState("");
+
+  // Edit-credential form inside the popup: null when viewing the list,
+  // else the form's field values (payload of POST /api/v1/add-credential).
+  const [editCred, setEditCred] = useState(null);
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState("");
+  const [saveMsg, setSaveMsg] = useState("");
+
+  // Delete-credential flow: which card is asking "are you sure?", and which
+  // one is mid-delete.
+  const [confirmDeleteId, setConfirmDeleteId] = useState(null);
+  const [deletingId, setDeletingId] = useState(null);
 
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
@@ -318,6 +341,444 @@ function Dashboard() {
     alert(`Actions for agent: ${agentName}`);
   };
 
+  // "+" in the first column: expand the row and load that agent's available
+  // services. The endpoint queries the agent live over MQTT, so it can time out
+  // with a 504 when the agent is offline — that message is surfaced inline.
+  const handleToggleServices = (agentName) => {
+    if (expandedAgent === agentName) {
+      setExpandedAgent(null); // clicking an open row collapses it
+      return;
+    }
+    setExpandedAgent(agentName);
+
+    // Reuse a previous successful result; retry if it failed last time.
+    const cached = services[agentName];
+    if (cached && !cached.error && cached.list) return;
+
+    setServices((prev) => ({
+      ...prev,
+      [agentName]: { loading: true, error: "", list: null },
+    }));
+
+    api
+      .get("/api/v1/available-services", { params: { agent_name: agentName } })
+      .then((res) => {
+        const list = res.data?.data?.available_engines || [];
+        setServices((prev) => ({
+          ...prev,
+          [agentName]: { loading: false, error: "", list },
+        }));
+      })
+      .catch((err) => {
+        // FastAPI raises HTTPException -> { detail: "..." }
+        const msg =
+          err.response?.data?.detail ||
+          err.response?.data?.message ||
+          "Failed to load services for this agent.";
+        setServices((prev) => ({
+          ...prev,
+          [agentName]: { loading: false, error: msg, list: null },
+        }));
+      });
+  };
+
+  const renderServices = (agentName) => {
+    const state = services[agentName];
+
+    if (!state || state.loading) {
+      return <div className="services-status">Loading available services…</div>;
+    }
+    if (state.error) {
+      return (
+        <div className="services-status services-error">
+          {state.error}
+          <button
+            className="services-retry"
+            onClick={() => {
+              // Clear the cached error so the toggle refetches.
+              setServices((prev) => {
+                const next = { ...prev };
+                delete next[agentName];
+                return next;
+              });
+              setExpandedAgent(null);
+              handleToggleServices(agentName);
+            }}
+          >
+            Retry
+          </button>
+        </div>
+      );
+    }
+    if (!state.list.length) {
+      return (
+        <div className="services-status">No services available for this agent.</div>
+      );
+    }
+
+    return (
+      <>
+      <table className="services-table">
+        <thead>
+          <tr>
+            <th>Engine</th>
+            <th>Service Name</th>
+            <th>Username</th>
+            <th>Status</th>
+            <th className="svc-th-action" />
+          </tr>
+        </thead>
+        <tbody>
+          {state.list.map((svc, i) => {
+            const style = getEngineStyle(svc.engine);
+            return (
+              <tr
+                key={`${svc.engine}-${i}`}
+                className="svc-row"
+                onClick={() => handleEngineClick(agentName, svc.engine)}
+                title={`View ${svc.engine} credentials`}
+              >
+                <td className="svc-engine">
+                  <span className="svc-engine-cell">
+                    <span
+                      className="engine-avatar engine-avatar-sm"
+                      style={{ background: style.color }}
+                    >
+                      {style.label}
+                    </span>
+                    <span className="svc-engine-name">{svc.engine}</span>
+                  </span>
+                </td>
+                <td>{svc.service_name || "—"}</td>
+                <td>{svc.username || "—"}</td>
+                <td>
+                  <span className={`cred-chip ${svc.is_enable ? "chip-on" : "chip-off"}`}>
+                    <i className="chip-dot" />
+                    {svc.is_enable ? "Enabled" : "Disabled"}
+                  </span>
+                </td>
+                <td className="svc-td-action">
+                  <span className="svc-view-hint">
+                    View credentials <span className="svc-chevron">›</span>
+                  </span>
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+      </>
+    );
+  };
+
+  // Clicking an engine (e.g. "mongodb") in the services panel: fetch that
+  // engine's credentials for the agent and show them in a popup.
+  const handleEngineClick = (agentName, engine) => {
+    setEditCred(null);
+    setSaveError("");
+    setSaveMsg("");
+    setCredModal({ agentName, engine, loading: true, error: "", data: null });
+    fetchCredentials(agentName, engine);
+  };
+
+  const fetchCredentials = (agentName, engine) => {
+    api
+      .get("/api/v1/get-credentials", {
+        params: { engine, agent_name: agentName },
+      })
+      .then((res) => {
+        const data = res.data?.data ?? res.data;
+        setCredModal((prev) =>
+          prev && prev.agentName === agentName && prev.engine === engine
+            ? { ...prev, loading: false, error: "", data }
+            : prev,
+        );
+      })
+      .catch((err) => {
+        const msg =
+          err.response?.data?.detail ||
+          err.response?.data?.message ||
+          "Failed to fetch credentials.";
+        setCredModal((prev) =>
+          prev && prev.agentName === agentName && prev.engine === engine
+            ? { ...prev, loading: false, error: msg, data: null }
+            : prev,
+        );
+      });
+  };
+
+  const closeCredModal = () => {
+    setCredModal(null);
+    setEditCred(null);
+    setSaveError("");
+    setSaveMsg("");
+    setConfirmDeleteId(null);
+    setDeletingId(null);
+  };
+
+  // ── Delete credential (DELETE /api/v1/delete-credential?credential_id=N) ───
+  const handleDeleteCred = (credId) => {
+    setSaveError("");
+    setSaveMsg("");
+    setDeletingId(credId);
+
+    api
+      .delete("/api/v1/delete-credential", {
+        params: { credential_id: credId },
+      })
+      .then(() => {
+        setDeletingId(null);
+        setConfirmDeleteId(null);
+        setSaveMsg("Credential deleted successfully.");
+        // Refresh the list so the removed credential disappears.
+        setCredModal((prev) => (prev ? { ...prev, loading: true } : prev));
+        fetchCredentials(credModal.agentName, credModal.engine);
+      })
+      .catch((err) => {
+        setDeletingId(null);
+        setConfirmDeleteId(null);
+        setSaveError(
+          err.response?.data?.detail ||
+            err.response?.data?.message ||
+            "Failed to delete credential.",
+        );
+      });
+  };
+
+  // ── Edit credential (POST /api/v1/add-credential) ──────────────────────────
+  const startEditCred = (cred) => {
+    setSaveError("");
+    setSaveMsg("");
+    setEditCred({
+      engine: cred.engine || credModal.engine,
+      agent_name: cred.agent_name || credModal.agentName,
+      host: cred.host || "",
+      port: cred.port ?? "",
+      user_name: cred.user_name || "",
+      // Never prefill a password — has_password only says one exists.
+      password: "",
+      service_name: cred.service_name || "",
+      dbname: cred.dbname || "",
+      is_active: !!cred.is_active,
+    });
+  };
+
+  const updateEditField = (key, value) =>
+    setEditCred((prev) => ({ ...prev, [key]: value }));
+
+  const handleSaveCred = (e) => {
+    e.preventDefault();
+    setSaveError("");
+
+    if (!editCred.host.trim() || !editCred.user_name.trim()) {
+      setSaveError("Host and Username are required.");
+      return;
+    }
+
+    setSaving(true);
+    api
+      .post("/api/v1/add-credential", {
+        engine: editCred.engine,
+        user_name: editCred.user_name.trim(),
+        password: editCred.password,
+        service_name: editCred.service_name.trim(),
+        dbname: editCred.dbname.trim(),
+        host: editCred.host.trim(),
+        port: Number(editCred.port) || 0,
+        agent_name: editCred.agent_name,
+        is_active: editCred.is_active,
+      })
+      .then(() => {
+        setSaving(false);
+        setEditCred(null);
+        setSaveMsg("Credential saved successfully.");
+        // Refresh the list so the popup shows the updated values.
+        setCredModal((prev) => (prev ? { ...prev, loading: true } : prev));
+        fetchCredentials(credModal.agentName, credModal.engine);
+      })
+      .catch((err) => {
+        setSaving(false);
+        setSaveError(
+          err.response?.data?.detail ||
+            err.response?.data?.message ||
+            "Failed to save credential.",
+        );
+      });
+  };
+
+  // Copy a field value to the clipboard and flash a ✓ on that field.
+  const copyValue = (fieldKey, value) => {
+    if (!navigator.clipboard) return;
+    navigator.clipboard
+      .writeText(String(value))
+      .then(() => {
+        setCopiedField(fieldKey);
+        setTimeout(
+          () => setCopiedField((current) => (current === fieldKey ? "" : current)),
+          1200,
+        );
+      })
+      .catch(() => {});
+  };
+
+  // Brand-ish accent color + short label per engine for the card avatars.
+  const getEngineStyle = (engine) => {
+    const key = (engine || "").toLowerCase().replace(/[^a-z]/g, "");
+    const styles = {
+      postgresql: { color: "#336791", label: "Pg" },
+      postgres: { color: "#336791", label: "Pg" },
+      mysql: { color: "#00758f", label: "My" },
+      mongodb: { color: "#47a248", label: "Mg" },
+      oracle: { color: "#c74634", label: "Or" },
+      sqlserver: { color: "#a91d22", label: "MS" },
+      redis: { color: "#d82c20", label: "Rd" },
+    };
+    return styles[key] || { color: "#667eea", label: (engine || "?").slice(0, 2) };
+  };
+
+  // Response shape: data.credentials = [{ id, agent_name, engine, host, port,
+  // user_name, service_name, dbname, is_active, has_password }]
+  const renderCredBody = () => {
+    if (credModal.loading) {
+      return <div className="cred-status">Fetching credentials…</div>;
+    }
+    if (credModal.error) {
+      return <div className="cred-status cred-error">{credModal.error}</div>;
+    }
+
+    const credentials = credModal.data?.credentials;
+    if (!Array.isArray(credentials) || credentials.length === 0) {
+      return (
+        <div className="cred-status">
+          No credentials found for this engine.
+        </div>
+      );
+    }
+
+    return (
+      <>
+      {saveMsg && <div className="cred-saved-notice">✓ {saveMsg}</div>}
+      {saveError && <div className="cred-status cred-error">{saveError}</div>}
+      <div className="cred-count">
+        <span className="cred-count-num">{credentials.length}</span>
+        credential{credentials.length === 1 ? "" : "s"} found
+      </div>
+      <div className="cred-list">
+        {credentials.map((cred, i) => {
+          const style = getEngineStyle(cred.engine);
+          const fields = [
+            ["Host", cred.host],
+            ["Port", cred.port],
+            ["Username", cred.user_name],
+            ["Service", cred.service_name],
+            ["Database", cred.dbname],
+          ];
+          return (
+            <div className="cred-card" key={cred.id ?? i}>
+              <div
+                className="cred-card-accent"
+                style={{ background: style.color }}
+              />
+              <div className="cred-card-head">
+                <span
+                  className="engine-avatar"
+                  style={{ background: style.color }}
+                >
+                  {style.label}
+                </span>
+                <div className="cred-card-titles">
+                  <span className="cred-card-engine">
+                    {cred.engine || "—"}
+                    <span className="cred-id">#{cred.id ?? "—"}</span>
+                  </span>
+                  <span className="cred-card-agent">{cred.agent_name || "—"}</span>
+                </div>
+                <div className="cred-card-chips">
+                  <span className={`cred-chip ${cred.is_active ? "chip-on" : "chip-off"}`}>
+                    <i className="chip-dot" />
+                    {cred.is_active ? "Active" : "Inactive"}
+                  </span>
+                  <span
+                    className={`cred-chip ${cred.has_password ? "chip-on" : "chip-warn"}`}
+                    title={cred.has_password ? "Password is set" : "No password set"}
+                  >
+                    <i className="chip-dot" />
+                    {cred.has_password ? "Password" : "No password"}
+                  </span>
+                  <button
+                    type="button"
+                    className="cred-edit-btn"
+                    title="Edit this credential"
+                    onClick={() => startEditCred(cred)}
+                  >
+                    ✎ Edit
+                  </button>
+                  {confirmDeleteId === cred.id ? (
+                    <span className="cred-del-confirm">
+                      Delete?
+                      <button
+                        type="button"
+                        className="cred-del-yes"
+                        onClick={() => handleDeleteCred(cred.id)}
+                        disabled={deletingId === cred.id}
+                      >
+                        {deletingId === cred.id ? "…" : "Yes"}
+                      </button>
+                      <button
+                        type="button"
+                        className="cred-del-no"
+                        onClick={() => setConfirmDeleteId(null)}
+                        disabled={deletingId === cred.id}
+                      >
+                        No
+                      </button>
+                    </span>
+                  ) : (
+                    <button
+                      type="button"
+                      className="cred-del-btn"
+                      title="Delete this credential"
+                      onClick={() => setConfirmDeleteId(cred.id)}
+                    >
+                      🗑 Delete
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              <div className="cred-grid">
+                {fields.map(([label, value]) => {
+                  const fieldKey = `${cred.id ?? i}-${label}`;
+                  const display = value ?? "—";
+                  const copyable = value !== null && value !== undefined && value !== "";
+                  return (
+                    <div className="cred-field" key={label}>
+                      <span className="cred-field-label">{label}</span>
+                      <span className="cred-field-value">
+                        <span className="cred-field-text">{display === "" ? "—" : display}</span>
+                        {copyable && (
+                          <button
+                            type="button"
+                            className={`copy-btn ${copiedField === fieldKey ? "copied" : ""}`}
+                            title={copiedField === fieldKey ? "Copied!" : `Copy ${label.toLowerCase()}`}
+                            onClick={() => copyValue(fieldKey, value)}
+                          >
+                            {copiedField === fieldKey ? "✓" : "⧉"}
+                          </button>
+                        )}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      </>
+    );
+  };
+
   const goToPage = (page) => {
     setCurrentPage(Math.min(Math.max(page, 1), totalPages));
   };
@@ -470,7 +931,7 @@ function Dashboard() {
             <input
               type="text"
               className="search-input"
-              placeholder="Search all columns…"
+              placeholder="Search…"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
@@ -490,12 +951,13 @@ function Dashboard() {
         <table className="agents-table">
           <thead>
             <tr>
+              <th className="col-expand" aria-label="Show available services" />
               <th>
-                <input
+                {/* <input
                   type="checkbox"
                   checked={selectAll}
                   onChange={handleSelectAll}
-                />
+                /> */}
               </th>
               <th>ID</th>
               <th>Agent Name</th>
@@ -511,7 +973,7 @@ function Dashboard() {
           <tbody>
             {paginatedAgents.length === 0 ? (
               <tr>
-                <td colSpan={10} className="no-results">
+                <td colSpan={11} className="no-results">
                   {searchTerm
                     ? `No agents match "${searchTerm}".`
                     : "No agents found."}
@@ -519,14 +981,30 @@ function Dashboard() {
               </tr>
             ) : (
               paginatedAgents.map((agent) => (
-                <tr key={agent.id}>
-                  <td>
+                <Fragment key={agent.id}>
+                <tr>
+                  <td className="col-expand">
+                    <button
+                      type="button"
+                      className={`btn-expand ${expandedAgent === agent.name ? "open" : ""}`}
+                      onClick={() => handleToggleServices(agent.name)}
+                      title={
+                        expandedAgent === agent.name
+                          ? "Hide available services"
+                          : "Show available services"
+                      }
+                      aria-expanded={expandedAgent === agent.name}
+                    >
+                      {expandedAgent === agent.name ? "−" : "+"}
+                    </button>
+                  </td>
+                  {/* <td>
                     <input
                       type="checkbox"
                       checked={selectedAgents.has(agent.id)}
                       onChange={() => handleSelectAgent(agent.id)}
                     />
-                  </td>
+                  </td> */}
                   <td>{agent.id}</td>
                   <td>
                     <a
@@ -557,6 +1035,25 @@ function Dashboard() {
                     </button>
                   </td>
                 </tr>
+                {expandedAgent === agent.name && (
+                  <tr className="services-row">
+                    <td colSpan={11}>
+                      <div className="services-panel">
+                        <div className="services-title">
+                          <span className="services-title-icon">🗄</span>
+                          Available services — <strong>{agent.name}</strong>
+                          {services[agent.name]?.list?.length > 0 && (
+                            <span className="services-count">
+                              {services[agent.name].list.length}
+                            </span>
+                          )}
+                        </div>
+                        {renderServices(agent.name)}
+                      </div>
+                    </td>
+                  </tr>
+                )}
+                </Fragment>
               ))
             )}
           </tbody>
@@ -622,6 +1119,175 @@ function Dashboard() {
           </div>
         )}
       </div>
+
+      {/* Credentials popup (opened from the services panel's engine links) */}
+      {credModal && (
+        <div className="cred-overlay" onClick={closeCredModal}>
+          <div
+            className="cred-modal"
+            role="dialog"
+            aria-modal="true"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="cred-head">
+              <div>
+                <h3 className="cred-title">
+                  {editCred
+                    ? "Edit Credential"
+                    : `${credModal.engine} credentials`}
+                </h3>
+                <p className="cred-sub">
+                  {editCred ? (
+                    <>
+                      {editCred.engine} on <strong>{editCred.agent_name}</strong>
+                    </>
+                  ) : (
+                    <>
+                      Agent: <strong>{credModal.agentName}</strong>
+                    </>
+                  )}
+                </p>
+              </div>
+              <button
+                type="button"
+                className="cred-close"
+                onClick={closeCredModal}
+                aria-label="Close"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="cred-body">
+              {editCred ? (
+                /* ── Edit form: POST /api/v1/add-credential ── */
+                <form className="cred-form" onSubmit={handleSaveCred}>
+                  {saveError && (
+                    <div className="cred-status cred-error">{saveError}</div>
+                  )}
+
+                  <div className="cred-form-grid">
+                    <div className="form-field">
+                      <label>Engine</label>
+                      <input value={editCred.engine} disabled />
+                    </div>
+                    <div className="form-field">
+                      <label>Agent Name</label>
+                      <input value={editCred.agent_name} disabled />
+                    </div>
+                    <div className="form-field">
+                      <label>Host *</label>
+                      <input
+                        value={editCred.host}
+                        placeholder="127.0.0.1"
+                        onChange={(e) => updateEditField("host", e.target.value)}
+                        disabled={saving}
+                      />
+                    </div>
+                    <div className="form-field">
+                      <label>Port</label>
+                      <input
+                        type="number"
+                        min="0"
+                        max="65535"
+                        value={editCred.port}
+                        placeholder="5432"
+                        onChange={(e) => updateEditField("port", e.target.value)}
+                        disabled={saving}
+                      />
+                    </div>
+                    <div className="form-field">
+                      <label>Username *</label>
+                      <input
+                        value={editCred.user_name}
+                        placeholder="db_user"
+                        onChange={(e) =>
+                          updateEditField("user_name", e.target.value)
+                        }
+                        disabled={saving}
+                      />
+                    </div>
+                    <div className="form-field">
+                      <label>Password</label>
+                      <input
+                        type="password"
+                        value={editCred.password}
+                        placeholder="Enter new password"
+                        autoComplete="new-password"
+                        onChange={(e) =>
+                          updateEditField("password", e.target.value)
+                        }
+                        disabled={saving}
+                      />
+                    </div>
+                    <div className="form-field">
+                      <label>Service Name</label>
+                      <input
+                        value={editCred.service_name}
+                        placeholder="postgres"
+                        onChange={(e) =>
+                          updateEditField("service_name", e.target.value)
+                        }
+                        disabled={saving}
+                      />
+                    </div>
+                    <div className="form-field">
+                      <label>Database</label>
+                      <input
+                        value={editCred.dbname}
+                        placeholder="production_db"
+                        onChange={(e) =>
+                          updateEditField("dbname", e.target.value)
+                        }
+                        disabled={saving}
+                      />
+                    </div>
+                  </div>
+
+                  <label className="form-toggle">
+                    <input
+                      type="checkbox"
+                      checked={editCred.is_active}
+                      onChange={(e) =>
+                        updateEditField("is_active", e.target.checked)
+                      }
+                      disabled={saving}
+                    />
+                    <span>Credential is active</span>
+                  </label>
+
+                  <div className="cred-form-actions">
+                    <button
+                      type="button"
+                      className="btn-form-cancel"
+                      onClick={() => {
+                        setEditCred(null);
+                        setSaveError("");
+                      }}
+                      disabled={saving}
+                    >
+                      Cancel
+                    </button>
+                    <button type="submit" className="cred-ok" disabled={saving}>
+                      {saving ? "Saving…" : "Save Changes"}
+                    </button>
+                  </div>
+                </form>
+              ) : (
+                renderCredBody()
+              )}
+            </div>
+
+            {!editCred && (
+              <div className="cred-foot">
+                <button type="button" className="cred-ok" onClick={closeCredModal}>
+                  Close
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
