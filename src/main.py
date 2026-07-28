@@ -14,22 +14,26 @@ from fastapi.responses import FileResponse
 from db.db import create_db_and_tables , get_async_db
 import sys
 from bots.mqtt_consumer import mqtt_background_consumer
+from bots.agent_activity_status import check_active_status
 from models.agent_model import AgentGroups, Agents
 
 
 worker_task = None
+activity_status_task = None
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
 
     global worker_task
+    global activity_status_task
 
     # DATABASE STARTUP
     await create_db_and_tables()
 
 
     worker_task = asyncio.create_task(mqtt_background_consumer())
+    activity_status_task = asyncio.create_task(check_active_status())
 
     print("Application Started")
 
@@ -38,6 +42,7 @@ async def lifespan(app: FastAPI):
     # SHUTDOWN LOGIC
     print("Application Shutting Down...")
     worker_task.cancel()
+    activity_status_task.cancel()
 
 
 app = FastAPI(
