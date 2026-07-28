@@ -117,6 +117,10 @@ function VerifyOtp() {
       setError("Invalid or expired code. Check your authenticator app.");
       setDigits(Array(OTP_LENGTH).fill(""));
       focusInput(0);
+    } catch {
+      setError("Couldn't verify the code. Please try again.");
+      setDigits(Array(OTP_LENGTH).fill(""));
+      focusInput(0);
     } finally {
       setLoading(false);
     }
