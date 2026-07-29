@@ -10,13 +10,11 @@ from models.agent_model import Agents
 async def check_active(agent_name):
     result = await mqtt_request(agent_name=agent_name, command =  "active_test",timeout=10.0)
     res = result != None
-    print(res)
     return res
 
 
 
 async def check_active_status():
-    print("stareted")
     while(True):
         async with get_async_session() as session:
                     res = await session.execute(select(Agents))
