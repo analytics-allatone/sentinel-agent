@@ -94,9 +94,9 @@ function EnterOtp() {
 
     setLoading(true);
     try {
-      await api.post("/api/v1/verify-otp", { email, otp: code });
+      await api.post("/verify-otp", { email, otp: code });
       setSuccess("Verified successfully! Redirecting...");
-      setTimeout(() => navigate("/dashboard"), 1500);
+      setTimeout(() => navigate("/app/dashboard"), 1500);
     } catch (err) {
       setError(err.response?.data?.message || "Invalid or expired OTP");
       setDigits(Array(OTP_LENGTH).fill(""));
@@ -112,7 +112,7 @@ function EnterOtp() {
     setSuccess("");
     setResending(true);
     try {
-      await api.post("/api/v1/resend-otp", { email });
+      await api.post("/resend-otp", { email });
       setSuccess("A new code has been sent to your email");
       setTimer(RESEND_SECONDS);
     } catch (err) {
@@ -190,7 +190,7 @@ function EnterOtp() {
           </div>
 
           <div className="login-link">
-            <a href="/login">Back to Sign in</a>
+            <a href="/app/login">Back to Sign in</a>
           </div>
         </div>
       </div>

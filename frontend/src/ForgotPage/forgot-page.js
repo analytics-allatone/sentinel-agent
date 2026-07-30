@@ -31,7 +31,7 @@ function ForgotPage() {
 
     setLoading(true);
     try {
-      await api.post("/api/v1/forgot-password", { email });
+      await api.post("/forgot-password", { email });
       setSuccess("Verification code sent to your email");
       setStep(2);
     } catch (err) {
@@ -55,7 +55,7 @@ function ForgotPage() {
 
     setLoading(true);
     try {
-      await api.post("/api/v1/verify-code", { email, code });
+      await api.post("/verify-code", { email, code });
       setSuccess("Code verified successfully");
       setStep(3);
     } catch (err) {
@@ -87,7 +87,7 @@ function ForgotPage() {
 
     setLoading(true);
     try {
-      await api.post("/api/v1/reset-password", {
+      await api.post("/reset-password", {
         email,
         code,
         newPassword,
@@ -95,7 +95,7 @@ function ForgotPage() {
       setSuccess("Password reset successfully! Redirecting to login...");
 
       setTimeout(() => {
-        navigate("/login");
+        navigate("/app/login");
       }, 2000);
     } catch (err) {
       setError(err.response?.data?.message || "Failed to reset password");
@@ -247,7 +247,7 @@ function ForgotPage() {
           )}
 
           <div className="login-link">
-            Remember your password? <a href="/login">Sign in here</a>
+            Remember your password? <a href="/app/login">Sign in here</a>
           </div>
         </div>
       </div>

@@ -75,7 +75,7 @@ function Dashboard() {
 
   const fetchAgents = () => {
     api
-      .get("/api/v1/get-agents")
+      .get("/get-agents")
       .then((res) => {
         if (res.data.status !== "success" || !res.data.data) return;
         const data = res.data.data;
@@ -268,7 +268,7 @@ function Dashboard() {
     paginatedAgents.every((agent) => selectedAgents.has(agent.id));
 
   const handleDeployAgent = () => {
-    navigate("/installation");
+    navigate("/app/installation");
   };
 
   const handleRefresh = () => {
@@ -361,7 +361,7 @@ function Dashboard() {
     }));
 
     api
-      .get("/api/v1/available-services", { params: { agent_name: agentName } })
+      .get("/available-services", { params: { agent_name: agentName } })
       .then((res) => {
         const list = res.data?.data?.available_engines || [];
         setServices((prev) => ({
@@ -483,7 +483,7 @@ function Dashboard() {
 
   const fetchCredentials = (agentName, engine) => {
     api
-      .get("/api/v1/get-credentials", {
+      .get("/get-credentials", {
         params: { engine, agent_name: agentName },
       })
       .then((res) => {
@@ -523,7 +523,7 @@ function Dashboard() {
     setDeletingId(credId);
 
     api
-      .delete("/api/v1/delete-credential", {
+      .delete("/delete-credential", {
         params: { credential_id: credId },
       })
       .then(() => {
@@ -577,7 +577,7 @@ function Dashboard() {
 
     setSaving(true);
     api
-      .post("/api/v1/add-credential", {
+      .post("/add-credential", {
         engine: editCred.engine,
         user_name: editCred.user_name.trim(),
         password: editCred.password,
@@ -1008,7 +1008,7 @@ function Dashboard() {
                   <td>{agent.id}</td>
                   <td>
                     <a
-                      href="/reports/soc2"
+                      href="/app/reports/soc2"
                       target="_blank"
                       rel="noopener noreferrer"
                       className="agent-name-link"

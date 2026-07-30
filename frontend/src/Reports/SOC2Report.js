@@ -120,7 +120,7 @@ export default function SOC2Report() {
   // ── data fetching ────────────────────────────────────────────
   const fetchAgents = async () => {
     try {
-      const res = await api.get("/api/v1/agents");
+      const res = await api.get("/agents");
       const list = Array.isArray(res.data) ? res.data : res.data?.agents || [];
       if (list.length) {
         const normalized = list.map((a, i) => ({
@@ -164,12 +164,12 @@ export default function SOC2Report() {
       const [agentList, summary, access, sysops, change, network, incidents] =
         await Promise.all([
           fetchAgents(),
-          safeGet("/api/v1/reports/soc2/summary", params),
-          safeGet("/api/v1/reports/soc2/access", params),
-          safeGet("/api/v1/reports/soc2/sysops", params),
-          safeGet("/api/v1/reports/soc2/change", params),
-          safeGet("/api/v1/reports/soc2/network", params),
-          safeGet("/api/v1/reports/soc2/incidents", params),
+          safeGet("/reports/soc2/summary", params),
+          safeGet("/reports/soc2/access", params),
+          safeGet("/reports/soc2/sysops", params),
+          safeGet("/reports/soc2/change", params),
+          safeGet("/reports/soc2/network", params),
+          safeGet("/reports/soc2/incidents", params),
         ]);
 
       // Fall back to realistic mock data for any missing section.
@@ -217,7 +217,7 @@ export default function SOC2Report() {
     setExporting("docx");
     const params = buildParams();
     try {
-      const res = await api.get("/api/v1/reports/soc2/export", {
+      const res = await api.get("/reports/soc2/export", {
         params: { ...params, format: "docx" },
         responseType: "blob",
       });

@@ -42,7 +42,7 @@
 
 import api from "../api/api";
 
-export const OVERVIEW_PATH = "/api/v1/capacity-monitoring/overview";
+export const OVERVIEW_PATH = "/capacity-monitoring/overview";
 
 /**
  * camelCase params -> the wire query object the endpoint expects.

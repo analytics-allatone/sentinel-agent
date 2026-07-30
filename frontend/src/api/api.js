@@ -56,7 +56,7 @@ export const clearAuthCookies = () => {
 export const logout = () => {
   clearAuthCookies();
   console.log("[🚪 AUTH] Logging out...");
-  window.location.href = "/";
+  window.location.href = "/app/login";
 };
 
 // ========================
@@ -91,7 +91,7 @@ export const triggerHideLoader = () => {
 // ========================
 
 const api = axios.create({
-  // baseURL: "http://80.225.239.163:8000",
+  baseURL: "http://80.225.239.163:8000/api/v1",
   withCredentials: true,
   headers: {
     "Content-Type": "application/json",
