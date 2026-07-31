@@ -147,7 +147,7 @@ async def get_available_services(agent_name: str = Query() ,  db: AsyncSession =
             "service_name" : s.service_name,
             "username" : s.user_name,
             "password" : s.password_enc,
-            "is_enable" : s.is_enable
+            "is_enable" : s.is_active
         }
         curr_services[s.agent_name] = this_ser
         ser_list.append(s.agent_name)
