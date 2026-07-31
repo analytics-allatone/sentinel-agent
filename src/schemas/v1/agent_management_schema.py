@@ -98,7 +98,6 @@ class AddCredentialRequest(BaseModel):
     host: str = "127.0.0.1"
     port: Optional[int] = None
     agent_name: Optional[str] = None
-    is_active: bool = True
  
     @field_validator("engine")
     @classmethod

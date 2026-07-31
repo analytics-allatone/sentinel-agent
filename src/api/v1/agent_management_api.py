@@ -28,7 +28,8 @@ from models.credential_model import CredentialStorage
 from schemas.v1.agent_management_schema import (
         AddCredentialRequest, AddCredentialResponse,
         GetCredentialsResponse, CredentialData)
-from utils.crypto import encrypt, canon_engine
+from auth.crypto import hash_password
+from utils.crypto import canon_engine
 
 
 agent_management_router = APIRouter()
@@ -275,7 +276,7 @@ async def add_credential(req: AddCredentialRequest,
     credential.port = req.port
     credential.is_active = req.is_active
     if req.password is not None:
-        credential.password_enc = encrypt(req.password)     # encrypted here
+        credential.password_enc = hash_password(req.password)     # encrypted here
 
     await db.commit()
     await db.refresh(credential)
