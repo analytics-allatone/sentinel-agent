@@ -274,7 +274,7 @@ async def add_credential(req: AddCredentialRequest,
     credential.user_name = req.user_name
     credential.dbname = req.dbname
     credential.port = req.port
-    credential.is_active = req.is_active
+    credential.is_active = True
     if req.password is not None:
         credential.password_enc = hash_password(req.password)     # encrypted here
 
