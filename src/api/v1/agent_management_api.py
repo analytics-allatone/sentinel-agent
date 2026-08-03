@@ -28,7 +28,8 @@ from models.credential_model import CredentialStorage
 from schemas.v1.agent_management_schema import (
         AddCredentialRequest, AddCredentialResponse,
         GetCredentialsResponse, CredentialData)
-from utils.crypto import encrypt, canon_engine
+from auth.crypto import hash_password
+from utils.crypto import canon_engine
 
 
 agent_management_router = APIRouter()
@@ -146,7 +147,7 @@ async def get_available_services(agent_name: str = Query() ,  db: AsyncSession =
             "service_name" : s.service_name,
             "username" : s.user_name,
             "password" : s.password_enc,
-            "is_enable" : s.is_enable
+            "is_enable" : s.is_active
         }
         curr_services[s.agent_name] = this_ser
         ser_list.append(s.agent_name)
@@ -273,9 +274,9 @@ async def add_credential(req: AddCredentialRequest,
     credential.user_name = req.user_name
     credential.dbname = req.dbname
     credential.port = req.port
-    credential.is_active = req.is_active
+    credential.is_active = True
     if req.password is not None:
-        credential.password_enc = encrypt(req.password)     # encrypted here
+        credential.password_enc = hash_password(req.password)     # encrypted here
 
     await db.commit()
     await db.refresh(credential)
