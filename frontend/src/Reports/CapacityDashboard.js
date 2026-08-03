@@ -85,36 +85,49 @@ const PLOT_INSET_RIGHT = CHART_MARGIN.right;
 //
 // A line's `key` is both its row field and its slot in the palette, so colour
 // follows the entity and stays put when the theme changes.
+// `lead` is the plain-English explanation printed under each chart's heading in
+// the PDF — the report is read by people who did not run it. The screen ignores
+// it; the interactive pane titles are enough there.
 const PANES = [
   {
     id: "host-cpu",
     title: "Host CPU",
     unit: "%",
     lines: [{ key: "cpu", name: "Host CPU", type: "monotone" }],
+    lead: `The share of the machine's processor capacity in use, sampled by the agent. Brief
+      spikes are normal — a program starting, a scan running. What matters is a line that sits
+      high for long stretches: that is a host with no headroom left for new work, and the point
+      at which everything else on it starts to slow down.`,
   },
   {
     id: "host-mem",
-    title: "Host memory ",
+    title: "Host memory",
     unit: "%",
-    lines: [
-      { key: "mem", name: "Host memory", type: "monotone" },
-    
-    ],
+    lines: [{ key: "mem", name: "Host memory", type: "monotone" }],
+    lead: `The share of physical memory (RAM) in use on the host. Once this stays high the
+      machine begins moving memory to disk to cope, which shows up to users as sluggishness long
+      before anything actually fails. A steadily rising line with no dips is worth investigating
+      even while the percentage still looks safe.`,
   },
-   {
-    id: "host-mem",
+  {
+    id: "host-sto",
     title: "Host storage",
     unit: "%",
-    lines: [
-     
-      { key: "sto", name: "Storage", type: "stepAfter" },
-    ],
+    lines: [{ key: "sto", name: "Storage", type: "stepAfter" }],
+    lead: `How full the host's disks are. Under normal use this only moves one way, so the slope
+      matters more than the current value: extend the line to the right and you have the date the
+      disk runs out. A disk that fills stops logs being written, which is what makes this a
+      monitoring concern and not just a housekeeping one.`,
   },
   {
     id: "agent-cpu",
     title: "Agent CPU",
     unit: "%",
     lines: [{ key: "acpu", name: "Agent CPU", type: "monotone" }],
+    lead: `Processor time used by the Guardlynx agent itself, as a share of the host's capacity.
+      This is the cost of being monitored: it should stay a small fraction of the host CPU line
+      above. If the two rise together, the agent is contributing to the load rather than just
+      observing it.`,
   },
   // Mb, not percent — its own pane, so it never shares the 0-100 axis above.
   // Agent memory used to ride the Agent-CPU pane on a shared % axis; once its
@@ -124,6 +137,10 @@ const PANES = [
     title: "Agent memory",
     unit: "Mb",
     lines: [{ key: "amem", name: "Agent memory", type: "monotone" }],
+    lead: `Memory held by the agent process, in megabytes — an absolute figure, not a percentage,
+      which is why it has an axis of its own. Healthy behaviour is a line that rises and falls as
+      work comes and goes; a line that only ever climbs, never returning to its earlier level, is
+      the signature of a memory leak.`,
   },
   // Mbps, not percent — hence its own pane. Sharing the 0-100 axis above would
   // flatten a 0.04 Mbps line onto the baseline and imply it is a percentage.
@@ -132,6 +149,9 @@ const PANES = [
     title: "Agent bandwidth",
     unit: "Mbps",
     lines: [{ key: "bw", name: "Agent bandwidth", type: "monotone" }],
+    lead: `Network throughput used by the agent to ship its telemetry, in megabits per second.
+      This is the load monitoring places on the site's link — compare it against what the
+      connection can spare, particularly for hosts on a metered or shared line.`,
   },
 ];
 
@@ -634,9 +654,74 @@ function ChartPane({ pane, rows, masterRange, gaps, lastIndex, hidden, onToggle,
 function PrintReport({ payload, rows, gaps, stats, periodText, theme }) {
   const summary = (payload && payload.summary) || {};
   const lastIndex = Math.max(0, rows.length - 1);
+  // the cover is page 1, so the charts start at 2
+  const pageCount = PANES.length + 1;
 
   return (
     <div className="capacity-dash__print" aria-hidden="true">
+      {/* ── cover: what this is, what it covers, and what is in it ── */}
+      <section className="capacity-dash__print-page capacity-dash__print-cover">
+        <header className="capacity-dash__print-head">
+          <span className="capacity-dash__print-brand">Capacity report</span>
+          <span className="capacity-dash__print-meta">
+            {payload ? payload.agent_name : "—"} · {periodText} · IST
+          </span>
+        </header>
+
+        <h1 className="capacity-dash__print-h1">Guardlynx — capacity report</h1>
+
+        <p className="capacity-dash__print-lead">
+          This report shows how much of the machine's capacity the monitored host and the
+          Guardlynx agent used over the period above. Every figure is sampled by the agent
+          itself — nothing here is entered by hand. Each chart that follows covers the whole
+          window at once and starts on its own page, and opens with a note on what the metric
+          means and how to read it. All times are India Standard Time (UTC+5:30).
+        </p>
+
+        <table className="capacity-dash__print-table">
+          <tbody>
+            <tr>
+              {stats.map((stat) => (
+                <th key={stat.key}>{stat.label}</th>
+              ))}
+              <th>Samples</th>
+            </tr>
+            <tr>
+              {stats.map((stat) => (
+                <td key={stat.key}>
+                  {summary[stat.key] == null ? "—" : Number(summary[stat.key]).toFixed(2)}{" "}
+                  {stat.unit}
+                </td>
+              ))}
+              <td>{payload && payload.sample_count != null ? payload.sample_count : "—"}</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <p className="capacity-dash__print-note">
+          Every figure in that row is the mean across the whole window, so a short spike barely
+          moves it — read the averages with the charts, not instead of them.
+          {gaps.length
+            ? ` The agent stopped reporting ${gaps.length} time${gaps.length > 1 ? "s" : ""} during
+               this window; each break is marked on the charts, and nothing was measured while it
+               lasted.`
+            : " The agent reported without interruption for the whole window."}
+        </p>
+
+        <div className="capacity-dash__print-toc">
+          <div className="capacity-dash__print-toc-head">Contents</div>
+          <ol className="capacity-dash__print-toc-list">
+            {PANES.map((pane) => (
+              <li key={pane.id}>
+                {pane.title} <span>({pane.unit})</span>
+              </li>
+            ))}
+          </ol>
+        </div>
+
+        <footer className="capacity-dash__print-foot">Page 1 of {pageCount}</footer>
+      </section>
+
       {PANES.map((pane, index) => {
         const lines = paintLines(pane.lines, theme);
         return (
@@ -652,28 +737,7 @@ function PrintReport({ payload, rows, gaps, stats, periodText, theme }) {
               {index + 1}. {pane.title} <span>({pane.unit})</span>
             </h2>
 
-            {/* the summary rides page 1 only */}
-            {index === 0 && (
-              <table className="capacity-dash__print-table">
-                <tbody>
-                  <tr>
-                    {stats.map((stat) => (
-                      <th key={stat.key}>{stat.label}</th>
-                    ))}
-                    <th>Samples</th>
-                  </tr>
-                  <tr>
-                    {stats.map((stat) => (
-                      <td key={stat.key}>
-                        {summary[stat.key] == null ? "—" : Number(summary[stat.key]).toFixed(2)}{" "}
-                        {stat.unit}
-                      </td>
-                    ))}
-                    <td>{payload && payload.sample_count != null ? payload.sample_count : "—"}</td>
-                  </tr>
-                </tbody>
-              </table>
-            )}
+            {pane.lead && <p className="capacity-dash__print-lead">{pane.lead}</p>}
 
             <PaneHeader pane={pane} lines={lines} />
             <ChartBody
@@ -692,10 +756,13 @@ function PrintReport({ payload, rows, gaps, stats, periodText, theme }) {
             <p className="capacity-dash__print-note">
               Full range, {rows.length} samples.
               {gaps.length
-                ? ` ${gaps.length} reporting gap${gaps.length > 1 ? "s" : ""} marked on the chart.`
+                ? ` ${gaps.length} reporting gap${gaps.length > 1 ? "s" : ""} marked on the chart —
+                   the agent was not reporting, so nothing was measured there.`
                 : " No reporting gaps."}
             </p>
-            <footer className="capacity-dash__print-foot">Page {index + 1} of {PANES.length}</footer>
+            <footer className="capacity-dash__print-foot">
+              Page {index + 2} of {pageCount}
+            </footer>
           </section>
         );
       })}

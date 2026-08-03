@@ -40,7 +40,7 @@
  * @property {string} toDt    naive ISO, no timezone, e.g. "2026-07-15T23:59:59"
  */
 
-import api from "../api/api";
+import api, { absoluteApiUrl } from "../api/api";
 
 export const OVERVIEW_PATH = "/capacity-monitoring/overview";
 
@@ -90,8 +90,7 @@ export function overviewUrl(params) {
  * @param {OverviewParams} params
  */
 export function absoluteOverviewUrl(params) {
-  const base = (api.defaults && api.defaults.baseURL) || "";
-  return `${base}${overviewUrl(params)}`;
+  return absoluteApiUrl(overviewUrl(params));
 }
 
 /** Error carrying the bits the error state needs to render. */

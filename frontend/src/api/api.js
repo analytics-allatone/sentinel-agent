@@ -68,6 +68,11 @@ let loadingCallbacks = {
   hideLoader: null,
 };
 
+// Requests still in flight. The loader is reference-counted because pages fire
+// several calls at once (the SOC2 report fires five): without the count, the
+// first response would hide the loader while the rest were still running.
+let inFlight = 0;
+
 export const registerLoaderCallbacks = (showLoader, hideLoader) => {
   loadingCallbacks.showLoader = showLoader;
   loadingCallbacks.hideLoader = hideLoader;
@@ -75,23 +80,79 @@ export const registerLoaderCallbacks = (showLoader, hideLoader) => {
 };
 
 export const triggerShowLoader = () => {
-  if (loadingCallbacks.showLoader) {
+  inFlight += 1;
+  if (inFlight === 1 && loadingCallbacks.showLoader) {
     loadingCallbacks.showLoader();
   }
 };
 
 export const triggerHideLoader = () => {
-  if (loadingCallbacks.hideLoader) {
+  // Nothing open: an unbalanced hide. Ignore it rather than firing a hide that
+  // pairs with no show — the count must never go negative or the next real
+  // request would leave the loader stuck on screen.
+  if (inFlight === 0) return;
+  inFlight -= 1;
+  if (inFlight === 0 && loadingCallbacks.hideLoader) {
     loadingCallbacks.hideLoader();
   }
 };
+
+/** How many requests are currently open — 0 when the app is idle. */
+export const pendingRequestCount = () => inFlight;
+
+/**
+ * Does this request want the full-screen loader?
+ *
+ * Pass `skipGlobalLoader: true` in a request's config when the calling screen
+ * renders its own progress (the SOC2 report shows one loader per report, which
+ * the blocking overlay would sit on top of). Everything else keeps the overlay.
+ */
+const skipsGlobalLoader = (config) => Boolean(config && config.skipGlobalLoader);
 
 // ========================
 // 🔌 AXIOS INSTANCE
 // ========================
 
+/**
+ * Every endpoint on this backend lives under /api/v1, so the prefix belongs to
+ * the client rather than to each call site. Call sites pass the path only:
+ *
+ *   api.get("/get-agents")            ->  <origin>/api/v1/get-agents
+ *   api.get("/soc2-report/auth")      ->  <origin>/api/v1/soc2-report/auth
+ */
+export const API_PREFIX = "/api/v1";
+
+/**
+ * Where the API lives, without the prefix.
+ *
+ * Set REACT_APP_API_ORIGIN per environment (see .env.development /
+ * .env.production). Leave it EMPTY to call the same origin the app is served
+ * from — the right setting when a reverse proxy in front of the site forwards
+ * /api/v1 to the backend. Unset falls back to the deployed API host, so an
+ * environment with no configuration keeps working.
+ */
+const DEFAULT_API_ORIGIN = "http://80.225.239.163:8000";
+const configuredOrigin =
+  process.env.REACT_APP_API_ORIGIN === undefined
+    ? DEFAULT_API_ORIGIN
+    : process.env.REACT_APP_API_ORIGIN;
+
+// trailing slashes would double up against the prefix
+export const API_ORIGIN = String(configuredOrigin).replace(/\/+$/, "");
+
+/** The prefix every request is built on, e.g. "http://host:8000/api/v1". */
+export const API_BASE_URL = `${API_ORIGIN}${API_PREFIX}`;
+
+/** The same base as a browser-absolute URL, for showing the user what failed. */
+export const absoluteApiUrl = (path = "") =>
+  API_ORIGIN
+    ? `${API_BASE_URL}${path}`
+    : `${typeof window !== "undefined" ? window.location.origin : ""}${API_BASE_URL}${path}`;
+
+console.log("[🔌 API] Base URL:", API_BASE_URL);
+
 const api = axios.create({
-  baseURL: "http://80.225.239.163:8000/api/v1",
+  baseURL: API_BASE_URL,
   withCredentials: true,
   headers: {
     "Content-Type": "application/json",
@@ -107,8 +168,10 @@ api.interceptors.request.use(
     console.log("\n[📤 REQUEST] URL:", config.url);
     console.log("[📤 REQUEST] Method:", config.method.toUpperCase());
 
-    // Show loader on request start
-    triggerShowLoader();
+    // Show loader on request start, unless the screen draws its own progress
+    if (!skipsGlobalLoader(config)) {
+      triggerShowLoader();
+    }
 
     // Get token from cookie (most reliable source)
     let token = getCookie("token");
@@ -157,7 +220,11 @@ api.interceptors.request.use(
   },
   (error) => {
     console.error("[❌ REQUEST ERROR]:", error);
-    triggerHideLoader();
+    // Only balance a show that actually happened — a request that opted out of
+    // the overlay, or one that failed before the show, must not decrement it.
+    if (error && error.config && !skipsGlobalLoader(error.config)) {
+      triggerHideLoader();
+    }
     return Promise.reject(error);
   },
 );
@@ -174,7 +241,9 @@ api.interceptors.response.use(
       "URL:",
       response.config.url,
     );
-    triggerHideLoader();
+    if (!skipsGlobalLoader(response.config)) {
+      triggerHideLoader();
+    }
     return response;
   },
   (error) => {
@@ -184,7 +253,9 @@ api.interceptors.response.use(
       "[❌ RESPONSE ERROR] Message:",
       error.response?.data?.message,
     );
-    triggerHideLoader();
+    if (!skipsGlobalLoader(error.config)) {
+      triggerHideLoader();
+    }
     return Promise.reject(error);
   },
 );

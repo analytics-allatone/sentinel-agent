@@ -952,13 +952,13 @@ function Dashboard() {
           <thead>
             <tr>
               <th className="col-expand" aria-label="Show available services" />
-              <th>
-                {/* <input
+              {/* <th>
+                <input
                   type="checkbox"
                   checked={selectAll}
                   onChange={handleSelectAll}
-                /> */}
-              </th>
+                />
+              </th> */}
               <th>ID</th>
               <th>Agent Name</th>
               <th>MAC Address</th>
@@ -1007,11 +1007,14 @@ function Dashboard() {
                   </td> */}
                   <td>{agent.id}</td>
                   <td>
+                    {/* `agent` scopes the SOC2 report to this agent — it becomes
+                        agent_name on every /soc2-report/* request. */}
                     <a
-                      href="/app/reports/soc2"
+                      href={`/app/reports/soc2?agent=${encodeURIComponent(agent.name)}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="agent-name-link"
+                      title={`Open the SOC2 report for ${agent.name}`}
                     >
                       {agent.name}
                     </a>
