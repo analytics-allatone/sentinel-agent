@@ -477,8 +477,38 @@ function Dashboard() {
     setEditCred(null);
     setSaveError("");
     setSaveMsg("");
+    setConfirmDeleteId(null);
     setCredModal({ agentName, engine, loading: true, error: "", data: null });
     fetchCredentials(agentName, engine);
+  };
+
+  // "+ Add credential" in the services panel: opens the very same popup, but
+  // straight in form mode with empty fields, so the form below can POST a
+  // brand-new credential instead of overwriting an existing one. Nothing is
+  // fetched here — there is no credential to load yet.
+  const handleAddCred = (agentName) => {
+    setSaveError("");
+    setSaveMsg("");
+    setConfirmDeleteId(null);
+    setCredModal({
+      agentName,
+      engine: "",
+      loading: false,
+      error: "",
+      data: null,
+    });
+    setEditCred({
+      isNew: true,
+      engine: "",
+      agent_name: agentName,
+      host: "",
+      port: "",
+      user_name: "",
+      password: "",
+      service_name: "",
+      dbname: "",
+      is_active: true,
+    });
   };
 
   const fetchCredentials = (agentName, engine) => {
@@ -550,6 +580,7 @@ function Dashboard() {
     setSaveError("");
     setSaveMsg("");
     setEditCred({
+      isNew: false,
       engine: cred.engine || credModal.engine,
       agent_name: cred.agent_name || credModal.agentName,
       host: cred.host || "",
@@ -570,31 +601,47 @@ function Dashboard() {
     e.preventDefault();
     setSaveError("");
 
+    const engine = editCred.engine.trim();
+    const agentName = editCred.agent_name;
+
+    if (!engine) {
+      setSaveError("Engine is required.");
+      return;
+    }
     if (!editCred.host.trim() || !editCred.user_name.trim()) {
       setSaveError("Host and Username are required.");
       return;
     }
 
+    const isNew = editCred.isNew;
+
     setSaving(true);
     api
       .post("/add-credential", {
-        engine: editCred.engine,
+        engine,
         user_name: editCred.user_name.trim(),
         password: editCred.password,
         service_name: editCred.service_name.trim(),
         dbname: editCred.dbname.trim(),
         host: editCred.host.trim(),
         port: Number(editCred.port) || 0,
-        agent_name: editCred.agent_name,
+        agent_name: agentName,
         is_active: editCred.is_active,
       })
       .then(() => {
         setSaving(false);
         setEditCred(null);
-        setSaveMsg("Credential saved successfully.");
-        // Refresh the list so the popup shows the updated values.
-        setCredModal((prev) => (prev ? { ...prev, loading: true } : prev));
-        fetchCredentials(credModal.agentName, credModal.engine);
+        setSaveMsg(
+          isNew
+            ? "Credential added successfully."
+            : "Credential saved successfully.",
+        );
+        // Refresh the list so the popup shows the updated values. On an "add"
+        // the popup was opened without an engine, so adopt the one just typed.
+        setCredModal((prev) =>
+          prev ? { ...prev, engine, loading: true, error: "" } : prev,
+        );
+        fetchCredentials(agentName, engine);
       })
       .catch((err) => {
         setSaving(false);
@@ -1050,6 +1097,14 @@ function Dashboard() {
                               {services[agent.name].list.length}
                             </span>
                           )}
+                          <button
+                            type="button"
+                            className="services-add-btn"
+                            title={`Add a new credential for ${agent.name}`}
+                            onClick={() => handleAddCred(agent.name)}
+                          >
+                            + Add credential
+                          </button>
                         </div>
                         {renderServices(agent.name)}
                       </div>
@@ -1136,13 +1191,16 @@ function Dashboard() {
               <div>
                 <h3 className="cred-title">
                   {editCred
-                    ? "Edit Credential"
+                    ? editCred.isNew
+                      ? "Add Credential"
+                      : "Edit Credential"
                     : `${credModal.engine} credentials`}
                 </h3>
                 <p className="cred-sub">
                   {editCred ? (
                     <>
-                      {editCred.engine} on <strong>{editCred.agent_name}</strong>
+                      {editCred.engine || "New credential"} on{" "}
+                      <strong>{editCred.agent_name}</strong>
                     </>
                   ) : (
                     <>
@@ -1171,8 +1229,34 @@ function Dashboard() {
 
                   <div className="cred-form-grid">
                     <div className="form-field">
-                      <label>Engine</label>
-                      <input value={editCred.engine} disabled />
+                      <label>Engine {editCred.isNew ? "*" : ""}</label>
+                      {editCred.isNew ? (
+                        <>
+                          {/* Free text so any engine can be added, with the
+                              agent's own available services as suggestions. */}
+                          <input
+                            value={editCred.engine}
+                            list="engine-options"
+                            placeholder="postgresql"
+                            onChange={(e) =>
+                              updateEditField("engine", e.target.value)
+                            }
+                            disabled={saving}
+                          />
+                          <datalist id="engine-options">
+                            {(services[editCred.agent_name]?.list || []).map(
+                              (svc, i) => (
+                                <option
+                                  key={`${svc.engine}-${i}`}
+                                  value={svc.engine}
+                                />
+                              ),
+                            )}
+                          </datalist>
+                        </>
+                      ) : (
+                        <input value={editCred.engine} disabled />
+                      )}
                     </div>
                     <div className="form-field">
                       <label>Agent Name</label>
@@ -1264,6 +1348,12 @@ function Dashboard() {
                       type="button"
                       className="btn-form-cancel"
                       onClick={() => {
+                        // An "add" popup has no credential list behind it, so
+                        // cancelling closes it instead of showing an empty list.
+                        if (editCred.isNew) {
+                          closeCredModal();
+                          return;
+                        }
                         setEditCred(null);
                         setSaveError("");
                       }}
@@ -1272,7 +1362,11 @@ function Dashboard() {
                       Cancel
                     </button>
                     <button type="submit" className="cred-ok" disabled={saving}>
-                      {saving ? "Saving…" : "Save Changes"}
+                      {saving
+                        ? "Saving…"
+                        : editCred.isNew
+                          ? "Add Credential"
+                          : "Save Changes"}
                     </button>
                   </div>
                 </form>
