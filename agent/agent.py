@@ -18,6 +18,7 @@ from collectors.engines_handler import EnginesHandler
 from utils.command_registry import register
 from collectors.web_inspector import WebInspector
 from utils.command_registry import register
+from collectors.fly_inspector import FlyInspector
 
 
 
@@ -64,6 +65,15 @@ class SentinelAgent:
         self._dispatcher = self._build_dispatcher()
         dispatch = self._make_dispatch()
 
+        try :
+            insp = FlyInspector(dispatch, machine_info=self.machine_info, interval=60)
+            register("fly_inspector", insp)
+            self._collectors.append(insp)
+        except Exception as e:
+            print(f"FlyInspector error: {e}")
+
+
+
         try:
             eh = EnginesHandler(dispatch=dispatch, machine_info=self.machine_info)
             register("engines_handler", eh)
@@ -73,7 +83,6 @@ class SentinelAgent:
         try:
             wi = WebInspector(dispatch=dispatch, machine_info=self.machine_info)
             # wi.start({"server": "apache", "host": "127.0.0.1", "port": 8080})
-            print("nech")
             register("web_inspector", wi)
             self._collectors.append(wi)
         except Exception as e:

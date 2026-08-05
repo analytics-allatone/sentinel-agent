@@ -13,6 +13,7 @@ from models.db_events_models import (
     PostgresDbEvents, MysqlDbEvents, OracleDbEvents, RedisDbEvents, MongoDbEvents,
 )
 from models.agent_model import AgentGroups , Agents , ServicesCredentials
+from models.fly_events_model import FlyEvents
 from models.event_model import AuthEvents , ProcessEvents , NetworkEvents , USBEvents , FileEvents , CapacityMonitoringEvents
 import json
 from datetime import datetime
@@ -26,7 +27,6 @@ dbpassword = os.environ.get("DB_PASSWORD")
 dbendpoint = os.environ.get("DB_ENDPOINT")
 dbname = os.environ.get("DB_NAME")
 # dbname = "testdb"
-
 
 DATABASE_URL_ASYNC=f"postgresql+asyncpg://{dbuser}:{dbpassword}@{dbendpoint}:5432/{dbname}"
 
@@ -85,15 +85,14 @@ CATEGORIES_TABLE_MAPPING = {
     "redis_health":    RedisDbEvents,
     "mongodb_health":  MongoDbEvents,
     "web_server_health": WebServerEvents,
-   
-    "resource" : CapacityMonitoringEvents
+    "fly_heath" : FlyEvents,
+    "resource" : CapacityMonitoringEvents,
     }
 
         
 async def push_data_to_db(data_to_push,agents_map):
     meta_data = data_to_push.get("meta_data")
     events_data = data_to_push.get("event_data")
-
     agent_name = meta_data.get("agent_name")
     agent_id = agents_map.get(agent_name)
 
