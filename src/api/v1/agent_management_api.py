@@ -32,9 +32,11 @@ from schemas.v1.agent_management_schema import (
         GetCredentialsResponse, CredentialData,AddWebConfigRequest,
         UpdateWebConfigRequest,WebConfigData,AddWebConfigResponse,
         GetWebConfigsResponse)
-from utils.crypto import encrypt, canon_engine
 from utils.web_config import (canon_server, clean, load_tls_hosts,
                                   dump_tls_hosts, build_control_json)
+from auth.crypto import hash_password
+from utils.crypto import canon_engine
+
 
 agent_management_router = APIRouter()
 
@@ -150,8 +152,8 @@ async def get_available_services(agent_name: str = Query() ,  db: AsyncSession =
         this_ser = {
             "service_name" : s.service_name,
             "username" : s.user_name,
-            "password" : s.password_enc
-            # "is_enable" : s.is_enable
+            "password" : s.password_enc,
+            "is_enable" : s.is_active
         }
         curr_services[s.agent_name] = this_ser
         ser_list.append(s.agent_name)
@@ -278,9 +280,9 @@ async def add_credential(req: AddCredentialRequest,
     credential.user_name = req.user_name
     credential.dbname = req.dbname
     credential.port = req.port
-    credential.is_active = req.is_active
+    credential.is_active = True
     if req.password is not None:
-        credential.password_enc = encrypt(req.password)     # encrypted here
+        credential.password_enc = hash_password(req.password)     # encrypted here
 
     await db.commit()
     await db.refresh(credential)
@@ -418,7 +420,7 @@ async def add_web_config(req: AddWebConfigRequest,
     row.user_name = req.user_name
     row.is_active = req.is_active
     if req.password is not None:
-        row.password_enc = encrypt(req.password)     # encrypted before storage
+        row.password_enc = hash_password(req.password)     # encrypted before storage
 
     await db.commit()
     await db.refresh(row)

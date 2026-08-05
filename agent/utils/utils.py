@@ -2,8 +2,12 @@ import socket
 import platform
 import uuid
 from collectors.dbprobe.detect import detect_engines
+<<<<<<< HEAD
 from collectors.webprobe.detect import detect_servers
 from utils.command_registry import get_handler
+=======
+from .command_registry import get_handler
+>>>>>>> 2840f6f2d4d12ded898950e03e7367cd73dbd3bd
 
 
 def get_mac_address() -> str:
@@ -57,6 +61,10 @@ def get_machine_info() -> dict:
 async def handle_command(payload):
     command = payload.get("command")
     args = payload.get("args")
+
+    if command == "active_test":
+        return {"success" : True}
+    
     if command ==  "list_services":
         det=[]
         # print(detect_engines())

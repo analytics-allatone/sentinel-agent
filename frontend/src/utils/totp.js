@@ -65,21 +65,116 @@ export function buildOtpauthUrl(secret, accountEmail) {
   return `otpauth://totp/${label}?${params.toString()}`;
 }
 
+// ── Pure-JS SHA-1 + HMAC-SHA1 ─────────────────────────────────────────────────
+// Implemented in plain JS (not the Web Crypto API) on purpose: crypto.subtle is
+// ONLY available in a "secure context" (HTTPS or localhost). On a plain-HTTP
+// deployment it's undefined, which used to make OTP verification silently fail
+// in production while working locally. This works everywhere.
+
+function rotl(n, s) {
+  return ((n << s) | (n >>> (32 - s))) >>> 0;
+}
+
+function sha1(msg) {
+  const len = msg.length;
+  const bitLen = len * 8;
+  const paddedLen = (((len + 8) >> 6) + 1) << 6; // multiple of 64
+  const buf = new Uint8Array(paddedLen);
+  buf.set(msg);
+  buf[len] = 0x80;
+  const dv = new DataView(buf.buffer);
+  dv.setUint32(paddedLen - 4, bitLen >>> 0);
+  dv.setUint32(paddedLen - 8, Math.floor(bitLen / 0x100000000));
+
+  let h0 = 0x67452301,
+    h1 = 0xefcdab89,
+    h2 = 0x98badcfe,
+    h3 = 0x10325476,
+    h4 = 0xc3d2e1f0;
+  const w = new Uint32Array(80);
+
+  for (let i = 0; i < paddedLen; i += 64) {
+    for (let t = 0; t < 16; t++) w[t] = dv.getUint32(i + t * 4);
+    for (let t = 16; t < 80; t++)
+      w[t] = rotl(w[t - 3] ^ w[t - 8] ^ w[t - 14] ^ w[t - 16], 1);
+
+    let a = h0,
+      b = h1,
+      c = h2,
+      d = h3,
+      e = h4;
+    for (let t = 0; t < 80; t++) {
+      let f, k;
+      if (t < 20) {
+        f = (b & c) | (~b & d);
+        k = 0x5a827999;
+      } else if (t < 40) {
+        f = b ^ c ^ d;
+        k = 0x6ed9eba1;
+      } else if (t < 60) {
+        f = (b & c) | (b & d) | (c & d);
+        k = 0x8f1bbcdc;
+      } else {
+        f = b ^ c ^ d;
+        k = 0xca62c1d6;
+      }
+      const tmp = (rotl(a, 5) + f + e + k + w[t]) >>> 0;
+      e = d;
+      d = c;
+      c = rotl(b, 30);
+      b = a;
+      a = tmp;
+    }
+    h0 = (h0 + a) >>> 0;
+    h1 = (h1 + b) >>> 0;
+    h2 = (h2 + c) >>> 0;
+    h3 = (h3 + d) >>> 0;
+    h4 = (h4 + e) >>> 0;
+  }
+
+  const out = new Uint8Array(20);
+  const odv = new DataView(out.buffer);
+  odv.setUint32(0, h0);
+  odv.setUint32(4, h1);
+  odv.setUint32(8, h2);
+  odv.setUint32(12, h3);
+  odv.setUint32(16, h4);
+  return out;
+}
+
+function concatBytes(a, b) {
+  const out = new Uint8Array(a.length + b.length);
+  out.set(a);
+  out.set(b, a.length);
+  return out;
+}
+
+function hmacSha1(key, msg) {
+  const BLOCK = 64;
+  let k = key;
+  if (k.length > BLOCK) k = sha1(k);
+  if (k.length < BLOCK) {
+    const padded = new Uint8Array(BLOCK);
+    padded.set(k);
+    k = padded;
+  }
+  const oKeyPad = new Uint8Array(BLOCK);
+  const iKeyPad = new Uint8Array(BLOCK);
+  for (let i = 0; i < BLOCK; i++) {
+    oKeyPad[i] = k[i] ^ 0x5c;
+    iKeyPad[i] = k[i] ^ 0x36;
+  }
+  return sha1(concatBytes(oKeyPad, sha1(concatBytes(iKeyPad, msg))));
+}
+
 // ── HOTP / TOTP core ──────────────────────────────────────────────────────────
-async function hotp(secretBytes, counter) {
-  const buffer = new ArrayBuffer(8); // 8-byte big-endian counter
-  const view = new DataView(buffer);
+function hotp(secretBytes, counter) {
+  const buffer = new Uint8Array(8); // 8-byte big-endian counter
+  const view = new DataView(buffer.buffer);
   view.setUint32(0, Math.floor(counter / 2 ** 32));
   view.setUint32(4, counter >>> 0);
 
-  const key = await crypto.subtle.importKey(
-    "raw",
-    secretBytes,
-    { name: "HMAC", hash: "SHA-1" },
-    false,
-    ["sign"],
-  );
-  const sig = new Uint8Array(await crypto.subtle.sign("HMAC", key, buffer));
+  const sig = hmacSha1(secretBytes, buffer);
 
   const offset = sig[sig.length - 1] & 0x0f; // dynamic truncation (RFC 4226)
   const binary =
@@ -91,7 +186,7 @@ async function hotp(secretBytes, counter) {
 }
 
 /** Current TOTP code for a Base32 secret. */
-export async function generateTotp(secret, nowSeconds = Date.now() / 1000) {
+export function generateTotp(secret, nowSeconds = Date.now() / 1000) {
   const counter = Math.floor(nowSeconds / PERIOD);
   return hotp(base32Decode(secret), counter);
 }
@@ -100,7 +195,7 @@ export async function generateTotp(secret, nowSeconds = Date.now() / 1000) {
  * Verify a submitted code, tolerating +/- `window` time-steps of clock drift
  * (default 1 => ~90s tolerance).
  */
-export async function verifyTotp(secret, code, window = 1) {
+export function verifyTotp(secret, code, window = 1) {
   if (!secret || !code) return false;
   const cleaned = code.trim().replace(/\s/g, "");
   if (!/^\d{6}$/.test(cleaned)) return false;
@@ -108,7 +203,7 @@ export async function verifyTotp(secret, code, window = 1) {
   const counter = Math.floor(Date.now() / 1000 / PERIOD);
   const bytes = base32Decode(secret);
   for (let w = -window; w <= window; w++) {
-    if ((await hotp(bytes, counter + w)) === cleaned) return true;
+    if (hotp(bytes, counter + w) === cleaned) return true;
   }
   return false;
 }
