@@ -20,14 +20,13 @@ from datetime import datetime
 load_dotenv()
 
 
-dbuser = os.environ.get("DB_USER")
-dbpassword = os.environ.get("DB_PASSWORD")
-dbendpoint = os.environ.get("DB_ENDPOINT")
-# dbname = os.environ.get("DB_NAME")
+dbuser = "dbmasteruser"
+dbpassword = "dbmasterpassword"
+dbendpoint = "sentinelpg"
 dbname = "testdb"
 
 
-DATABASE_URL_ASYNC=f"postgresql+asyncpg://{dbuser}:{dbpassword}@postgres:5432/{dbname}"
+DATABASE_URL_ASYNC=f"postgresql+asyncpg://{dbuser}:{dbpassword}@{dbendpoint}:5432/{dbname}"
 
 async_engine: AsyncEngine = create_async_engine(DATABASE_URL_ASYNC)
 
