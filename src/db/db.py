@@ -27,7 +27,7 @@ dbendpoint = os.environ.get("DB_ENDPOINT")
 dbname = "testdb"
 
 
-DATABASE_URL_ASYNC=f"postgresql+asyncpg://{dbuser}:{dbpassword}@{dbendpoint}:5432/{dbname}"
+DATABASE_URL_ASYNC=f"postgresql+asyncpg://{dbuser}:{dbpassword}@postgres:5432/{dbname}"
 
 async_engine: AsyncEngine = create_async_engine(DATABASE_URL_ASYNC)
 
