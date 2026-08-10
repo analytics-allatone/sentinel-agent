@@ -95,9 +95,13 @@ export default function AgentInfoDashboard() {
           to="now"
           timezone="browser"
           extraParams={{ dtab: DASHBOARD_TAB }}
-          // Grafana's own chrome stays visible, matching the shared link. Pass
-          // kiosk (the component's default) to hide the nav inside the frame.
+          // Grafana's own chrome stays visible, matching the shared link. Drop
+          // this prop to get the component's default (&kiosk), which hides
+          // Grafana's sidebar and top bar inside the frame.
           kiosk={false}
+          // Embedding works now, so the "needs allow_embedding" hint under the
+          // frame would only be noise.
+          helpFooter={false}
           theme={theme}
           title={`Agent info — ${agentName}`}
           height="100%"

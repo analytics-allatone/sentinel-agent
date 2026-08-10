@@ -82,8 +82,11 @@ const APP_OWNED = [
   /^\/ws(\/|$)/,
   /^\/__webpack/,
   /hot-update\.(json|js)$/,
-  /^\/(index\.html|manifest\.json|asset-manifest\.json|favicon\.ico|robots\.txt)$/,
-  /^\/logo\d*\.png$/,
+  // Everything the app ships in public/ sits at the root: index.html, the
+  // manifest, and the service/OS icons (slack.png, gmail.png, windows.png …).
+  // Grafana keeps its own assets under /public/, so a root-level file with an
+  // extension always belongs to this app.
+  /^\/[^/]+\.(html|json|ico|txt|png|jpe?g|gif|svg|webp|webmanifest|map)$/,
 ];
 
 // A filter function (rather than a mount path) is what makes the websocket
