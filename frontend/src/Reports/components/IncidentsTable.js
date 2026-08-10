@@ -2,7 +2,10 @@ import React, { useMemo, useState } from "react";
 
 /**
  * props:
- *  - incidents: [{ date, severity, category, description, agent_name, mitre_technique }]
+ *  - incidents: [{ date, severity, category, description, agent_name, mitre_technique, sortTs? }]
+ *              `date` is the displayed label; the optional `sortTs` (epoch ms) is
+ *              what the date column sorts on, because a label without a year
+ *              ("Jul 30, 02:30") does not parse back to the right instant.
  *  - loading
  *
  * Click a column header to sort by it. Default sort: date descending.
@@ -32,8 +35,8 @@ export default function IncidentsTable({ incidents = [], loading = false }) {
         av = SEVERITY_RANK[av] || 0;
         bv = SEVERITY_RANK[bv] || 0;
       } else if (sortKey === "date") {
-        av = new Date(av).getTime() || 0;
-        bv = new Date(bv).getTime() || 0;
+        av = a.sortTs != null ? a.sortTs : new Date(av).getTime() || 0;
+        bv = b.sortTs != null ? b.sortTs : new Date(bv).getTime() || 0;
       } else {
         av = (av || "").toString().toLowerCase();
         bv = (bv || "").toString().toLowerCase();

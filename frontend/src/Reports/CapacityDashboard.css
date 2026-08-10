@@ -720,9 +720,23 @@
     page-break-inside: avoid;
     padding-top: 2mm;
   }
+  /* the cover carries prose rather than a fixed-size chart, so it is allowed to
+     run on if the summary table wraps */
+  .capacity-dash__print-cover {
+    break-inside: auto;
+    page-break-inside: auto;
+  }
   .capacity-dash__print-page:last-child {
     break-after: auto;
     page-break-after: auto;
+  }
+
+  /* A printed report is read at arm's length and often photocopied, so the type
+     is set well above the screen's. Each chart already owns a page, so the extra
+     size costs nothing but white space. */
+  .capacity-dash__print {
+    font-size: 15px;
+    line-height: 1.5;
   }
 
   .capacity-dash__print-head {
@@ -730,9 +744,9 @@
     justify-content: space-between;
     align-items: baseline;
     border-bottom: 1px solid #cfd4de;
-    padding-bottom: 4px;
-    margin-bottom: 10px;
-    font-size: 9px;
+    padding-bottom: 6px;
+    margin-bottom: 14px;
+    font-size: 13px;
     color: #6b7280;
   }
   .capacity-dash__print-brand {
@@ -741,20 +755,39 @@
     letter-spacing: 0.04em;
     text-transform: uppercase;
   }
+  .capacity-dash__print-h1 {
+    font-size: 26px;
+    font-weight: 700;
+    margin: 0 0 14px;
+    color: #0f141c;
+  }
   .capacity-dash__print-h2 {
-    font-size: 13px;
-    margin: 0 0 8px;
+    font-size: 21px;
+    margin: 0 0 10px;
     color: #0f141c;
   }
   .capacity-dash__print-h2 span {
     color: #6b7280;
     font-weight: 400;
   }
+
+  /* the plain-English note that opens the cover and every chart page */
+  .capacity-dash__print-lead {
+    font-size: 15.5px;
+    line-height: 1.65;
+    color: #313947;
+    margin: 0 0 16px;
+    max-width: 62em;
+    /* a heading must not be left stranded from the text it introduces */
+    break-before: avoid;
+    page-break-before: avoid;
+  }
+
   .capacity-dash__print-table {
     border-collapse: collapse;
     width: 100%;
-    margin-bottom: 12px;
-    font-size: 9px;
+    margin-bottom: 14px;
+    font-size: 14px;
   }
   .capacity-dash__print-table th {
     text-align: left;
@@ -762,34 +795,61 @@
     font-weight: 500;
     text-transform: uppercase;
     letter-spacing: 0.05em;
+    font-size: 12.5px;
     border-bottom: 1px solid #dfe3ea;
-    padding: 3px 6px 3px 0;
+    padding: 6px 10px 6px 0;
   }
   .capacity-dash__print-table td {
-    padding: 4px 6px 4px 0;
+    padding: 8px 10px 8px 0;
     font-variant-numeric: tabular-nums;
     color: #0f141c;
   }
-  .capacity-dash__print-note {
-    font-size: 9px;
+
+  /* cover contents list */
+  .capacity-dash__print-toc {
+    margin-top: 4px;
+  }
+  .capacity-dash__print-toc-head {
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
     color: #6b7280;
-    margin: 8px 0 0;
+    margin-bottom: 6px;
+  }
+  .capacity-dash__print-toc-list {
+    margin: 0;
+    padding-left: 20px;
+    font-size: 16px;
+    line-height: 2;
+    color: #0f141c;
+  }
+  .capacity-dash__print-toc-list span {
+    color: #6b7280;
+  }
+
+  .capacity-dash__print-note {
+    font-size: 14px;
+    line-height: 1.55;
+    color: #6b7280;
+    margin: 10px 0 0;
+    max-width: 62em;
   }
   .capacity-dash__print-foot {
-    margin-top: 6px;
-    font-size: 8px;
-    color: #aab1bd;
+    margin-top: 10px;
+    font-size: 12px;
+    color: #98a0ad;
     text-align: right;
   }
   /* the pane header is reused for the legend; drop its interactive affordances */
   .capacity-dash__print .capacity-dash__pane-title {
     color: #0f141c;
-    font-size: 10px;
+    font-size: 16px;
   }
   .capacity-dash__print .capacity-dash__legend-item {
     color: #313947;
-    padding: 2px 0;
-    margin-right: 10px;
+    font-size: 14px;
+    padding: 3px 0;
+    margin-right: 14px;
   }
   .capacity-dash__print .capacity-dash__pane-unit {
     display: none;
