@@ -1,87 +1,375 @@
 .soc2-page {
-  background: #f9f8f6;
+  /* theme tokens — blue accent, mirroring the capacity report's structure so
+     the two reports read as one family */
+  --surface-0: #f7f7f5;
+  --card: #ffffff;
+  --border: rgba(11, 11, 11, 0.09);
+  --border-strong: rgba(11, 11, 11, 0.16);
+  --text-primary: #0b0b0b;
+  --text-secondary: #52514e;
+  --text-muted: #898781;
+  --accent: #185fa5;
+  --accent-wash: rgba(24, 95, 165, 0.08);
+  --radius: 10px;
+  --shadow-sm: 0 1px 2px rgba(11, 11, 11, 0.04);
+
+  background: var(--surface-0);
   min-height: 100vh;
-  padding: 16px;
+  padding: 20px 20px 16px;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica,
     Arial, sans-serif;
-  color: #1a1a1a;
+  color: var(--text-primary);
   display: flex;
   flex-direction: column;
+  /* App.css ships CRA's boilerplate `.App { text-align: center }`, which
+     otherwise centres every label, card title and table cell on this page */
+  text-align: left;
 }
 
 /* ── top bar ───────────────────────────────────────────── */
 .soc2-topbar {
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   justify-content: space-between;
-  gap: 12px;
+  gap: 16px;
   flex-wrap: wrap;
-  margin-bottom: 12px;
+  margin-bottom: 14px;
 }
 
 .soc2-title {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 11px;
+  min-width: 0;
+}
+.soc2-title-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 9px;
+  background: var(--accent-wash);
+  flex-shrink: 0;
 }
 .soc2-title-text {
-  font-size: 15px;
-  font-weight: 600;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
 }
-.soc2-title-dim {
-  color: #999;
-  font-weight: 400;
+.soc2-title-main {
+  font-size: 17px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+}
+.soc2-title-sub {
+  font-size: 12px;
+  color: var(--text-muted);
 }
 
+/* the controls read as a form: one labelled field per input */
 .soc2-controls {
+  display: flex;
+  /* explicit: Login.css, Register.css and forgot-page.css each ship an
+     unscoped `form { display: flex; flex-direction: column }`, and CRA bundles
+     every stylesheet globally — without this the fields stack in a column and
+     `align-items: flex-end` below turns that into a ragged right-hand list */
+  flex-direction: row;
+  align-items: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.soc2-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.soc2-field-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+.soc2-actions {
   display: flex;
   align-items: center;
   gap: 8px;
-  flex-wrap: wrap;
+  padding-left: 4px;
+  border-left: 0.5px solid var(--border);
+  margin-left: 2px;
 }
 
 .soc2-select,
-.soc2-date {
-  height: 32px;
-  border: 0.5px solid #d5d5d0;
-  border-radius: 6px;
-  background: #fff;
+.soc2-date,
+.soc2-input {
+  height: 34px;
+  border: 0.5px solid var(--border-strong);
+  border-radius: 8px;
+  background: var(--card);
   padding: 0 10px;
   font-size: 13px;
-  color: #333;
+  color: var(--text-primary);
   font-family: inherit;
   cursor: pointer;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
-.soc2-date {
+.soc2-select:focus-visible,
+.soc2-date:focus-visible,
+.soc2-input:focus-visible {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-wash);
+}
+.soc2-date,
+.soc2-input {
   cursor: text;
+}
+.soc2-input {
+  width: 180px;
+}
+
+/* the agent / window the report on screen was built from */
+.soc2-scope {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: 12px;
+  color: #777;
+  margin: -4px 0 10px;
+}
+.soc2-scope-label {
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #999;
+}
+.soc2-scope-agent {
+  font-size: 13px;
+  font-weight: 600;
+  color: #185fa5;
+  background: #e6f1fb;
+  border-radius: 9999px;
+  padding: 2px 10px;
+}
+.soc2-scope-rest {
+  color: #777;
+}
+
+/* one line per section that failed while the others loaded */
+.soc2-warnbar {
+  border: 0.5px solid #e6c98a;
+  background: #fdf6e6;
+  border-radius: 6px;
+  padding: 8px 10px;
+  margin-bottom: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.soc2-warnbar-row {
+  font-size: 12px;
+  color: #7a5b12;
+}
+
+/* the whole refresh failed, but an earlier window is still on screen */
+.soc2-errorbar {
+  border: 0.5px solid #e3b0b0;
+  background: #fcebeb;
+  border-radius: 6px;
+  padding: 8px 10px;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 12px;
+  color: #a32d2d;
+}
+
+.soc2-note {
+  font-size: 13px;
+  color: #777;
+  background: #fff;
+  border: 0.5px dashed #ddd;
+  border-radius: 6px;
+  padding: 10px 12px;
+}
+.soc2-note-loading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-style: solid;
+  border-color: #cfe0f2;
+  background: #f7fbff;
+  color: #185fa5;
+}
+
+/* ── per-request loaders ───────────────────────────────────── */
+.soc2-spinner {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  flex: none;
+  border-radius: 50%;
+  border: 2px solid rgba(24, 95, 165, 0.25);
+  border-top-color: #185fa5;
+  animation: soc2-spin 0.7s linear infinite;
+}
+@keyframes soc2-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+/* honour a reduced-motion preference: pulse instead of spin */
+@media (prefers-reduced-motion: reduce) {
+  .soc2-spinner {
+    animation: soc2-pulse 1.2s ease-in-out infinite;
+  }
+  @keyframes soc2-pulse {
+    50% {
+      opacity: 0.35;
+    }
+  }
+}
+
+/* the count next to the scope while requests are open */
+.soc2-scope-loading {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── domain shortcuts on the overview ──────────────────── */
+.soc2-domains {
+  display: flex;
+  flex-direction: column;
+}
+.soc2-domain {
+  display: grid;
+  grid-template-columns: 1fr auto 10px;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 6px;
+  border: 0;
+  border-bottom: 0.5px solid #f0f0ee;
+  background: none;
+  font-family: inherit;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+}
+.soc2-domain:last-child {
+  border-bottom: 0;
+}
+.soc2-domain:hover {
+  background: rgba(11, 11, 11, 0.03);
+}
+.soc2-domain:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+.soc2-domain-name {
+  font-weight: 500;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.soc2-domain-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-muted);
+  font-size: 12.5px;
+  white-space: nowrap;
+}
+.soc2-domain-count {
+  font-variant-numeric: tabular-nums;
+}
+.soc2-domain-score {
+  padding: 1px 8px;
+  border-radius: 9999px;
+  font-size: 11.5px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.soc2-domain-score-good {
+  background: #eaf3de;
+  color: #27500a;
+}
+.soc2-domain-score-warn {
+  background: #faeeda;
+  color: #854f0b;
+}
+.soc2-domain-score-bad {
+  background: #fcebeb;
+  color: #a32d2d;
+}
+.soc2-domain-failed {
+  color: #a32d2d;
+}
+/* the chevron that says the row goes somewhere */
+.soc2-domain-go {
+  width: 6px;
+  height: 6px;
+  border-right: 1.5px solid #b9b7b1;
+  border-top: 1.5px solid #b9b7b1;
+  transform: rotate(45deg);
+}
+
+/* a domain tab whose own report failed */
+.soc2-tab-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #d64545;
+  margin-left: 6px;
+  vertical-align: middle;
 }
 
 .soc2-btn {
-  height: 32px;
-  border: 0.5px solid #d5d5d0;
-  border-radius: 6px;
-  background: #fff;
-  padding: 0 12px;
+  height: 34px;
+  border: 0.5px solid var(--border-strong);
+  border-radius: 8px;
+  background: var(--card);
+  padding: 0 13px;
   font-size: 13px;
-  color: #333;
+  color: var(--text-primary);
   cursor: pointer;
   font-family: inherit;
   white-space: nowrap;
+  transition: background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
 }
 .soc2-btn:hover:not(:disabled) {
   background: #f2f2ef;
+  border-color: var(--border-strong);
+}
+.soc2-btn:focus-visible {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-wash);
 }
 .soc2-btn:disabled {
-  opacity: 0.6;
+  opacity: 0.55;
   cursor: default;
 }
 .soc2-btn-primary {
-  background: #185fa5;
-  border-color: #185fa5;
+  background: var(--accent);
+  border-color: var(--accent);
   color: #fff;
+  font-weight: 550;
 }
 .soc2-btn-primary:hover:not(:disabled) {
   background: #14508c;
+  border-color: #14508c;
 }
 .soc2-btn-sm {
   height: 30px;
@@ -91,29 +379,45 @@
 /* ── tab bar ───────────────────────────────────────────── */
 .soc2-tabbar {
   display: flex;
-  gap: 4px;
-  border-bottom: 0.5px solid #e0e0e0;
+  gap: 2px;
+  border-bottom: 0.5px solid var(--border);
   overflow-x: auto;
   margin-bottom: 14px;
+  /* a domain page is long; the tabs stay reachable without scrolling back up */
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  background: var(--surface-0);
+  /* nine tabs scroll on narrow screens; the scrollbar itself is noise */
+  scrollbar-width: none;
+}
+.soc2-tabbar::-webkit-scrollbar {
+  display: none;
 }
 .soc2-tab {
   border: none;
   background: none;
-  padding: 10px 12px;
-  font-size: 14px;
-  color: #777;
+  padding: 9px 12px;
+  font-size: 13.5px;
+  color: var(--text-secondary);
   cursor: pointer;
   font-family: inherit;
   border-bottom: 2px solid transparent;
   white-space: nowrap;
+  transition: color 0.15s ease, background 0.15s ease;
 }
 .soc2-tab:hover {
-  color: #333;
+  color: var(--text-primary);
+  background: rgba(11, 11, 11, 0.03);
+}
+.soc2-tab:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
 }
 .soc2-tab.active {
-  color: #1a1a1a;
-  font-weight: 500;
-  border-bottom-color: #185fa5;
+  color: var(--accent);
+  font-weight: 600;
+  border-bottom-color: var(--accent);
 }
 
 /* ── content ───────────────────────────────────────────── */
@@ -137,31 +441,167 @@
   font-weight: 500;
 }
 
-/* stat card row */
+/* stat card row — four across when there is room, never cramped below that */
 .soc2-statrow {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
   gap: 12px;
 }
 
 /* two-column card layout */
 .soc2-two-col {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+  gap: 12px;
+}
+
+/* the top-N breakdowns: as many columns as fit, so a domain with eleven of
+   them is a readable grid instead of a two-wide tower */
+.soc2-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(270px, 1fr));
   gap: 12px;
 }
 
 /* generic card / section */
 .soc2-card {
-  background: #fff;
-  border: 0.5px solid #e0e0e0;
-  border-radius: 8px;
-  padding: 12px;
+  background: var(--card);
+  border: 0.5px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+  padding: 14px;
+  min-width: 0; /* a grid child must be allowed to shrink, or wide tables push out */
 }
 .soc2-card-title {
-  font-size: 14px;
+  font-size: 13.5px;
   font-weight: 600;
   margin-bottom: 12px;
+  color: var(--text-primary);
+}
+/* a card that owns the full width (charts, evidence tables) */
+.soc2-card-wide {
+  grid-column: 1 / -1;
+}
+
+/* ── folded detail ─────────────────────────────────────── */
+/* The breakdowns and evidence tables are the bulk of a domain page, so they sit
+   folded until asked for. Native <details>, styled to match a card. */
+.soc2-fold {
+  background: var(--card);
+  border: 0.5px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+}
+.soc2-fold-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 14px;
+  cursor: pointer;
+  font-size: 13.5px;
+  font-weight: 600;
+  list-style: none;
+  border-radius: var(--radius);
+}
+/* the default disclosure triangle, replaced by the chevron below */
+.soc2-fold-head::-webkit-details-marker {
+  display: none;
+}
+.soc2-fold-head:hover {
+  background: rgba(11, 11, 11, 0.02);
+}
+.soc2-fold-head:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+.soc2-fold-chevron {
+  width: 7px;
+  height: 7px;
+  flex: none;
+  border-right: 1.5px solid var(--text-muted);
+  border-bottom: 1.5px solid var(--text-muted);
+  transform: rotate(-45deg);
+  transition: transform 0.15s ease;
+  margin-left: 2px;
+}
+.soc2-fold[open] > .soc2-fold-head .soc2-fold-chevron {
+  transform: rotate(45deg);
+}
+.soc2-fold-title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.soc2-fold-hint {
+  margin-left: auto;
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+.soc2-fold-body {
+  padding: 0 14px 14px;
+}
+/* nested cards inside a fold drop their own frame — one border is enough */
+.soc2-fold-body .soc2-card {
+  border: 0;
+  box-shadow: none;
+  padding: 0 0 4px;
+  background: none;
+}
+.soc2-fold-body .soc2-card-grid {
+  gap: 18px 24px;
+}
+
+/* ── top-N breakdown lists ─────────────────────────────── */
+.soc2-bd-list {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.soc2-bd-row {
+  display: grid;
+  grid-template-columns: minmax(90px, 40%) 1fr 56px;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+}
+.soc2-bd-label {
+  color: #333;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.soc2-bd-track {
+  height: 6px;
+  border-radius: 3px;
+  background: rgba(43, 127, 208, 0.1);
+  overflow: hidden;
+}
+.soc2-bd-fill {
+  display: block;
+  height: 100%;
+  border-radius: 3px;
+  background: #2b7fd0;
+}
+.soc2-bd-count {
+  text-align: right;
+  color: #666;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── evidence tables ───────────────────────────────────── */
+.soc2-tbl td {
+  max-width: 260px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.soc2-tbl-more {
+  font-size: 12px;
+  color: #888;
+  padding: 8px 2px 0;
 }
 
 /* ── progress bars ─────────────────────────────────────── */
@@ -206,7 +646,7 @@
 }
 .criteria-row {
   display: grid;
-  grid-template-columns: 4px 180px 1fr 44px;
+  grid-template-columns: 4px minmax(120px, 190px) 1fr 44px;
   align-items: center;
   gap: 10px;
 }
@@ -215,9 +655,15 @@
   height: 22px;
   border-radius: 2px;
 }
+/* the labels carry a criterion number and a name ("CC6.7 — Removable media"),
+   so they must be allowed to clip rather than push the bar out of the card */
 .criteria-label {
   font-size: 13px;
-  color: #333;
+  color: var(--text-secondary);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .criteria-track {
   height: 5px;
@@ -324,45 +770,75 @@
   background: #eaf3de;
   color: #27500a;
 }
+.cat-usb {
+  background: #ece9fb;
+  color: #4a3fb0;
+}
 
-/* ── incidents table ───────────────────────────────────── */
+/* ── incidents / evidence tables ────────────────────────── */
 .inc-table-wrap {
-  background: #fff;
-  border: 0.5px solid #e0e0e0;
-  border-radius: 8px;
+  background: var(--card);
+  border: 0.5px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
   padding: 4px 12px 12px;
-  overflow-x: auto;
+  overflow: auto;
+  /* long evidence lists scroll inside the card rather than running for pages */
+  max-height: 460px;
+}
+/* inside a card the wrapper's own frame would double up */
+.soc2-card .inc-table-wrap {
+  background: none;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  padding: 0;
+  max-height: 380px;
 }
 .inc-table {
   width: 100%;
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 0;
   font-size: 13px;
 }
 .inc-table th {
   text-align: left;
-  padding: 10px 10px;
-  color: #888;
-  font-weight: 500;
-  font-size: 12px;
-  border-bottom: 0.5px solid #e0e0e0;
+  padding: 9px 10px;
+  color: var(--text-muted);
+  font-weight: 600;
+  font-size: 11.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  border-bottom: 0.5px solid var(--border-strong);
   cursor: pointer;
   user-select: none;
   white-space: nowrap;
+  /* the header stays put while the rows scroll under it */
+  position: sticky;
+  top: 0;
+  background: var(--card);
+  z-index: 1;
 }
 .inc-table th:hover {
-  color: #333;
+  color: var(--text-primary);
 }
 .inc-table th.sorted {
-  color: #185fa5;
+  color: var(--accent);
 }
 .sort-caret {
   font-size: 10px;
 }
 .inc-table td {
-  padding: 10px 10px;
+  padding: 9px 10px;
   border-bottom: 0.5px solid #f2f2f0;
-  color: #333;
+  color: var(--text-secondary);
   vertical-align: middle;
+}
+.inc-table tbody tr:nth-child(even) td {
+  background: #fbfbfa;
+}
+.inc-table tbody tr:hover td {
+  background: var(--accent-wash);
 }
 .inc-table tr:last-child td {
   border-bottom: none;
@@ -388,6 +864,51 @@
 }
 .agent-row:last-child {
   border-bottom: none;
+}
+
+/* a row that scopes the report to its agent */
+.agent-row-btn {
+  border: 0;
+  border-bottom: 0.5px solid #f0f0ee;
+  background: none;
+  font-family: inherit;
+  font-size: 13px;
+  text-align: left;
+  width: 100%;
+  padding: 11px 8px;
+  cursor: pointer;
+}
+.agent-row-btn:hover {
+  background: #f4f4f1;
+}
+.agent-row-btn:focus-visible {
+  outline: 2px solid #185fa5;
+  outline-offset: -2px;
+}
+.agent-row-btn.selected {
+  background: #eef4fb;
+  box-shadow: inset 2px 0 0 #185fa5;
+}
+.agent-row-btn.selected .agent-name {
+  color: #14508c;
+}
+
+.soc2-hint {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+}
+/* the same hint, but closing a card rather than introducing one */
+.soc2-hint-foot {
+  margin: 12px 0 0;
+  padding-top: 10px;
+  border-top: 0.5px solid var(--border);
+}
+
+/* a breakdown row the agent gave no label for */
+.soc2-bd-blank {
+  color: var(--text-muted);
+  font-style: italic;
 }
 .agent-dot {
   width: 9px;
@@ -468,26 +989,18 @@
   color: #234a72;
 }
 
-/* ── export bar ────────────────────────────────────────── */
+/* ── page footer — one line of provenance ───────────────── */
 .soc2-exportbar {
   display: flex;
   align-items: center;
   gap: 10px;
   padding-top: 12px;
-  border-top: 0.5px solid #e0e0e0;
+  border-top: 0.5px solid var(--border);
   flex-wrap: wrap;
 }
-.soc2-export-label {
-  font-size: 13px;
-  color: #666;
-}
 .soc2-period {
-  font-size: 13px;
-  color: #666;
-  margin-left: auto;
-}
-.soc2-regen {
-  margin-left: 4px;
+  font-size: 12px;
+  color: var(--text-muted);
 }
 
 /* ── empty / error states ──────────────────────────────── */
@@ -558,9 +1071,60 @@
   font-size: 15px;
   font-weight: 700;
   color: #185fa5;
-  margin: 0 0 10px;
+  margin: 0 0 8px;
   padding-bottom: 4px;
   border-bottom: 0.5px solid #e0e0e0;
+}
+
+/* the plain-English explanation that opens the cover and every section */
+.soc2-print-lead {
+  font-size: 11.5px;
+  line-height: 1.55;
+  color: #444;
+  margin: 0 0 14px;
+  max-width: 62em;
+}
+
+/* ── cover page ── */
+.soc2-print-cover {
+  display: flex;
+  flex-direction: column;
+}
+.soc2-print-meta {
+  display: flex;
+  gap: 28px;
+  flex-wrap: wrap;
+  margin-bottom: 18px;
+  padding: 10px 0;
+  border-top: 0.5px solid #e0e0e0;
+  border-bottom: 0.5px solid #e0e0e0;
+}
+.soc2-print-meta-key {
+  display: block;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #888;
+}
+.soc2-print-meta-val {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: #1a1a1a;
+}
+.soc2-print-toc-head {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #888;
+  margin-bottom: 6px;
+}
+.soc2-print-toc-list {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 12.5px;
+  line-height: 1.9;
+  color: #333;
 }
 
 @media print {
@@ -582,24 +1146,193 @@
     background: #fff;
   }
 
-  /* open up the two-column layouts so nothing is clipped on paper */
+  /* open up the grid layouts so nothing is clipped on paper */
   .soc2-print-root .soc2-two-col {
     grid-template-columns: 1fr 1fr;
   }
-  .soc2-print-root .soc2-statrow {
+  .soc2-print-root .soc2-statrow,
+  .soc2-print-root .soc2-card-grid {
     grid-template-columns: repeat(4, 1fr);
   }
 
-  /* avoid awkward breaks inside cards / sections */
-  .soc2-print-section,
+  /* tables print in full: no inner scroll box, no sticky header */
+  .soc2-print-root .inc-table-wrap,
+  .soc2-print-root .soc2-card .inc-table-wrap {
+    max-height: none;
+    overflow: visible;
+  }
+  .soc2-print-root .inc-table th {
+    position: static;
+  }
+
+  /* every section opens a new sheet, so one can be pulled out on its own */
+  .soc2-print-section {
+    break-before: page;
+    page-break-before: always;
+    break-inside: auto;
+    page-break-inside: auto;
+    margin-bottom: 0;
+  }
+
+  /* keep a heading and its explanation with the content they introduce */
+  .soc2-print-h2,
+  .soc2-print-lead {
+    break-after: avoid;
+    page-break-after: avoid;
+  }
+
+  /* avoid awkward breaks inside a card, a table or a recommendation */
   .soc2-print-root .soc2-card,
+  .soc2-print-root .soc2-fold,
   .soc2-print-root .inc-table-wrap,
   .soc2-print-root .soc2-rec {
     break-inside: avoid;
     page-break-inside: avoid;
   }
-  .soc2-print-section {
-    page-break-inside: auto;
+
+  /* the cover fills the first sheet on its own */
+  .soc2-print-cover {
+    min-height: 90vh;
+  }
+
+  /* loaders and on-screen instructions are not part of the printed evidence */
+  .soc2-print-root .soc2-note-loading,
+  .soc2-print-root .soc2-spinner,
+  .soc2-print-root .soc2-screen-only {
+    display: none;
+  }
+
+  /* A printed report is read at arm's length and often photocopied, so the type
+     is set larger than the screen's. Each section starts on its own sheet, so
+     the extra length costs pages rather than legibility. */
+  .soc2-print-root {
+    font-size: 16px;
+    line-height: 1.55;
+  }
+
+  /* headings and the explanation that opens each section */
+  .soc2-print-title {
+    font-size: 26px;
+  }
+  .soc2-print-period {
+    font-size: 15px;
+  }
+  .soc2-print-h2 {
+    font-size: 21px;
+  }
+  .soc2-print-lead {
+    font-size: 15.5px;
+    line-height: 1.65;
+  }
+  .soc2-print-meta-key {
+    font-size: 13px;
+  }
+  .soc2-print-meta-val {
+    font-size: 18px;
+  }
+  .soc2-print-toc-head {
+    font-size: 14px;
+  }
+  .soc2-print-toc-list {
+    font-size: 16.5px;
+    line-height: 2;
+  }
+
+  /* headline figures */
+  .soc2-print-root .stat-card {
+    padding: 12px 14px;
+  }
+  .soc2-print-root .stat-label {
+    font-size: 13px;
+  }
+  .soc2-print-root .stat-value {
+    font-size: 29px;
+  }
+  .soc2-print-root .stat-sub {
+    font-size: 13.5px;
+  }
+
+  /* card and section labels */
+  .soc2-print-root .soc2-card-title,
+  .soc2-print-root .soc2-fold-title {
+    font-size: 16.5px;
+  }
+  .soc2-print-root .soc2-section-head {
+    font-size: 14px;
+  }
+  .soc2-print-root .soc2-fold-hint,
+  .soc2-print-root .soc2-hint,
+  .soc2-print-root .soc2-note {
+    font-size: 14px;
+  }
+
+  /* evidence tables — the densest thing on paper, so they get the most care */
+  .soc2-print-root .inc-table {
+    font-size: 14px;
+  }
+  .soc2-print-root .inc-table th {
+    font-size: 13px;
+  }
+  .soc2-print-root .inc-table th,
+  .soc2-print-root .inc-table td {
+    padding: 9px 11px;
+  }
+
+  /* lists: breakdowns, events, agents, recommendations */
+  .soc2-print-root .soc2-bd-row,
+  .soc2-print-root .pbar-label,
+  .soc2-print-root .pbar-count,
+  .soc2-print-root .criteria-label,
+  .soc2-print-root .criteria-pct,
+  .soc2-print-root .agent-row,
+  .soc2-print-root .evt-item {
+    font-size: 14.5px;
+  }
+  .soc2-print-root .evt-time,
+  .soc2-print-root .agent-meta {
+    font-size: 13.5px;
+  }
+  .soc2-print-root .soc2-rec {
+    font-size: 15px;
+    line-height: 1.55;
+  }
+  .soc2-print-root .sev-badge,
+  .soc2-print-root .agent-badge {
+    font-size: 13px;
+  }
+  /* the chart's own axis labels live in the SVG, scaled with the chart */
+  .soc2-print-root .tsc-ylabel,
+  .soc2-print-root .tsc-xlabel {
+    font-size: 17px;
+  }
+
+  /* folds print flat: the printed report renders them open, and the chevron and
+     hover affordance mean nothing on paper */
+  .soc2-print-root .soc2-fold {
+    border: 0;
+    box-shadow: none;
+  }
+  .soc2-print-root .soc2-fold-head {
+    padding: 0 0 8px;
+  }
+  .soc2-print-root .soc2-fold-chevron {
+    display: none;
+  }
+  .soc2-print-root .soc2-fold-body {
+    padding: 0;
+  }
+
+  /* chart controls are interactive-only — they mean nothing on paper */
+  .soc2-print-root .tsc-tools,
+  .soc2-print-root .tsc-hint {
+    display: none;
+  }
+
+  /* evidence tables: let the cells wrap instead of clipping to an ellipsis */
+  .soc2-print-root .soc2-tbl td {
+    max-width: none;
+    white-space: normal;
+    overflow: visible;
   }
 
   /* let every event/agent row show — no ellipsis truncation on paper */
@@ -621,17 +1354,43 @@
 }
 
 /* ── responsive ────────────────────────────────────────── */
+/* The grids above are auto-fit, so they reflow on their own; these are the
+   pieces that need an explicit narrow-screen form. */
 @media (max-width: 820px) {
-  .soc2-statrow {
-    grid-template-columns: repeat(2, 1fr);
+  .soc2-page {
+    padding: 14px 12px 12px;
   }
-  .soc2-two-col {
-    grid-template-columns: 1fr;
+  .soc2-controls,
+  .soc2-topbar {
+    width: 100%;
+  }
+  /* the fields share the row; only they are flex items of the form */
+  .soc2-field {
+    flex: 1 1 170px;
+    min-width: 0;
+  }
+  /* the controls are items of the field's COLUMN, so flex-basis here would set
+     their height — they stretch by width instead */
+  .soc2-input,
+  .soc2-select,
+  .soc2-date {
+    width: 100%;
+    min-width: 0;
+  }
+  .soc2-actions {
+    flex: 1 1 100%;
+    justify-content: flex-end;
+    border-left: 0;
+    padding-left: 0;
+    margin-left: 0;
   }
   .criteria-row {
     grid-template-columns: 4px 130px 1fr 40px;
   }
   .agent-meta {
     display: none;
+  }
+  .agent-row {
+    grid-template-columns: 10px 1fr auto;
   }
 }

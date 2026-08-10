@@ -75,7 +75,7 @@ function Dashboard() {
 
   const fetchAgents = () => {
     api
-      .get("/api/v1/get-agents")
+      .get("/get-agents")
       .then((res) => {
         if (res.data.status !== "success" || !res.data.data) return;
         const data = res.data.data;
@@ -268,7 +268,7 @@ function Dashboard() {
     paginatedAgents.every((agent) => selectedAgents.has(agent.id));
 
   const handleDeployAgent = () => {
-    navigate("/installation");
+    navigate("/app/installation");
   };
 
   const handleRefresh = () => {
@@ -361,7 +361,7 @@ function Dashboard() {
     }));
 
     api
-      .get("/api/v1/available-services", { params: { agent_name: agentName } })
+      .get("/available-services", { params: { agent_name: agentName } })
       .then((res) => {
         const list = res.data?.data?.available_engines || [];
         setServices((prev) => ({
@@ -477,13 +477,43 @@ function Dashboard() {
     setEditCred(null);
     setSaveError("");
     setSaveMsg("");
+    setConfirmDeleteId(null);
     setCredModal({ agentName, engine, loading: true, error: "", data: null });
     fetchCredentials(agentName, engine);
   };
 
+  // "+ Add credential" in the services panel: opens the very same popup, but
+  // straight in form mode with empty fields, so the form below can POST a
+  // brand-new credential instead of overwriting an existing one. Nothing is
+  // fetched here — there is no credential to load yet.
+  const handleAddCred = (agentName) => {
+    setSaveError("");
+    setSaveMsg("");
+    setConfirmDeleteId(null);
+    setCredModal({
+      agentName,
+      engine: "",
+      loading: false,
+      error: "",
+      data: null,
+    });
+    setEditCred({
+      isNew: true,
+      engine: "",
+      agent_name: agentName,
+      host: "",
+      port: "",
+      user_name: "",
+      password: "",
+      service_name: "",
+      dbname: "",
+      is_active: true,
+    });
+  };
+
   const fetchCredentials = (agentName, engine) => {
     api
-      .get("/api/v1/get-credentials", {
+      .get("/get-credentials", {
         params: { engine, agent_name: agentName },
       })
       .then((res) => {
@@ -523,7 +553,7 @@ function Dashboard() {
     setDeletingId(credId);
 
     api
-      .delete("/api/v1/delete-credential", {
+      .delete("/delete-credential", {
         params: { credential_id: credId },
       })
       .then(() => {
@@ -550,6 +580,7 @@ function Dashboard() {
     setSaveError("");
     setSaveMsg("");
     setEditCred({
+      isNew: false,
       engine: cred.engine || credModal.engine,
       agent_name: cred.agent_name || credModal.agentName,
       host: cred.host || "",
@@ -570,31 +601,47 @@ function Dashboard() {
     e.preventDefault();
     setSaveError("");
 
+    const engine = editCred.engine.trim();
+    const agentName = editCred.agent_name;
+
+    if (!engine) {
+      setSaveError("Engine is required.");
+      return;
+    }
     if (!editCred.host.trim() || !editCred.user_name.trim()) {
       setSaveError("Host and Username are required.");
       return;
     }
 
+    const isNew = editCred.isNew;
+
     setSaving(true);
     api
-      .post("/api/v1/add-credential", {
-        engine: editCred.engine,
+      .post("/add-credential", {
+        engine,
         user_name: editCred.user_name.trim(),
         password: editCred.password,
         service_name: editCred.service_name.trim(),
         dbname: editCred.dbname.trim(),
         host: editCred.host.trim(),
         port: Number(editCred.port) || 0,
-        agent_name: editCred.agent_name,
+        agent_name: agentName,
         is_active: editCred.is_active,
       })
       .then(() => {
         setSaving(false);
         setEditCred(null);
-        setSaveMsg("Credential saved successfully.");
-        // Refresh the list so the popup shows the updated values.
-        setCredModal((prev) => (prev ? { ...prev, loading: true } : prev));
-        fetchCredentials(credModal.agentName, credModal.engine);
+        setSaveMsg(
+          isNew
+            ? "Credential added successfully."
+            : "Credential saved successfully.",
+        );
+        // Refresh the list so the popup shows the updated values. On an "add"
+        // the popup was opened without an engine, so adopt the one just typed.
+        setCredModal((prev) =>
+          prev ? { ...prev, engine, loading: true, error: "" } : prev,
+        );
+        fetchCredentials(agentName, engine);
       })
       .catch((err) => {
         setSaving(false);
@@ -952,13 +999,13 @@ function Dashboard() {
           <thead>
             <tr>
               <th className="col-expand" aria-label="Show available services" />
-              <th>
-                {/* <input
+              {/* <th>
+                <input
                   type="checkbox"
                   checked={selectAll}
                   onChange={handleSelectAll}
-                /> */}
-              </th>
+                />
+              </th> */}
               <th>ID</th>
               <th>Agent Name</th>
               <th>MAC Address</th>
@@ -1007,11 +1054,14 @@ function Dashboard() {
                   </td> */}
                   <td>{agent.id}</td>
                   <td>
+                    {/* `agent` scopes the SOC2 report to this agent — it becomes
+                        agent_name on every /soc2-report/* request. */}
                     <a
-                      href="/reports/soc2"
+                      href={`/app/reports/soc2?agent=${encodeURIComponent(agent.name)}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="agent-name-link"
+                      title={`Open the SOC2 report for ${agent.name}`}
                     >
                       {agent.name}
                     </a>
@@ -1047,6 +1097,14 @@ function Dashboard() {
                               {services[agent.name].list.length}
                             </span>
                           )}
+                          <button
+                            type="button"
+                            className="services-add-btn"
+                            title={`Add a new credential for ${agent.name}`}
+                            onClick={() => handleAddCred(agent.name)}
+                          >
+                            + Add credential
+                          </button>
                         </div>
                         {renderServices(agent.name)}
                       </div>
@@ -1133,13 +1191,16 @@ function Dashboard() {
               <div>
                 <h3 className="cred-title">
                   {editCred
-                    ? "Edit Credential"
+                    ? editCred.isNew
+                      ? "Add Credential"
+                      : "Edit Credential"
                     : `${credModal.engine} credentials`}
                 </h3>
                 <p className="cred-sub">
                   {editCred ? (
                     <>
-                      {editCred.engine} on <strong>{editCred.agent_name}</strong>
+                      {editCred.engine || "New credential"} on{" "}
+                      <strong>{editCred.agent_name}</strong>
                     </>
                   ) : (
                     <>
@@ -1168,8 +1229,34 @@ function Dashboard() {
 
                   <div className="cred-form-grid">
                     <div className="form-field">
-                      <label>Engine</label>
-                      <input value={editCred.engine} disabled />
+                      <label>Engine {editCred.isNew ? "*" : ""}</label>
+                      {editCred.isNew ? (
+                        <>
+                          {/* Free text so any engine can be added, with the
+                              agent's own available services as suggestions. */}
+                          <input
+                            value={editCred.engine}
+                            list="engine-options"
+                            placeholder="postgresql"
+                            onChange={(e) =>
+                              updateEditField("engine", e.target.value)
+                            }
+                            disabled={saving}
+                          />
+                          <datalist id="engine-options">
+                            {(services[editCred.agent_name]?.list || []).map(
+                              (svc, i) => (
+                                <option
+                                  key={`${svc.engine}-${i}`}
+                                  value={svc.engine}
+                                />
+                              ),
+                            )}
+                          </datalist>
+                        </>
+                      ) : (
+                        <input value={editCred.engine} disabled />
+                      )}
                     </div>
                     <div className="form-field">
                       <label>Agent Name</label>
@@ -1261,6 +1348,12 @@ function Dashboard() {
                       type="button"
                       className="btn-form-cancel"
                       onClick={() => {
+                        // An "add" popup has no credential list behind it, so
+                        // cancelling closes it instead of showing an empty list.
+                        if (editCred.isNew) {
+                          closeCredModal();
+                          return;
+                        }
                         setEditCred(null);
                         setSaveError("");
                       }}
@@ -1269,7 +1362,11 @@ function Dashboard() {
                       Cancel
                     </button>
                     <button type="submit" className="cred-ok" disabled={saving}>
-                      {saving ? "Saving…" : "Save Changes"}
+                      {saving
+                        ? "Saving…"
+                        : editCred.isNew
+                          ? "Add Credential"
+                          : "Save Changes"}
                     </button>
                   </div>
                 </form>

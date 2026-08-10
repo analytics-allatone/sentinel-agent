@@ -11,6 +11,7 @@ const Sidebar = ({ isOpen, onClose }) => {
     { id: 'monitoring', label: 'Monitoring', icon: '👁️', href: '/monitoring' },
     { id: 'reports', label: 'Reports', icon: '📈', href: '/reports' },
     { id: 'messages', label: 'Messages', icon: '📨', href: '/messages' },
+    { id: 'channels', label: 'Channels', icon: '📡', href: '/channels' },
     { id: 'users', label: 'Users', icon: '👥', href: '/access' },
   ];
 
@@ -35,7 +36,7 @@ const Sidebar = ({ isOpen, onClose }) => {
               {menuItems.map((item) => (
                 <li key={item.id}>
                   <a
-                    href={item.href}
+                    href={`/app${item.href}`}
                     className={`nav-item ${activeMenu === item.id ? 'active' : ''}`}
                     onClick={() => setActiveMenu(item.id)}
                   >
@@ -53,7 +54,7 @@ const Sidebar = ({ isOpen, onClose }) => {
               {settingsItems.map((item) => (
                 <li key={item.id}>
                   <a
-                    href={item.href}
+                    href={`/app${item.href}`}
                     className={`nav-item ${activeMenu === item.id ? 'active' : ''}`}
                     onClick={() => setActiveMenu(item.id)}
                   >

@@ -58,7 +58,7 @@ export default function ProtectedRoute({ element, children, roles, perm, withLay
   }, [needsAuthz, role]);
 
   if (!isAuthenticated) {
-    return <Navigate to="/login" replace state={{ from: location }} />;
+    return <Navigate to="/app/login" replace state={{ from: location }} />;
   }
 
   if (needsAuthz && !settled) {
@@ -68,7 +68,7 @@ export default function ProtectedRoute({ element, children, roles, perm, withLay
   if (needsAuthz && !isAuthorized({ userRole: role, can, roles, perm })) {
     return (
       <Navigate
-        to="/unauthorized"
+        to="/app/unauthorized"
         replace
         state={{ from: location, requiredRoles: roles || [], requiredPerm: perm || null }}
       />

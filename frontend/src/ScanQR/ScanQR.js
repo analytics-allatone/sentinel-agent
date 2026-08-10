@@ -69,14 +69,14 @@ function ScanQR() {
 
   // Guard: reached without coming through the login step.
   if (!email) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/app/login" replace />;
   }
 
   const finishLogin = () => {
     if (pendingAccessToken) setCookie("token", pendingAccessToken, 7);
     if (pendingRefreshToken) setCookie("refresh_token", pendingRefreshToken, 30);
     localStorage.setItem("auth_email", email);
-    navigate("/dashboard");
+    navigate("/app/dashboard");
   };
 
   const handleSubmit = (e) => {
@@ -169,7 +169,7 @@ function ScanQR() {
           )}
 
           <div className="login-link">
-            <a href="/login">Back to Sign in</a>
+            <a href="/app/login">Back to Sign in</a>
           </div>
         </div>
       </div>

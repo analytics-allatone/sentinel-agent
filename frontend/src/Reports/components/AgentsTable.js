@@ -5,6 +5,10 @@ import React from "react";
  *  - agents: [{ name, hostname, os, last_seen, status }]
  *            status: "online" | "degraded" | "offline"
  *  - loading
+ *  - onSelect     : optional (agent) => void. When given, each row becomes a
+ *                   button — the SOC2 report uses it to scope itself to one
+ *                   agent. Omit it (as the printed report does) for a plain list.
+ *  - selectedName : the currently scoped agent's name, marked as pressed.
  */
 const DOT = {
   online: "#5a9216",
@@ -18,7 +22,7 @@ const BADGE_CLASS = {
   offline: "agent-badge-offline",
 };
 
-export default function AgentsTable({ agents = [], loading = false }) {
+export default function AgentsTable({ agents = [], loading = false, onSelect, selectedName }) {
   if (loading) {
     return (
       <div className="agents-list">
@@ -37,16 +41,40 @@ export default function AgentsTable({ agents = [], loading = false }) {
 
   return (
     <div className="agents-list">
-      {agents.map((a, i) => (
-        <div className="agent-row" key={a.id ?? i}>
-          <span className="agent-dot" style={{ background: DOT[a.status] || "#999" }} />
-          <span className="agent-name">{a.name}</span>
-          <span className="agent-meta">
-            {a.hostname} — {a.os} — last seen {a.last_seen}
-          </span>
-          <span className={`agent-badge ${BADGE_CLASS[a.status] || ""}`}>{a.status}</span>
-        </div>
-      ))}
+      {agents.map((a, i) => {
+        const body = (
+          <>
+            <span className="agent-dot" style={{ background: DOT[a.status] || "#999" }} />
+            <span className="agent-name">{a.name}</span>
+            <span className="agent-meta">
+              {a.hostname} — {a.os} — last seen {a.last_seen}
+            </span>
+            <span className={`agent-badge ${BADGE_CLASS[a.status] || ""}`}>{a.status}</span>
+          </>
+        );
+
+        if (!onSelect) {
+          return (
+            <div className="agent-row" key={a.id ?? i}>
+              {body}
+            </div>
+          );
+        }
+
+        const selected = Boolean(selectedName) && selectedName === a.name;
+        return (
+          <button
+            type="button"
+            key={a.id ?? i}
+            className={`agent-row agent-row-btn ${selected ? "selected" : ""}`}
+            onClick={() => onSelect(a)}
+            aria-pressed={selected}
+            title={selected ? `Clear the filter on ${a.name}` : `Report on ${a.name} only`}
+          >
+            {body}
+          </button>
+        );
+      })}
     </div>
   );
 }

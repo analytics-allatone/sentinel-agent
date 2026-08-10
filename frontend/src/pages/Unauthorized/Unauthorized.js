@@ -147,7 +147,7 @@ export default function Unauthorized() {
   useEffect(() => {
     if (!autoRedirect) return undefined;
     if (secondsLeft <= 0) {
-      navigate("/dashboard", { replace: true });
+      navigate("/app/dashboard", { replace: true });
       return undefined;
     }
     const t = setTimeout(() => setSecondsLeft((s) => s - 1), 1000);
@@ -157,7 +157,7 @@ export default function Unauthorized() {
   const goBack = () => {
     // If there's no in-app history to go back to, fall back to the dashboard.
     if (window.history.length > 1) navigate(-1);
-    else navigate("/dashboard", { replace: true });
+    else navigate("/app/dashboard", { replace: true });
   };
 
   const mailtoHref = useMemo(() => {
@@ -207,7 +207,7 @@ export default function Unauthorized() {
         <nav className="ua__crumb" aria-label="Breadcrumb">
           <ol>
             <li>
-              <button type="button" className="ua__crumb-link" onClick={() => navigate("/dashboard")}>
+              <button type="button" className="ua__crumb-link" onClick={() => navigate("/app/dashboard")}>
                 Home
               </button>
             </li>
@@ -243,7 +243,7 @@ export default function Unauthorized() {
           <button
             type="button"
             className="ua__btn ua__btn--primary"
-            onClick={() => navigate("/dashboard")}
+            onClick={() => navigate("/app/dashboard")}
             aria-label="Go to the dashboard"
           >
             <IconGrid />

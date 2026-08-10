@@ -207,7 +207,7 @@ export function AccessProvider({ children }) {
   // Merges by e-mail so frontend-only fields (id, status, permissions) survive.
   const fetchUsers = async () => {
     try {
-      const res = await api.get("/api/v1/get-users");
+      const res = await api.get("/get-users");
       const apiUsers = res?.data?.data?.users;
       if (!Array.isArray(apiUsers)) return;
       setUsers((prev) => {
@@ -246,7 +246,7 @@ export function AccessProvider({ children }) {
 
     // POST /api/v1/create-user  { name, email, password, role }
     try {
-      await api.post("/api/v1/create-user", {
+      await api.post("/create-user", {
         name: finalName,
         email: clean,
         password,
@@ -283,7 +283,7 @@ export function AccessProvider({ children }) {
         role: patch.role ?? target.role,
       };
       try {
-        await api.put("/api/v1/update-user", payload);
+        await api.put("/update-user", payload);
       } catch (e) {
         console.warn("[RBAC] update-user API failed:", e?.response?.status || e?.message);
       }
@@ -326,7 +326,7 @@ export function AccessProvider({ children }) {
     // axios sends a request body on DELETE only via the `data` config key.
     if (target) {
       try {
-        await api.delete("/api/v1/delete-user", { data: { email: target.email } });
+        await api.delete("/delete-user", { data: { email: target.email } });
       } catch (e) {
         console.warn("[RBAC] delete-user API failed:", e?.response?.status || e?.message);
       }

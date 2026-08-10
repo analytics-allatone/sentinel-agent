@@ -163,7 +163,7 @@ const PRINT_W = 700;
 const PRINT_H = 430;
 
 const STATS = [
-  { key: "avg_cpu_percent", label: "Avg CPU", unit: "%", modifier: "cpu" },
+  { key: "avg_cpu_percent", label: "Avg CPU", unit: "MB", modifier: "cpu" },
   { key: "avg_memory", label: "Avg memory", unit: "MB", modifier: "mem" },
   { key: "avg_agent_cpu_percent", label: "Avg Agent CPU", unit: "%", modifier: "acpu" },
   { key: "avg_agent_memory", label: "Avg Agent memory", unit: "Mb", modifier: "amem" },
