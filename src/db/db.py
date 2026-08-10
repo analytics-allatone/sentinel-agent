@@ -20,10 +20,9 @@ from datetime import datetime
 load_dotenv()
 
 
-dbuser = os.environ.get("DB_USER")
-dbpassword = os.environ.get("DB_PASSWORD")
-dbendpoint = os.environ.get("DB_ENDPOINT")
-# dbname = os.environ.get("DB_NAME")
+dbuser = "dbmasteruser"
+dbpassword = "dbmasterpassword"
+dbendpoint = "sentinelpg"
 dbname = "testdb"
 
 

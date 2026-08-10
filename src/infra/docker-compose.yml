@@ -1,0 +1,54 @@
+services:
+
+  sentinel-postgres:
+    image: timescale/timescaledb:latest-pg16
+    container_name: sentinel-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER:     developer
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB:       developmentdb
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U developer -d developmentdb"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  sentinel-mosquitto:
+    image: eclipse-mosquitto:2
+    container_name: sentinel-mosquitto
+    restart: unless-stopped
+    ports:
+      - "1883:1883"
+    volumes:
+      - ./mosquitto/config:/mosquitto/config
+      - mosquitto-data:/mosquitto/data
+      - mosquitto-log:/mosquitto/log
+  
+  sentinel-agent:
+    build: ./agent
+    container_name: sentinel-agent
+    restart: unless-stopped
+    depends_on:
+      sentinel-postgres:
+        condition: service_healthy
+    environment:
+      DB_HOST: sentinel-postgres
+      DB_PORT: 5432
+      DB_USER: developer
+      DB_PASSWORD: password
+      DB_NAME: developmentdb
+      MQTT_HOST: sentinel-mosquitto
+      MQTT_PORT: 1883
+      MQTT_USER: my_mqtt_user
+      MQTT_PASS: mqttpassword
+    ports:
+      - "8000:8000"  
+volumes:
+  postgres-data:
+  mosquitto-data:
+  mosquitto-log:

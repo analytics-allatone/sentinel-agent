@@ -5,7 +5,7 @@ import aiomqtt
 from fastapi import HTTPException
 
 # ---- config (match your broker) ----
-MQTT_HOST = "80.225.239.163"      # or SERVER_IP
+MQTT_HOST = "sentinelmqtt"      # or SERVER_IP
 MQTT_PORT = 1883
 MQTT_USER = "my_mqtt_user"
 MQTT_PASS = "mqttpassword"

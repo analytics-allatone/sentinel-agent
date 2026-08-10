@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, BigInteger, String, Boolean, Float, TIMESTAMP
+from sqlalchemy import Column, Integer, BigInteger, String, Boolean, Float, TIMESTAMP,ForeignKey
 from sqlalchemy.dialects.postgresql import JSONB
 from datetime import datetime, timezone
 
@@ -10,8 +10,6 @@ except Exception:
     from sqlalchemy.orm import declarative_base
     Base = declarative_base()
     ForceDateTime = TIMESTAMP(timezone=True)
-from db.base import Base          # the SAME Base db.py calls create_all on
-# import ForceDateTime from wherever it's actually defined, e.g.:
 
 class DbEventCommon:
     """Columns shared by every engine table (mixin)."""

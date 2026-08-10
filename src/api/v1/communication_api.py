@@ -56,7 +56,7 @@ async def get_communication_channels(db: AsyncSession = Depends(get_async_db) ,
 
 
 @communication_router.post("/add-communication-channels" , response_model = standard_success_response[addCommunicationChannelResponse] , status_code=201)
-async def get_communication_channels(req : addCommunicationChannelRequest,
+async def add_communication_channels(req : addCommunicationChannelRequest,
                                      db: AsyncSession = Depends(get_async_db) ,
                                      user:dict = Depends(verify_admin_token)):
     channel_result = await db.execute(select(CommunicationChannel).where(CommunicationChannel.name == req.name))
