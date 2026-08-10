@@ -1,0 +1,244 @@
+/* Grafana iframe embed — sizes to whatever box the parent gives it. */
+
+.grafana-embed {
+  /* Light theme palette; the dark block below overrides it. */
+  --ge-bg: #f4f6f8;
+  --ge-surface: #ffffff;
+  --ge-border: #dfe3e8;
+  --ge-text: #1c2530;
+  --ge-muted: #5a6875;
+  --ge-accent: #2a6fdb;
+  --ge-code-bg: #f0f2f5;
+  --ge-danger: #c0392b;
+
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  box-sizing: border-box;
+  /* Fill a flex parent by growing, not by height:100% — a percentage height
+     resolves to auto unless every ancestor has a definite height, which is
+     rarely true inside app chrome. */
+  flex: 1 1 auto;
+  align-self: stretch;
+  border: 1px solid var(--ge-border);
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--ge-bg);
+  color: var(--ge-text);
+}
+
+.grafana-embed[data-theme="dark"] {
+  --ge-bg: #111217;
+  --ge-surface: #181b1f;
+  --ge-border: #2c3235;
+  --ge-text: #e8eaed;
+  --ge-muted: #9aa3ad;
+  --ge-accent: #6ea8fe;
+  --ge-code-bg: #0f1215;
+  --ge-danger: #ff7b72;
+}
+
+/* The frame and its overlays share one positioning context. */
+.grafana-embed__frame-wrap {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+}
+
+/* Absolute rather than height:100% — an iframe falls back to its intrinsic
+   150px whenever the percentage has no definite parent height to resolve
+   against, which is exactly what happens inside a flex column. */
+.grafana-embed__frame {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  background: transparent;
+}
+
+/* ── loading / error overlays ─────────────────────────────── */
+
+.grafana-embed__overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 20px;
+  box-sizing: border-box;
+  background: var(--ge-bg);
+  text-align: center;
+}
+
+.grafana-embed__overlay--error {
+  overflow: auto;
+  align-items: stretch;
+  justify-content: flex-start;
+}
+
+.grafana-embed__spinner {
+  width: 38px;
+  height: 38px;
+  border: 3px solid var(--ge-border);
+  border-top-color: var(--ge-accent);
+  border-radius: 50%;
+  animation: grafana-embed-spin 0.9s linear infinite;
+}
+
+@keyframes grafana-embed-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .grafana-embed__spinner {
+    animation-duration: 2.4s;
+  }
+}
+
+.grafana-embed__loading-text {
+  margin: 0;
+  font-size: 14px;
+  color: var(--ge-muted);
+}
+
+/* ── error card ───────────────────────────────────────────── */
+
+.grafana-embed__error-card {
+  width: 100%;
+  max-width: 640px;
+  margin: auto;
+  padding: 22px;
+  box-sizing: border-box;
+  border: 1px solid var(--ge-border);
+  border-radius: 10px;
+  background: var(--ge-surface);
+  text-align: left;
+}
+
+.grafana-embed__error-title {
+  margin: 0 0 8px;
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--ge-danger);
+}
+
+.grafana-embed__error-lead {
+  margin: 0 0 14px;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.grafana-embed__error-hint {
+  margin: 0 0 8px;
+  font-size: 13px;
+  color: var(--ge-muted);
+}
+
+.grafana-embed__code {
+  margin: 0 0 14px;
+  padding: 12px 14px;
+  border-radius: 8px;
+  background: var(--ge-code-bg);
+  border: 1px solid var(--ge-border);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12.5px;
+  line-height: 1.55;
+  white-space: pre;
+  overflow-x: auto;
+}
+
+.grafana-embed__checklist {
+  margin: 0 0 18px;
+  padding-left: 18px;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--ge-muted);
+}
+
+.grafana-embed code {
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: var(--ge-code-bg);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.92em;
+}
+
+.grafana-embed__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.grafana-embed__btn {
+  padding: 8px 16px;
+  border: 1px solid var(--ge-accent);
+  border-radius: 6px;
+  background: var(--ge-accent);
+  color: #fff;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.grafana-embed__btn:hover {
+  filter: brightness(1.08);
+}
+
+.grafana-embed__btn--ghost {
+  background: transparent;
+  color: var(--ge-accent);
+}
+
+.grafana-embed__url {
+  margin: 14px 0 0;
+  font-size: 11.5px;
+  color: var(--ge-muted);
+  word-break: break-all;
+}
+
+/* ── footer hint ──────────────────────────────────────────── */
+
+.grafana-embed__footer {
+  flex: 0 0 auto;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 12px;
+  border-top: 1px solid var(--ge-border);
+  background: var(--ge-surface);
+  font-size: 11.5px;
+  color: var(--ge-muted);
+}
+
+.grafana-embed__footer a {
+  color: var(--ge-accent);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.grafana-embed__footer a:hover {
+  text-decoration: underline;
+}
+
+@media (max-width: 600px) {
+  .grafana-embed__error-card {
+    padding: 16px;
+  }
+
+  .grafana-embed__actions .grafana-embed__btn {
+    flex: 1 1 auto;
+    text-align: center;
+  }
+}
