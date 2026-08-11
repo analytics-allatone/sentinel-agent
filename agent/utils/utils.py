@@ -2,14 +2,13 @@ import socket
 import platform
 import uuid
 from collectors.dbprobe.detect import detect_engines
-<<<<<<< HEAD
 from collectors.webprobe.detect import detect_servers
 from utils.command_registry import get_handler
-=======
 from .command_registry import get_handler
->>>>>>> 2840f6f2d4d12ded898950e03e7367cd73dbd3bd
+from collectors.fly_detect import run_fly_detect
+from collectors.flyprobe.detect import detect_fly
 
-
+import os
 def get_mac_address() -> str:
     """
     Extracts and formats the hardware MAC address of the primary network interface.
@@ -59,6 +58,7 @@ def get_machine_info() -> dict:
 
 
 async def handle_command(payload):
+
     command = payload.get("command")
     args = payload.get("args")
 
@@ -67,26 +67,34 @@ async def handle_command(payload):
     
     if command ==  "list_services":
         det=[]
-        # print(detect_engines())
-        print(detect_servers())
-        det=(detect_engines()+detect_servers())
-        # print(det)
+        det=(detect_engines()+detect_servers()+detect_fly())
         return det
     
     inspector = get_handler("engines_handler")
     web_inspector=get_handler("web_inspector")
-    if inspector is None:
-        return {"error": "log inspector not ready"}
-    if web_inspector is None:
-        return {"error": "web inspector not ready"}
+    fly_inspector=get_handler("fly_inspector")
 
-    if command == "start_engine":
-        return inspector.start(args)
-    
-    if command == "stop_engine":
-        return inspector.stop(args.get("engine"))
-    
-    return []
+    if inspector is not None:
+        if command == "start_engine":
+            return inspector.start(args)
+            
+        if command == "stop_engine":
+            return inspector.stop(args.get("engine"))
+    if web_inspector is not None:
+        if command == "start_web":            
+            return web_inspector.start(args)
+                    
+        if command == "stop_web":
+            return web_inspector.stop(args.get("engine"))
+    if fly_inspector is not None:
+        if command == "start_fly":
+            # source=run_fly_detect(token=args.get('token'), prefer=args.get("prefer"))
+            
+                # print(detail)
+            return fly_inspector.start(args.get('detail'))
+        if command == "stop_fly":
+            return fly_inspector.stop(args.get("engine"))
+    return []  
 
 if __name__ == "__main__":
     print(get_machine_info())

@@ -68,7 +68,7 @@ def _cli_version(cli: str) -> Dict[str, Any]:
 
 def _cli_apps(cli: str, org: Optional[str]) -> List[Dict[str, Any]]:
     args = ["apps", "list"]
-    if org:
+    if org!="string":
         args += ["--org", org]
     data = _cli_json(cli, args) or []
     apps = data if isinstance(data, list) else data.get("Apps", data.get("apps", []))
@@ -127,9 +127,10 @@ def availability(params: Dict[str, Any] = None) -> Dict[str, Any]:
     if cli:
         rc, out, err = _run([cli, "auth", "whoami"])
         cli_authed = rc == 0 and out.strip() and "not logged in" not in (out + err).lower()
-    token = p.get("token") or os.getenv("FLY_API_TOKEN")
+    tok = p.get("token")
+    token_present = isinstance(tok, str) and tok.strip() != "string"
     return {"cli_installed": bool(cli), "cli_path": cli, "cli_authenticated": bool(cli_authed),
-            "api_token_present": bool(token)}
+            "api_token_present": bool(token_present)}
 
 
 # ---------- extra per-app fetchers (opt-in) ---------------------------------
@@ -240,23 +241,36 @@ def _prometheus(token: str, org: str, app: str,
 def inspect(params: Dict[str, Any]) -> Dict[str, Any]:
     p = params or {}
     base = p.get("api_base") or API_BASE
-    token = p.get("token") or os.getenv("FLY_API_TOKEN")
-    org = p.get("org")
+    # token must be a real non-empty STRING — never True/1/os.getenv here.
+    token = p.get("token")
+    if token is True or token == "string" or token is None:
+        token = None
+    else:
+        token = str(token)
+    org =None if p.get("org") != "string" else p.get('org')
     want_apps = p.get("apps")                 # optional explicit app list
     container = p.get("container")            # if set -> run flyctl inside this container
     fly_bin = p.get("fly_bin") or "fly"
     avail = availability(p)
 
-    backend = p.get("backend") or "auto"
+    backend = (p.get("backend") or "auto").lower()
     if backend == "auto":
-        if container:
-            backend = "cli-docker"
+        # explicit token -> API; else local flyctl; else container; else none
+        if token:
+            backend = "api"
         elif avail["cli_authenticated"]:
             backend = "cli"
-        elif token:
-            backend = "api"
+        elif container:
+            backend = "cli-docker"
         else:
             backend = None
+    # if caller asked for api but gave no real token, don't silently succeed
+    if backend == "api" and not token:
+        return {"version": None, "server": "fly", "backend": None,
+                "metrics": {"reachable": False},
+                "sections": {"connectivity_version": {"backend": "api", **avail,
+                    "error": "api backend selected but no token provided (must be a string, not true/env)"},
+                    "health_summary": {"reachable": False}}}
 
     conn = {"backend": backend, **avail}
     if container:

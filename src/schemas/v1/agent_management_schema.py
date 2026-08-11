@@ -5,7 +5,6 @@ from pydantic import BaseModel, Field, field_validator
 from utils.crypto import VALID_ENGINES, canon_engine
 from utils.web_config import VALID_SERVERS, canon_server, clean
 
-
 class AddAgentRequest(BaseModel):
     agent_name : str
     group_id : Optional[int] = None 
@@ -228,3 +227,20 @@ class AddWebConfigResponse(BaseModel):
 class GetWebConfigsResponse(BaseModel):
     total: int
     web_configs: List[WebConfigData]
+class FlyStartRequest(BaseModel):
+    agent_name: str
+    backend: Optional[str] = None          # "api" for remote; None/"cli" => local
+    token: Optional[str] = None            # REQUIRED for api backend, from BODY only
+    prefers: Optional[str] = None
+    org: Optional[str] = None
+    apps: Optional[List[str]] = None
+    container: Optional[str] = None        # for cli-docker
+    # opt-in extras (what to collect)
+    want_status: Optional[bool] = None
+    want_releases: Optional[bool] = None
+    want_checks: Optional[bool] = None
+    want_volumes: Optional[bool] = None
+    want_ips: Optional[bool] = None
+    want_scale: Optional[bool] = None
+    want_certs: Optional[bool] = None
+    want_metrics: Optional[bool] = None
