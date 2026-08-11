@@ -22,7 +22,7 @@ function Login() {
 
     setLoading(true);
     try {
-      const response = await api.post("/api/v1/login", {
+      const response = await api.post("/login", {
         email,
         password,
       });
@@ -35,7 +35,7 @@ function Login() {
       // Second step: send the user to the QR + OTP verification page. The tokens
       // are held in navigation state and only stored as cookies once they scan
       // the QR with their authenticator app and enter the 6-digit code.
-      navigate("/verify-otp", {
+      navigate("/app/verify-otp", {
         state: {
           email: email.trim().toLowerCase(),
           pendingAccessToken: accessToken,
@@ -65,7 +65,7 @@ function Login() {
             <p>Security Management System</p>
           </div>
           <nav className="header-nav">
-            <a href="/register" className="nav-link">Sign Up</a>
+            <a href="/app/register" className="nav-link">Sign Up</a>
           </nav>
         </div>
       </header> */}
@@ -104,7 +104,7 @@ function Login() {
               />
             </div>
 
-            <a href="/forgot-password" className="forgot-password">Forgot password?</a>
+            <a href="/app/forgot-password" className="forgot-password">Forgot password?</a>
 
             <button
               type="submit"
@@ -116,7 +116,7 @@ function Login() {
           </form>
 
           <div className="signup-link">
-            Don't have an account? <a href="/register">Sign up here</a>
+            Don't have an account? <a href="/app/register">Sign up here</a>
           </div>
         </div>
       </div>

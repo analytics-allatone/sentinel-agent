@@ -70,7 +70,7 @@ function Register() {
 
     setLoading(true);
     try {
-      const response = await api.post("/api/v1/signup", {
+      const response = await api.post("/signup", {
         first_name: form.first_name,
         last_name: form.last_name,
         email: form.email,
@@ -94,7 +94,7 @@ function Register() {
       });
 
       setTimeout(() => {
-        navigate("/login");
+        navigate("/app/login");
       }, 2000);
     } catch (err) {
       setError(
@@ -207,7 +207,7 @@ function Register() {
           </form>
 
           <div className="login-link">
-            Already have an account? <a href="/login">Sign in here</a>
+            Already have an account? <a href="/app/login">Sign in here</a>
           </div>
         </div>
       </div>

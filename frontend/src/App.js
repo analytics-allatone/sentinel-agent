@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import logo from "./logo.svg";
 import "./App.css";
 import Login from "./Login/Login";
@@ -23,6 +23,7 @@ import AccessManagement from "./Access/AccessManagement";
 import CapacityDashboard from "./Reports/CapacityDashboard";
 import Unauthorized from "./pages/Unauthorized/Unauthorized";
 import Messaging from "./Messaging/Messaging";
+import ChannelsManager from "./Channels/ChannelsManager";
 
 function AppContent() {
   const [isLoading, setIsLoading] = useState(false);
@@ -40,47 +41,53 @@ function AppContent() {
       <Loader isVisible={isLoading} />
       <BrowserRouter>
         <Routes>
+          {/* Root → send users into the /app-prefixed app */}
+          <Route path="/" element={<Navigate to="/app/login" replace />} />
+
           {/* Public Routes - No authentication required */}
-          <Route path="/" element={<Login />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
-          <Route path="/forgot-password" element={<ForgotPage />} />
-          <Route path="/enter-otp" element={<EnterOtp />} />
-          <Route path="/scan-qr" element={<ScanQR />} />
-          <Route path="/verify-otp" element={<VerifyOtp />} />
+          <Route path="/app" element={<Login />} />
+          <Route path="/app/login" element={<Login />} />
+          <Route path="/app/register" element={<Register />} />
+          <Route path="/app/forgot-password" element={<ForgotPage />} />
+          <Route path="/app/enter-otp" element={<EnterOtp />} />
+          <Route path="/app/scan-qr" element={<ScanQR />} />
+          <Route path="/app/verify-otp" element={<VerifyOtp />} />
           {/* 403 — full-screen, no app chrome; the guard redirects here */}
-          <Route path="/unauthorized" element={<Unauthorized />} />
+          <Route path="/app/unauthorized" element={<Unauthorized />} />
 
           {/* Protected Routes - Authentication required */}
           <Route
-            path="/dashboard"
+            path="/app/dashboard"
             element={<ProtectedRoute element={<Dashboard />} />}
           />
           <Route
-            path="/installation"
+            path="/app/installation"
             element={<ProtectedRoute element={<InstallationProcess />} />}
           />
           <Route
-            path="/agentDetailsCard"
+            path="/app/agentDetailsCard"
             element={<ProtectedRoute element={<AgentCardGrid />} />}
           />
           <Route
-            path="/reports/soc2"
+            path="/app/reports/soc2"
             element={<ProtectedRoute element={<SOC2Report />} />}
           />
           <Route
-            path="/reports/capacity1"
+            path="/app/reports/capacity1"
             element={<ProtectedRoute element={<CapacityDashboard />} />}
           />
           <Route
-            path="/reports/capacity"
+            path="/app/reports/capacity"
             element={<ProtectedRoute element={<CapacityDashboard />} />}
           />
           {/* RBAC — self-contained, uses its own sign-in / role gate */}
-          <Route path="/access"     element={<ProtectedRoute element={<AccessManagement />} />} />
+          <Route path="/app/access"     element={<ProtectedRoute element={<AccessManagement />} />} />
 
           {/* Messaging / Notifications — frontend-only broadcast composer */}
-          <Route path="/messages"   element={<ProtectedRoute element={<Messaging />} />} />
+          <Route path="/app/messages1"   element={<ProtectedRoute element={<Messaging />} />} />
+
+          {/* Channels — register/manage notification destinations */}
+          <Route path="/app/messages"   element={<ProtectedRoute element={<ChannelsManager />} />} />
 
           {/*
             Role-based protection examples (ProtectedRoute now accepts `roles`
@@ -104,7 +111,7 @@ function AppContent() {
             Signed in, no access -> /unauthorized (the 403 page).
           */}
           <Route
-            path="/agentDetails"
+            path="/app/agentDetails"
             element={
               <ProtectedRoute
                 element={

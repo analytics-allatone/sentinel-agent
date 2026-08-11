@@ -219,7 +219,7 @@ export default function CapacityReport() {
   // ── data fetching ────────────────────────────────────────────
   const fetchAgents = async () => {
     try {
-      const res = await api.get("/api/v1/agents");
+      const res = await api.get("/agents");
       const list = Array.isArray(res.data) ? res.data : res.data?.agents || [];
       if (list.length) {
         const normalized = list.map((a, i) => ({
@@ -266,7 +266,7 @@ export default function CapacityReport() {
     setErrorMsg("");
 
     try {
-      const res = await api.get("/api/v1/capacity-monitoring/overview", {
+      const res = await api.get("/capacity-monitoring/overview", {
         params: {
           agent_name: name,
           from_dt: toApiDateTime(fromDt, false),
@@ -310,7 +310,7 @@ export default function CapacityReport() {
     setExporting("docx");
     const params = buildParams();
     try {
-      const res = await api.get("/api/v1/reports/capacity/export", {
+      const res = await api.get("/reports/capacity/export", {
         params: { ...params, format: "docx" },
         responseType: "blob",
       });

@@ -5,14 +5,14 @@ import aiomqtt
 from fastapi import HTTPException
 
 # ---- config (match your broker) ----
-MQTT_HOST =  "sentinelmqtt"       # or SERVER_IP
+MQTT_HOST = "sentinelmqtt"      # or SERVER_IP
 MQTT_PORT = 1883
 MQTT_USER = "my_mqtt_user"
 MQTT_PASS = "mqttpassword"
 
 
 
-async def mqtt_request(agent_name: str, command: str,args: dict|None = None, timeout: float| None = None) -> dict | None:
+async def mqtt_request(agent_name: str, command: str,args: dict|None = None, timeout: float|None = None) -> dict | None:
     """
     Publish a command to an agent and wait for its response.
     Returns the response dict, or None if the agent doesn't answer in time.
@@ -21,6 +21,7 @@ async def mqtt_request(agent_name: str, command: str,args: dict|None = None, tim
     command_topic  = f"server/command/{agent_name}"
     response_topic = f"agent/response/{agent_name}"
     payload = json.dumps({"command": command, "args" : args ,  "request_id": request_id})
+
     try:
         async with aiomqtt.Client(
             hostname=MQTT_HOST, port=MQTT_PORT,
@@ -29,6 +30,7 @@ async def mqtt_request(agent_name: str, command: str,args: dict|None = None, tim
             # subscribe BEFORE publishing so a fast reply isn't missed
             await client.subscribe(response_topic)
             await client.publish(command_topic, payload=payload)
+
             async def _wait():
                 async for message in client.messages:
                     try:

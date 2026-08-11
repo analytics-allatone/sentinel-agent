@@ -6,9 +6,9 @@ from dotenv import load_dotenv
 from sqlalchemy import insert
 from contextlib import asynccontextmanager
 from db.base import Base
-from models.user_model import Users
-# from models.agent_model import AgentGroups , Agents
-# from models.event_model import AuthEvents , ProcessEvents , NetworkEvents , USBEvents , FileEvents
+from models.user_model import Users , CommunicationChannel
+from models.agent_model import AgentGroups , Agents
+from models.event_model import AuthEvents , ProcessEvents , NetworkEvents , USBEvents , FileEvents
 from models.db_events_models import (
     PostgresDbEvents, MysqlDbEvents, OracleDbEvents, RedisDbEvents, MongoDbEvents,
 )
@@ -18,14 +18,14 @@ from models.event_model import AuthEvents , ProcessEvents , NetworkEvents , USBE
 import json
 from datetime import datetime
 
-from models.web_server_events_model import WebServerEvents
 load_dotenv()
 
 
-dbuser = os.environ.get("DB_USER")
-dbpassword = os.environ.get("DB_PASSWORD")
-dbendpoint = os.environ.get("DB_ENDPOINT")
-dbname = os.environ.get("DB_NAME")
+dbuser = "dbmasteruser"
+dbpassword = "dbmasterpassword"
+dbendpoint = "sentinelpg"
+dbname = "testdb"
+
 
 DATABASE_URL_ASYNC=f"postgresql+asyncpg://{dbuser}:{dbpassword}@{dbendpoint}:5432/{dbname}"
 
@@ -83,9 +83,14 @@ CATEGORIES_TABLE_MAPPING = {
     "oracle_health":   OracleDbEvents,
     "redis_health":    RedisDbEvents,
     "mongodb_health":  MongoDbEvents,
+<<<<<<< HEAD
     "web_server_health": WebServerEvents,
     "fly_health" : FlyEvents,
     "resource" : CapacityMonitoringEvents,
+=======
+    
+    "resource" : CapacityMonitoringEvents
+>>>>>>> f8ddecf15c71ac19646917798ffc9279d1a84358
     }
 
         

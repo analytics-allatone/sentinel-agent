@@ -10,7 +10,7 @@ from models.agent_model import Agents
 load_dotenv()
 
 # ⚠️ CONFIGURATION: Must match Step 2 parameters exactly
-SERVER_IP = "80.225.239.163" 
+SERVER_IP = "sentinelmqtt" 
 MQTT_USER = "my_mqtt_user"
 MQTT_PASS = "mqttpassword"
 TOPIC = "agent/agent_events"
@@ -86,7 +86,7 @@ async def mqtt_background_consumer():
                         master_dict[agent_name]["event_data"] = []
                     master_dict[agent_name]["event_data"].append(event_data)
                     if len(master_dict[agent_name]["event_data"]) >= BATCH_SIZE:
-                        await push_data_to_db(master_dict[agent_name],agents_map)
+                        await push_data_to_db(master_dict[agent_name])
                         master_dict[agent_name]["event_data"] = []
 
 
