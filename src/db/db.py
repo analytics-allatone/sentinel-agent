@@ -14,6 +14,7 @@ from models.db_events_models import (
 )
 from models.agent_model import AgentGroups , Agents , ServicesCredentials
 from models.fly_events_model import FlyEvents
+from models.web_server_events_model import WebServerEvents
 from models.event_model import AuthEvents , ProcessEvents , NetworkEvents , USBEvents , FileEvents , CapacityMonitoringEvents
 import json
 from datetime import datetime
@@ -83,14 +84,9 @@ CATEGORIES_TABLE_MAPPING = {
     "oracle_health":   OracleDbEvents,
     "redis_health":    RedisDbEvents,
     "mongodb_health":  MongoDbEvents,
-<<<<<<< HEAD
     "web_server_health": WebServerEvents,
     "fly_health" : FlyEvents,
     "resource" : CapacityMonitoringEvents,
-=======
-    
-    "resource" : CapacityMonitoringEvents
->>>>>>> f8ddecf15c71ac19646917798ffc9279d1a84358
     }
 
         
