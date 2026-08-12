@@ -21,6 +21,7 @@ import CapacityDashboard1 from "./Reports/CapacityDashboard1";
 import { AccessProvider } from "./Access/AccessContext";
 import AccessManagement from "./Access/AccessManagement";
 import CapacityDashboard from "./Reports/CapacityDashboard";
+import AgentInfoDashboard from "./Reports/AgentInfoDashboard";
 import Unauthorized from "./pages/Unauthorized/Unauthorized";
 import Messaging from "./Messaging/Messaging";
 import ChannelsManager from "./Channels/ChannelsManager";
@@ -80,6 +81,12 @@ function AppContent() {
             path="/app/reports/capacity"
             element={<ProtectedRoute element={<CapacityDashboard />} />}
           />
+          {/* Embedded Grafana dashboard, agent/OS switchable at runtime */}
+          <Route
+            path="/app/reports/agent-info"
+            element={<ProtectedRoute element={<AgentInfoDashboard />} />}
+          />
+
           {/* RBAC — self-contained, uses its own sign-in / role gate */}
           <Route path="/app/access"     element={<ProtectedRoute element={<AccessManagement />} />} />
 
