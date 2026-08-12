@@ -13,6 +13,7 @@ from models.db_events_models import (
     PostgresDbEvents, MysqlDbEvents, OracleDbEvents, RedisDbEvents, MongoDbEvents,
 )
 from models.agent_model import AgentGroups , Agents , ServicesCredentials
+from models.fly_events_model import FlyEvents
 from models.event_model import AuthEvents , ProcessEvents , NetworkEvents , USBEvents , FileEvents , CapacityMonitoringEvents
 import json
 from datetime import datetime
@@ -82,15 +83,20 @@ CATEGORIES_TABLE_MAPPING = {
     "oracle_health":   OracleDbEvents,
     "redis_health":    RedisDbEvents,
     "mongodb_health":  MongoDbEvents,
+<<<<<<< HEAD
+    "web_server_health": WebServerEvents,
+    "fly_health" : FlyEvents,
+    "resource" : CapacityMonitoringEvents,
+=======
     
     "resource" : CapacityMonitoringEvents
+>>>>>>> f8ddecf15c71ac19646917798ffc9279d1a84358
     }
 
         
 async def push_data_to_db(data_to_push):
     meta_data = data_to_push.get("meta_data")
     events_data = data_to_push.get("event_data")
-
     agent_name = meta_data.get("agent_name")
     category_wise_data = {}
     available_categories = []
@@ -116,7 +122,6 @@ async def push_data_to_db(data_to_push):
                 
                 # 1. Get valid column names for this specific SQLAlchemy model
                 valid_columns = set(model_class.__table__.columns.keys())
-                
                 # 2. Filter out any extra keys from the incoming dictionaries
                 cleaned_records = [
                     {k: v for k, v in record.items() if k in valid_columns}
