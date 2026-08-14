@@ -14,6 +14,7 @@ from models.db_events_models import (
 )
 from models.agent_model import AgentGroups , Agents , ServicesCredentials
 from models.fly_events_model import FlyEvents
+from models.web_server_events_model import WebServerEvents
 from models.event_model import AuthEvents , ProcessEvents , NetworkEvents , USBEvents , FileEvents , CapacityMonitoringEvents
 import json
 from models.web_server_events_model import WebServerEvents

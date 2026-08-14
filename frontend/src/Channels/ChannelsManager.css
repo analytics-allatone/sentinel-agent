@@ -542,6 +542,18 @@
   font-size: 12px;
   color: #c5221f;
 }
+/* Whatever the server said when it refused the channel — a duplicate name,
+   a missing admin role — shown above the buttons rather than under a field. */
+.ch-form-err {
+  margin-top: 16px;
+  padding: 10px 12px;
+  border: 1px solid #f3c3c4;
+  border-radius: 10px;
+  background: #fdf0f0;
+  font-size: 13px;
+  line-height: 1.45;
+  color: #c5221f;
+}
 .ch-form-actions {
   display: flex;
   justify-content: flex-end;
