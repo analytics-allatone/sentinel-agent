@@ -5,8 +5,8 @@ from collectors.dbprobe.detect import detect_engines
 from collectors.webprobe.detect import detect_servers
 from utils.command_registry import get_handler
 from .command_registry import get_handler
-from collectors.fly_detect import run_fly_detect
 from collectors.flyprobe.detect import detect_fly
+from collectors.appprobe.detect import detect_appservers
 
 import os
 def get_mac_address() -> str:
@@ -67,12 +67,14 @@ async def handle_command(payload):
     
     if command ==  "list_services":
         det=[]
-        det=(detect_engines()+detect_servers()+detect_fly())
+        det=(detect_engines()+detect_servers()+detect_fly()+detect_appservers())
         return det
     
     inspector = get_handler("engines_handler")
     web_inspector=get_handler("web_inspector")
     fly_inspector=get_handler("fly_inspector")
+    App_inspector=get_handler("Appserver_inspector")
+
 
     if inspector is not None:
         if command == "start_engine":
@@ -94,6 +96,15 @@ async def handle_command(payload):
             return fly_inspector.start(args.get('detail'))
         if command == "stop_fly":
             return fly_inspector.stop(args.get("engine"))
+
+    
+    if App_inspector is not None:
+        if command == "start_appserver":  
+            # print(args)          
+            return App_inspector.start(args.get('detail'))
+                    
+        if command == "stop_appserver":
+            return App_inspector.stop(args.get('source'))
     return []  
 
 if __name__ == "__main__":
