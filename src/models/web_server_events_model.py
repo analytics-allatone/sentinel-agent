@@ -19,9 +19,7 @@ class WebServerEvents(Base):
     __tablename__ = "web_server_events"
 
     id = Column(BigInteger, primary_key=True, autoincrement=True, index=True)
-
-    agent_id = Column(Integer, nullable=True, index=True)
-
+    agent_name = Column(String, nullable=True, index=True)
     engine = Column(String)                        # "webserver"
     server = Column(String, index=True)            # nginx | apache
     category = Column(String)

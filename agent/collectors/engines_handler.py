@@ -144,10 +144,7 @@ class EnginesHandler:
         
 
         try:
-            print(params)
-            print(probe)
             res = probe.inspect(params)          # whole dict goes to the probe
-            # print(res)
             ev.running = True
             ev.auth_method = "configured"
             ev.apply_inspect(res)

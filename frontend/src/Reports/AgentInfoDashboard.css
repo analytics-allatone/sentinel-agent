@@ -1,0 +1,99 @@
+.agent-info-page {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 20px;
+  box-sizing: border-box;
+  /* Fill the viewport below the app header so the frame can take the rest. */
+  min-height: calc(100vh - 50px);
+  /* .App centres everything by default; this page reads left-aligned. */
+  text-align: left;
+}
+
+.agent-info-page__head h1 {
+  margin: 0 0 4px;
+  font-size: 22px;
+  font-weight: 600;
+}
+
+.agent-info-page__head p {
+  margin: 0;
+  font-size: 13px;
+  color: #6b7684;
+}
+
+/* `flex-direction` is stated explicitly because Login.css declares an unscoped
+   `form { display: flex; flex-direction: column }` that the shared bundle
+   applies to every form in the app, this one included. */
+.agent-info-page__controls {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px;
+}
+
+.agent-info-page__controls label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  color: #6b7684;
+}
+
+.agent-info-page__controls input,
+.agent-info-page__controls select {
+  min-width: 150px;
+  padding: 7px 10px;
+  border: 1px solid #d6dbe1;
+  border-radius: 6px;
+  background: #fff;
+  color: #1c2530;
+  font: inherit;
+  font-size: 13px;
+}
+
+.agent-info-page__controls button {
+  padding: 8px 18px;
+  border: 0;
+  border-radius: 6px;
+  background: #2a6fdb;
+  color: #fff;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.agent-info-page__controls button:hover {
+  filter: brightness(1.08);
+}
+
+/* The frame takes every pixel the controls leave behind. `display: flex` is
+   what lets the embed stretch to this box's full height — a percentage height
+   alone does not resolve against a flex-grown parent. */
+.agent-info-page__frame {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 480px;
+}
+
+@media (max-width: 600px) {
+  .agent-info-page {
+    padding: 14px;
+  }
+
+  .agent-info-page__controls {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .agent-info-page__controls label,
+  .agent-info-page__controls input,
+  .agent-info-page__controls select,
+  .agent-info-page__controls button {
+    width: 100%;
+    min-width: 0;
+  }
+}

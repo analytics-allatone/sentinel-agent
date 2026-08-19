@@ -18,7 +18,7 @@ class FlyEvents(Base):
     __tablename__ = "fly_events"
 
     id = Column(BigInteger, primary_key=True, autoincrement=True, index=True)
-    agent_id = Column(Integer, nullable=False, index=True)
+    agent_name = Column(String, nullable=False, index=True)
 
     engine = Column(String)                 # "fly"
     server = Column(String)                 # "fly"

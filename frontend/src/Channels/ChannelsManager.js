@@ -1,16 +1,21 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import "./ChannelsManager.css";
+import { addChannel, deleteChannel, fetchChannels } from "./channelsApi";
 
 /**
- * Channels Manager — FRONTEND ONLY.
+ * Channels Manager — backed by the communication-channel API.
  *
  * Users register notification channels. They pick a service (Email, WhatsApp,
  * Slack, …); the form then shows exactly the fields that service needs; they
- * register it. Registered channels can be viewed, edited and removed. Any
- * number of channels can be added. Everything persists to localStorage.
+ * register it. Registered channels can be viewed and removed, any number of
+ * them, and they live on the server rather than in this browser.
+ *
+ * The API stores three strings per channel — type, name, value — while a
+ * service here can need several fields, so `packValues` / `unpackValue` below
+ * are the one place that translates between the two shapes.
+ *
+ * There is no update endpoint, so channels are add-and-remove only.
  */
-
-const STORE_KEY = "message_channels_v1";
 
 // ── service catalogue: each service declares the fields it needs ──────────────
 const SERVICES = [
@@ -119,6 +124,24 @@ const SERVICES = [
 
 const serviceById = (id) => SERVICES.find((s) => s.id === id);
 
+/**
+ * A channel can arrive with a type this catalogue does not know — it may have
+ * been created by another client, or the catalogue may have moved on. Render it
+ * rather than dropping it.
+ */
+const unknownService = (id) => ({
+  id,
+  label: id || "Channel",
+  icon: "📡",
+  color: "#64748b",
+  blurb: "",
+  primary: "value",
+  fields: [],
+  unknown: true,
+});
+
+const serviceFor = (type) => serviceById(type) || unknownService(type);
+
 // icons can be an image path (e.g. "/slack.png" in public/) or an emoji.
 const isImgIcon = (icon) =>
   typeof icon === "string" && /\.(png|svg|jpe?g|webp)$/i.test(icon);
@@ -133,13 +156,52 @@ function renderIcon(icon, alt, size = "lg") {
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-function loadChannels() {
-  try {
-    const raw = localStorage.getItem(STORE_KEY);
-    return raw ? JSON.parse(raw) : [];
-  } catch {
-    return [];
+/**
+ * Form fields -> the API's single `value` string.
+ *
+ * Most services carry one destination (an address, a number, a webhook) and it
+ * is stored as-is, so the value stays readable in the database and to any other
+ * client. Services that need several secrets — Slack's channel + webhook, Jira's
+ * four fields — are stored as a JSON object, which {@link unpackValue} reverses.
+ *
+ * `label` never goes into the value: it becomes the channel's `name`.
+ */
+function packValues(service, values) {
+  const rest = {};
+  for (const f of service.fields) {
+    if (f.name === "label") continue;
+    rest[f.name] = (values[f.name] || "").trim();
   }
+  const keys = Object.keys(rest);
+  if (keys.length === 1) return rest[keys[0]];
+  return JSON.stringify(rest);
+}
+
+/** The API's `name` + `value` -> the form fields this UI renders. */
+function unpackValue(service, name, value) {
+  let fields = null;
+  try {
+    const parsed = JSON.parse(value);
+    // Only an object is a packed field set; a bare number or string that happens
+    // to be valid JSON (a phone number, say) is the destination itself.
+    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) fields = parsed;
+  } catch {
+    // not packed — value is the destination
+  }
+  return {
+    ...(fields || (service.primary ? { [service.primary]: value } : {})),
+    label: name,
+  };
+}
+
+/** One channel from the API -> the shape the cards and the form read. */
+function toUiChannel(apiChannel) {
+  const service = serviceFor(apiChannel.type);
+  return {
+    id: apiChannel.id,
+    serviceId: apiChannel.type,
+    values: unpackValue(service, apiChannel.name, apiChannel.value),
+  };
 }
 
 function validateField(field, value) {
@@ -153,19 +215,38 @@ function validateField(field, value) {
 }
 
 export default function ChannelsManager() {
-  const [channels, setChannels] = useState(loadChannels);
+  const [channels, setChannels] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(null);
+  const [saving, setSaving] = useState(false);
+  const [removingId, setRemovingId] = useState(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [step, setStep] = useState("choose"); // "choose" | "form"
   const [serviceId, setServiceId] = useState(null);
   const [values, setValues] = useState({});
-  const [editingId, setEditingId] = useState(null);
   const [errors, setErrors] = useState({});
   const [toast, setToast] = useState(null);
   const [filter, setFilter] = useState("all");
 
+  const load = useCallback(async (signal) => {
+    setLoading(true);
+    setLoadError(null);
+    try {
+      const list = await fetchChannels({ signal });
+      setChannels(list.map(toUiChannel));
+    } catch (err) {
+      if (err.name === "CanceledError" || err.code === "ERR_CANCELED") return;
+      setLoadError(err.message || "Could not load channels.");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
-    localStorage.setItem(STORE_KEY, JSON.stringify(channels));
-  }, [channels]);
+    const controller = new AbortController();
+    load(controller.signal);
+    return () => controller.abort();
+  }, [load]);
 
   useEffect(() => {
     if (!toast) return;
@@ -186,9 +267,15 @@ export default function ChannelsManager() {
     [channels, filter],
   );
 
+  // Built from what is actually stored, not from the catalogue, so a type this
+  // build does not know about still gets a chip and a filter.
+  const presentServices = useMemo(
+    () => Object.keys(counts).map(serviceFor),
+    [counts],
+  );
+
   // ── modal controls ──────────────────────────────────────────────
   const openAdd = () => {
-    setEditingId(null);
     setServiceId(null);
     setValues({});
     setErrors({});
@@ -203,18 +290,9 @@ export default function ChannelsManager() {
     setStep("form");
   };
 
-  const openEdit = (channel) => {
-    setEditingId(channel.id);
-    setServiceId(channel.serviceId);
-    setValues({ ...channel.values });
-    setErrors({});
-    setStep("form");
-    setModalOpen(true);
-  };
-
   const closeModal = () => {
+    if (saving) return;
     setModalOpen(false);
-    setEditingId(null);
     setServiceId(null);
     setValues({});
     setErrors({});
@@ -225,9 +303,9 @@ export default function ChannelsManager() {
     setErrors((e) => ({ ...e, [name]: undefined }));
   };
 
-  const submit = (e) => {
+  const submit = async (e) => {
     e.preventDefault();
-    if (!service) return;
+    if (!service || saving) return;
 
     // validate
     const next = {};
@@ -243,32 +321,46 @@ export default function ChannelsManager() {
     const clean = {};
     for (const f of service.fields) clean[f.name] = (values[f.name] || "").trim();
 
-    if (editingId) {
-      setChannels((cur) =>
-        cur.map((c) =>
-          c.id === editingId ? { ...c, values: clean } : c,
-        ),
-      );
-      setToast(`${service.label} channel updated`);
-    } else {
-      const channel = {
-        id: `ch_${Date.now()}`,
-        serviceId: service.id,
-        values: clean,
-        createdAt: new Date().toISOString(),
-      };
-      setChannels((cur) => [channel, ...cur]);
+    // The API's `name` must be unique across every channel. The label is what
+    // the user meant to call it; with no label, the destination itself is the
+    // most useful name — and the one most likely to already be unique.
+    const name = clean.label || packValues(service, clean);
+
+    setSaving(true);
+    setErrors({});
+    try {
+      const created = await addChannel({
+        type: service.id,
+        name,
+        value: packValues(service, clean),
+      });
+      // Trust the server's copy — it carries the id delete needs.
+      setChannels((cur) => [toUiChannel(created), ...cur]);
       setToast(`${service.label} channel registered`);
+      setModalOpen(false);
+      setServiceId(null);
+      setValues({});
+    } catch (err) {
+      setErrors({ _form: err.message || "Could not register this channel." });
+    } finally {
+      setSaving(false);
     }
-    closeModal();
   };
 
-  const removeChannel = (channel) => {
-    const s = serviceById(channel.serviceId);
-    const detail = channel.values[s?.primary] || s?.label;
-    if (window.confirm(`Remove this ${s?.label} channel (${detail})?`)) {
+  const removeChannel = async (channel) => {
+    const s = serviceFor(channel.serviceId);
+    const detail = channel.values[s.primary] || s.label;
+    if (!window.confirm(`Remove this ${s.label} channel (${detail})?`)) return;
+
+    setRemovingId(channel.id);
+    try {
+      await deleteChannel(channel.id);
       setChannels((cur) => cur.filter((c) => c.id !== channel.id));
       setToast("Channel removed");
+    } catch (err) {
+      setToast(err.message || "Could not remove this channel.");
+    } finally {
+      setRemovingId(null);
     }
   };
 
@@ -308,7 +400,7 @@ export default function ChannelsManager() {
             <span className="ch-stat-label">Services connected</span>
           </div>
           <div className="ch-stat-services">
-            {SERVICES.filter((s) => counts[s.id]).map((s) => (
+            {presentServices.map((s) => (
               <span
                 key={s.id}
                 className="ch-stat-chip"
@@ -331,7 +423,7 @@ export default function ChannelsManager() {
           >
             All <span className="ch-filter-n">{channels.length}</span>
           </button>
-          {SERVICES.filter((s) => counts[s.id]).map((s) => (
+          {presentServices.map((s) => (
             <button
               key={s.id}
               className={`ch-filter ${filter === s.id ? "on" : ""}`}
@@ -346,7 +438,21 @@ export default function ChannelsManager() {
       )}
 
       {/* ── channel grid / empty state ─────────────────────── */}
-      {channels.length === 0 ? (
+      {loading ? (
+        <div className="ch-empty">
+          <div className="ch-empty-icon">⏳</div>
+          <h2>Loading channels…</h2>
+        </div>
+      ) : loadError ? (
+        <div className="ch-empty">
+          <div className="ch-empty-icon">⚠️</div>
+          <h2>Could not load channels</h2>
+          <p>{loadError}</p>
+          <button className="ch-add-btn big" onClick={() => load()}>
+            Retry
+          </button>
+        </div>
+      ) : channels.length === 0 ? (
         <div className="ch-empty">
           <div className="ch-empty-icon">📡</div>
           <h2>No channels yet</h2>
@@ -358,7 +464,7 @@ export default function ChannelsManager() {
       ) : (
         <div className="ch-grid">
           {visible.map((channel) => {
-            const s = serviceById(channel.serviceId);
+            const s = serviceFor(channel.serviceId);
             return (
               <div className="ch-card" style={{ "--accent": s?.color }} key={channel.id}>
                 <div className="ch-card-top">
@@ -369,12 +475,16 @@ export default function ChannelsManager() {
                     <div className="ch-card-name">{titleFor(channel, s)}</div>
                     <div className="ch-card-service">{s?.label}</div>
                   </div>
+                  {/* No edit button: the API has no update endpoint, so a
+                      channel is changed by removing it and adding it again. */}
                   <div className="ch-card-actions">
-                    <button className="ch-icon-btn" title="Edit" onClick={() => openEdit(channel)}>
-                      ✏️
-                    </button>
-                    <button className="ch-icon-btn danger" title="Remove" onClick={() => removeChannel(channel)}>
-                      🗑️
+                    <button
+                      className="ch-icon-btn danger"
+                      title="Remove"
+                      onClick={() => removeChannel(channel)}
+                      disabled={removingId === channel.id}
+                    >
+                      {removingId === channel.id ? "…" : "🗑️"}
                     </button>
                   </div>
                 </div>
@@ -426,17 +536,13 @@ export default function ChannelsManager() {
               <>
                 <div className="ch-modal-head">
                   <div className="ch-modal-title">
-                    {!editingId && (
-                      <button className="ch-back" onClick={() => setStep("choose")} title="Back">
-                        ‹
-                      </button>
-                    )}
+                    <button className="ch-back" onClick={() => setStep("choose")} title="Back">
+                      ‹
+                    </button>
                     <span className="ch-tile-icon sm" style={{ background: `${service.color}18` }}>
                       {renderIcon(service.icon, service.label, "md")}
                     </span>
-                    <h2>
-                      {editingId ? "Edit" : "New"} {service.label} channel
-                    </h2>
+                    <h2>New {service.label} channel</h2>
                   </div>
                   <button className="ch-close" onClick={closeModal}>✕</button>
                 </div>
@@ -459,12 +565,18 @@ export default function ChannelsManager() {
                       {errors[f.name] && <span className="ch-err">{errors[f.name]}</span>}
                     </div>
                   ))}
+                  {errors._form && <div className="ch-form-err">{errors._form}</div>}
                   <div className="ch-form-actions">
-                    <button type="button" className="ch-btn ghost" onClick={closeModal}>
+                    <button
+                      type="button"
+                      className="ch-btn ghost"
+                      onClick={closeModal}
+                      disabled={saving}
+                    >
                       Cancel
                     </button>
-                    <button type="submit" className="ch-btn primary">
-                      {editingId ? "Save changes" : "Register channel"}
+                    <button type="submit" className="ch-btn primary" disabled={saving}>
+                      {saving ? "Registering…" : "Register channel"}
                     </button>
                   </div>
                 </form>

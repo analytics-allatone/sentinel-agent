@@ -12,7 +12,7 @@ MQTT_PASS = "mqttpassword"
 
 
 
-async def mqtt_request(agent_name: str, command: str,args: dict|None = None, timeout: float = 10.0) -> dict | None:
+async def mqtt_request(agent_name: str, command: str,args: dict|None = None, timeout: float|None = None) -> dict | None:
     """
     Publish a command to an agent and wait for its response.
     Returns the response dict, or None if the agent doesn't answer in time.
