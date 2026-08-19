@@ -31,7 +31,7 @@ from schemas.v1.agent_management_schema import (
         AddCredentialRequest, AddCredentialResponse,
         GetCredentialsResponse, CredentialData,AddWebConfigRequest,
         UpdateWebConfigRequest,WebConfigData,AddWebConfigResponse,
-        GetWebConfigsResponse,FlyStartRequest)
+        GetWebConfigsResponse,FlyStartRequest,AppServerStartRequest)
 from utils.web_config import (canon_server, clean, load_tls_hosts,
                                   dump_tls_hosts, build_control_json)
 from auth.crypto import hash_password
@@ -345,6 +345,17 @@ async def delete_credential(credential_id: int = Query(),
 
     return standard_success_response(data={"id": credential_id},
                                      message="Credential deleted successfully")
+@agent_management_router.post("/stop-db", status_code=200)
+async def stop_fly(engine: str =Query(),agent_name: str = Query(),
+                   db: AsyncSession = Depends(get_async_db)):
+    """Stop Fly.io monitoring on an agent."""
+   
+    result = await mqtt_request(agent_name=agent_name, command="stop_engine",
+                                args={"engine" : engine} ,timeout=10.0)
+    if result is None:
+        raise HTTPException(504, "Agent did not respond (may be offline)")
+    return standard_success_response(data={"result": result},
+                                     message="Fly monitoring stopped")
 
 def _web_config_data(row) -> "WebConfigData":
     """Row -> response model. The password is never included."""
@@ -560,3 +571,60 @@ async def stop_fly(engine: str =Query(),agent_name: str = Query(),
         raise HTTPException(504, "Agent did not respond (may be offline)")
     return standard_success_response(data={"result": result},
                                      message="Fly monitoring stopped")
+
+@agent_management_router.post("/start-appserver", status_code=200)
+async def start_appserver(req: AppServerStartRequest,
+                           db: AsyncSession = Depends(get_async_db)):
+    """Start WildFly/JBoss monitoring on an agent.
+ 
+    local api  : {"agent_name","backend":"api","user","password"}         (host defaults 127.0.0.1)
+    remote api : {"agent_name","backend":"api","host","user","password"}
+    local cli  : {"agent_name","backend":"cli"}                            (cli_path optional)
+    """
+    backend = (req.backend or "api").lower()
+ 
+    detail = {k: v for k, v in req.model_dump(exclude_none=True).items()
+              if k != "agent_name"}
+    detail.setdefault("host", "127.0.0.1")
+    detail.setdefault("port", 9990)
+    detail["backend"] = backend
+    # api backend to a REMOTE host needs mgmt credentials from the body
+    is_remote = detail["host"] not in ("127.0.0.1", "localhost", "::1")
+    if backend == "api" and is_remote and not req.user:
+        raise HTTPException(status_code=422,
+                            detail="remote api backend requires mgmt 'user' (and 'password') in the body")
+ 
+    # same stop-then-start rhythm as your other collectors
+    await mqtt_request(agent_name=req.agent_name, command="stop_appserver",
+                       args={"source": _appserver_source_id(detail)}) #, timeout=10.0)
+    result = await mqtt_request(agent_name=req.agent_name, command="start_appserver",
+                                args={"detail": detail})#, timeout=15.0)
+    if result is None:
+        raise HTTPException(504, "Agent did not respond (may be offline)")
+ 
+    # don't echo the password back
+    safe = {k: v for k, v in detail.items() if k != "password"}
+    return standard_success_response(data={"detail": safe, "result": result},
+                                     message="App-server monitoring started")
+ 
+ 
+@agent_management_router.post("/stop-appserver", status_code=200)
+async def stop_appserver(agent_name: str = Query(),
+                         source: Optional[str] = Query(default=None),
+                         db: AsyncSession = Depends(get_async_db)):
+    """Stop app-server monitoring. Pass the source id to stop one, or omit for all."""
+    result = await mqtt_request(agent_name=agent_name, command="stop_appserver",
+                                args={"source":_appserver_source_id({"backend":source})} if source else {}, timeout=10.0)
+    if result is None:
+        raise HTTPException(504, "Agent did not respond (may be offline)")
+    return standard_success_response(data={"result": result},
+                                     message="App-server monitoring stopped")
+ 
+ 
+def _appserver_source_id(detail: dict) -> str:
+    """Mirror AppServerInspector._source_id so stop targets the right thread."""
+    server = (detail.get("server") or "wildfly").lower()
+    host = detail.get("host") or "127.0.0.1"
+    port = int(detail.get("port") or 9990)
+    backend = (detail.get("backend") or "api").lower()
+    return f"{server}:{backend}:{host}:{port}"

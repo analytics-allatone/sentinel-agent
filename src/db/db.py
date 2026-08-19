@@ -17,8 +17,9 @@ from models.fly_events_model import FlyEvents
 from models.web_server_events_model import WebServerEvents
 from models.event_model import AuthEvents , ProcessEvents , NetworkEvents , USBEvents , FileEvents , CapacityMonitoringEvents
 import json
+from models.web_server_events_model import WebServerEvents
 from datetime import datetime
-
+from models.appserver_events_model import AppServerEvents
 load_dotenv()
 
 
@@ -87,6 +88,7 @@ CATEGORIES_TABLE_MAPPING = {
     "web_server_health": WebServerEvents,
     "fly_health" : FlyEvents,
     "resource" : CapacityMonitoringEvents,
+    "appserver_health":AppServerEvents,
     }
 
         

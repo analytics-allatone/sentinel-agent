@@ -244,3 +244,16 @@ class FlyStartRequest(BaseModel):
     want_scale: Optional[bool] = None
     want_certs: Optional[bool] = None
     want_metrics: Optional[bool] = None
+
+class AppServerStartRequest(BaseModel):
+    agent_name: str
+    server: Optional[str] = "wildfly"      # wildfly | jboss
+    backend: Optional[str] = "api"         # "api" (HTTP :9990, local/remote) | "cli" (local)
+    host: Optional[str] = "127.0.0.1"             # remote IP for remote api; default 127.0.0.1
+    port: Optional[int] = 9990             # default 9990
+    user: Optional[str] = None             # mgmt user (api backend, from BODY)
+    password: Optional[str] = None         # mgmt password (from BODY, never .env)
+    cli_path: Optional[str] = None         # jboss-cli path (cli backend; auto-found if omitted)
+    controller: Optional[str] = None       # host:port for cli remote (optional)
+    want_datasources: Optional[bool] = None
+ 
