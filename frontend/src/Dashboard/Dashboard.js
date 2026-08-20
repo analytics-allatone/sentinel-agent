@@ -2,6 +2,21 @@ import { Fragment, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api, { logout } from "../api/api";
 import "./Dashboard.css";
+import { FaLinux, FaWindows } from "react-icons/fa6";
+import {
+  LuCalendarDays,
+  LuRefreshCw,
+  LuDownload,
+  LuChevronDown,
+  LuChevronUp,
+} from "react-icons/lu";
+
+import {
+  LuMonitor,
+  LuUsers,
+  LuActivity,
+  LuMoreHorizontal,
+} from "react-icons/lu";
 
 const ROWS_PER_PAGE_OPTIONS = [10, 25, 50, 100];
 const STATUS_COLORS = {
@@ -25,6 +40,7 @@ function Dashboard() {
   const [agents, setAgents] = useState([]);
   const [selectedAgents, setSelectedAgents] = useState(new Set());
 
+
   // Chart data — kept as the API's own aggregate counts, not recomputed
   // from the (possibly filtered/paginated) agents table, since these
   // represent the full account-wide picture regardless of what's on screen.
@@ -37,8 +53,33 @@ function Dashboard() {
   const [osStats, setOsStats] = useState([]);
   const [groupStats, setGroupStats] = useState([]);
 
+  const totalAgents =
+  statusCounts.active +
+  statusCounts.disconnected +
+  statusCounts.pending +
+  statusCounts.neverConnected;
+
+const totalOsAgents = osStats.reduce(
+  (sum, item) => sum + Number(item.os_count || 0),
+  0
+);
+
+const totalGroupAgents = groupStats.reduce(
+  (sum, item) => sum + Number(item.group_count || 0),
+  0
+);
+
   // Search
   const [searchTerm, setSearchTerm] = useState("");
+
+  // Date filter
+const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
+
+const [appliedStartDate, setAppliedStartDate] = useState("");
+const [appliedEndDate, setAppliedEndDate] = useState("");
+
+const [startDate, setStartDate] = useState("");
+const [endDate, setEndDate] = useState("");
 
   // Available-services expansion: which agent row is open, plus a per-agent
   // cache of { loading, error, list } so re-opening a row doesn't refetch.
@@ -73,6 +114,68 @@ function Dashboard() {
     fetchAgents();
   }, []);
 
+  const formatLastSeen = (value) => {
+  if (!value) {
+    return {
+      date: "—",
+      time: "",
+    };
+  }
+
+  
+
+  const text = String(value).trim();
+
+  const match = text.match(
+    /^(.*?\d{4})\s+(\d{1,2}:\d{2}(?::\d{2})?\s*[AP]M.*)?$/i
+  );
+
+  if (!match) {
+    return {
+      date: text,
+      time: "",
+    };
+  }
+
+  return {
+    date: match[1],
+    time: match[2] || "",
+  };
+};
+
+const parseAgentDate = (value) => {
+  if (!value) return null;
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return null;
+  }
+
+  return date;
+};
+
+const getOsIcon = (os) => {
+  const value = String(os || "").toLowerCase();
+
+  if (value.includes("windows")) {
+    return <FaWindows className="windows-icon" />;
+  }
+
+  if (
+    value.includes("linux") ||
+    value.includes("ubuntu") ||
+    value.includes("debian") ||
+    value.includes("centos") ||
+    value.includes("red hat") ||
+    value.includes("rhel")
+  ) {
+    return <FaLinux className="linux-icon" />;
+  }
+
+  return null;
+};
+
   const fetchAgents = () => {
     api
       .get("/get-agents")
@@ -95,6 +198,7 @@ function Dashboard() {
             status:
               agent.status || (agent.is_active ? "active" : "disconnected"),
             isActive: agent.is_active,
+            lastSeen: agent.last_seen || agent.lastSeen || "",
           }));
           setAgents(transformedAgents);
         }
@@ -180,48 +284,140 @@ function Dashboard() {
     [groupStats],
   );
 
-  const renderDonut = (segments, emptyColor) => (
-    <svg width="150" height="150" viewBox="0 0 150 150">
-      <g transform="rotate(-90 75 75)">
-        {segments.length > 0 ? (
-          segments.map((segment, index) => (
+  console.log("OS TOTAL:", totalOsAgents);
+console.log("GROUP TOTAL:", totalGroupAgents);
+
+//   const renderDonut = (segments, emptyColor, total = 0) => (
+//   <div className="donut-wrapper">
+//     <svg width="150" height="150" viewBox="0 0 150 150">
+//       <g transform="rotate(-90 75 75)">
+//         {segments.length > 0 ? (
+//           segments.map((segment, index) => (
+//             <circle
+//               key={index}
+//               cx="75"
+//               cy="75"
+//               r={RADIUS}
+//               fill="none"
+//               stroke={segment.color}
+//               strokeWidth="18"
+//               strokeDasharray={`${segment.dasharray} ${CIRCUMFERENCE.toFixed(2)}`}
+//               strokeDashoffset={segment.dashoffset}
+//             >
+//               <title>{`${segment.percentage}%`}</title>
+//             </circle>
+//           ))
+//         ) : (
+//           <circle
+//             cx="75"
+//             cy="75"
+//             r={RADIUS}
+//             fill="none"
+//             stroke={emptyColor}
+//             strokeWidth="18"
+//             strokeDasharray={`${CIRCUMFERENCE.toFixed(2)} ${CIRCUMFERENCE.toFixed(2)}`}
+//           />
+//         )}
+//       </g>
+//     </svg>
+
+//     <div className="donut-center">
+//       <strong>{total}</strong>
+//       <span>Total</span>
+//     </div>
+//   </div>
+// );
+const renderDonut = (segments, emptyColor, total = 0) => {
+  console.log("RENDER DONUT TOTAL:", total);
+
+  return (
+    <div className="donut-wrapper">
+      <svg width="150" height="150" viewBox="0 0 150 150">
+        <g transform="rotate(-90 75 75)">
+          {segments.length > 0 ? (
+            segments.map((segment, index) => (
+              <circle
+                key={index}
+                cx="75"
+                cy="75"
+                r={RADIUS}
+                fill="none"
+                stroke={segment.color}
+                strokeWidth="18"
+                strokeDasharray={`${segment.dasharray} ${CIRCUMFERENCE.toFixed(2)}`}
+                strokeDashoffset={segment.dashoffset}
+              >
+                <title>{`${segment.percentage}%`}</title>
+              </circle>
+            ))
+          ) : (
             <circle
-              key={index}
               cx="75"
               cy="75"
               r={RADIUS}
               fill="none"
-              stroke={segment.color}
-              strokeWidth="20"
-              strokeDasharray={`${segment.dasharray} ${CIRCUMFERENCE.toFixed(2)}`}
-              strokeDashoffset={segment.dashoffset}
-            >
-              <title>{`${segment.percentage}%`}</title>
-            </circle>
-          ))
-        ) : (
-          <circle
-            cx="75"
-            cy="75"
-            r={RADIUS}
-            fill="none"
-            stroke={emptyColor}
-            strokeWidth="20"
-            strokeDasharray={`${CIRCUMFERENCE.toFixed(2)} ${CIRCUMFERENCE.toFixed(2)}`}
-          />
-        )}
-      </g>
-    </svg>
+              stroke={emptyColor}
+              strokeWidth="18"
+              strokeDasharray={`${CIRCUMFERENCE.toFixed(2)} ${CIRCUMFERENCE.toFixed(2)}`}
+            />
+          )}
+        </g>
+      </svg>
+
+      <div className="donut-center">
+        <strong>{total}</strong>
+        <span>Total</span>
+      </div>
+    </div>
   );
+};
 
   // ---------------------------------------------------------------------
   // Search — matches against every visible column of the agents table.
   // ---------------------------------------------------------------------
   const filteredAgents = useMemo(() => {
-    const term = searchTerm.trim().toLowerCase();
-    if (!term) return agents;
+  let result = [...agents];
 
-    return agents.filter((agent) =>
+  // ---------------------------------------
+  // DATE FILTER
+  // ---------------------------------------
+  if (appliedStartDate || appliedEndDate) {
+    const start = appliedStartDate
+      ? new Date(`${appliedStartDate}T00:00:00`)
+      : null;
+
+    const end = appliedEndDate
+      ? new Date(`${appliedEndDate}T23:59:59.999`)
+      : null;
+
+    result = result.filter((agent) => {
+      const agentDate = parseAgentDate(agent.lastSeen);
+
+      // If agent has no date, don't include it
+      // in a date-specific result.
+      if (!agentDate) {
+        return false;
+      }
+
+      if (start && agentDate < start) {
+        return false;
+      }
+
+      if (end && agentDate > end) {
+        return false;
+      }
+
+      return true;
+    });
+  }
+
+  // ---------------------------------------
+  // SEARCH FILTER
+  // ---------------------------------------
+  const term = searchTerm.trim().toLowerCase();
+
+  if (term) {
+    result = result.filter((agent) =>
       [
         agent.id,
         agent.name,
@@ -233,10 +429,26 @@ function Dashboard() {
         agent.status,
         agent.group,
       ]
-        .filter((value) => value !== null && value !== undefined)
-        .some((value) => String(value).toLowerCase().includes(term)),
+        .filter(
+          (value) =>
+            value !== null &&
+            value !== undefined
+        )
+        .some((value) =>
+          String(value)
+            .toLowerCase()
+            .includes(term)
+        )
     );
-  }, [agents, searchTerm]);
+  }
+
+  return result;
+}, [
+  agents,
+  searchTerm,
+  appliedStartDate,
+  appliedEndDate,
+]);
 
   // Reset to page 1 whenever the search term or page size changes.
   useEffect(() => {
@@ -274,6 +486,60 @@ function Dashboard() {
   const handleRefresh = () => {
     fetchAgents();
   };
+
+  const handleApplyDateFilter = () => {
+  if (!startDate || !endDate) {
+    return;
+  }
+
+  if (startDate > endDate) {
+    alert("From Date cannot be greater than To Date.");
+    return;
+  }
+
+  setAppliedStartDate(startDate);
+  setAppliedEndDate(endDate);
+
+  setCurrentPage(1);
+  setIsDatePickerOpen(false);
+};
+
+const handleClearDateFilter = () => {
+  setStartDate("");
+  setEndDate("");
+  setAppliedStartDate("");
+  setAppliedEndDate("");
+
+  setCurrentPage(1);
+  setIsDatePickerOpen(false);
+};
+
+const formatDateRange = () => {
+  if (!appliedStartDate || !appliedEndDate) {
+    return "All dates";
+  }
+
+  const start = new Date(`${appliedStartDate}T00:00:00`);
+  const end = new Date(`${appliedEndDate}T00:00:00`);
+
+  const options = {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  };
+
+  return `${start.toLocaleDateString("en-US", options)} – ${end.toLocaleDateString(
+    "en-US",
+    options
+  )}`;
+};
+
+const getPercentage = (count) => {
+  if (!totalAgents) return 0;
+  return Math.round((count / totalAgents) * 100);
+};
+
+
 
   const handleExportFormatted = () => {
     if (filteredAgents.length === 0) return;
@@ -830,6 +1096,8 @@ function Dashboard() {
     setCurrentPage(Math.min(Math.max(page, 1), totalPages));
   };
 
+  
+
   // Compact page-number list with ellipses for large page counts.
   const pageNumbers = useMemo(() => {
     const pages = [];
@@ -850,7 +1118,7 @@ function Dashboard() {
 
   return (
     <div className="dashboard-container">
-      <div className="dashboard-header">
+      {/* <div className="dashboard-header">
         <h1>Endpoints</h1>
         <div className="header-actions">
           <button className="btn-deploy" onClick={handleDeployAgent}>
@@ -863,11 +1131,291 @@ function Dashboard() {
             ⬇ Export formatted
           </button>
         </div>
+      </div> */}
+
+      <div className="dashboard-title-row">
+  <div className="dashboard-title">
+    <h1>Dashboard</h1>
+    <p>Overview of your network security</p>
+  </div>
+
+  <div className="dashboard-title-actions">
+    <div className="date-filter-wrapper">
+
+  <button
+    type="button"
+    className="date-filter"
+    onClick={() =>
+      setIsDatePickerOpen((prev) => !prev)
+    }
+  >
+   <span className="date-filter-icon">
+  <LuCalendarDays />
+</span>
+
+<span className="date-filter-text">
+  {formatDateRange()}
+</span>
+
+<span className="date-filter-arrow">
+  {isDatePickerOpen ? <LuChevronUp /> : <LuChevronDown />}
+</span>
+  </button>
+
+
+  {isDatePickerOpen && (
+    <div className="date-picker-popup">
+
+      <div className="date-picker-header">
+        <div>
+          <h4>Select Date Range</h4>
+          <p>Filter dashboard data by date</p>
+        </div>
       </div>
+
+
+      <div className="date-picker-body">
+
+        <div className="date-field">
+
+          <label>
+            From Date
+          </label>
+
+          <input
+            type="date"
+            value={startDate}
+            onChange={(e) =>
+              setStartDate(e.target.value)
+            }
+          />
+
+        </div>
+
+
+        <div className="date-field">
+
+          <label>
+            To Date
+          </label>
+
+          <input
+            type="date"
+            value={endDate}
+            min={startDate || undefined}
+            onChange={(e) =>
+              setEndDate(e.target.value)
+            }
+          />
+
+        </div>
+
+      </div>
+
+
+      <div className="date-picker-footer">
+
+        <button
+          type="button"
+          className="date-clear-btn"
+          onClick={handleClearDateFilter}
+        >
+          Clear
+        </button>
+
+        <button
+          type="button"
+          className="date-apply-btn"
+          onClick={handleApplyDateFilter}
+        >
+          Apply Filter
+        </button>
+
+      </div>
+
+    </div>
+  )}
+
+</div>
+
+   <button
+  type="button"
+  className="btn-refresh"
+  onClick={handleRefresh}
+  title="Refresh"
+>
+  <LuRefreshCw />
+</button>
+
+    <button
+  type="button"
+  className="btn-export"
+  onClick={handleExportFormatted}
+>
+  <LuDownload />
+  <span> Export</span>
+</button>
+  </div>
+</div>
+
+{/* KPI Summary */}
+<div className="dashboard-kpi-section">
+
+  <div className="kpi-card kpi-total">
+    <div className="kpi-card-top">
+      <div>
+        <span className="kpi-label">Total Agents</span>
+        <strong className="kpi-value">{totalAgents}</strong>
+      </div>
+
+      <div className="kpi-icon">◉</div>
+    </div>
+
+    <span className="kpi-description">
+      All registered agents
+    </span>
+
+    <div className="kpi-trend">
+      <svg viewBox="0 0 220 45" preserveAspectRatio="none">
+        <path
+          d="M2 34 C20 30,25 35,40 28 S60 38,75 25 S95 35,110 18 S130 31,145 14 S165 30,180 13 S200 22,218 8"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+        />
+      </svg>
+    </div>
+  </div>
+
+  <div className="kpi-card kpi-active">
+    <div className="kpi-card-top">
+      <div>
+        <span className="kpi-label">Active Agents</span>
+        <strong className="kpi-value">
+          {statusCounts.active}
+        </strong>
+      </div>
+
+      <div className="kpi-icon">✓</div>
+    </div>
+
+    <span className="kpi-description">
+      {totalAgents
+        ? ((statusCounts.active / totalAgents) * 100).toFixed(0)
+        : 0}
+      % of total agents
+    </span>
+
+    <div className="kpi-trend">
+      <svg viewBox="0 0 220 45" preserveAspectRatio="none">
+        <path
+          d="M2 35 C20 24,28 36,45 25 S70 39,90 22 S115 31,135 18 S160 35,180 15 S200 28,218 10"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+        />
+      </svg>
+    </div>
+  </div>
+
+  <div className="kpi-card kpi-disconnected">
+    <div className="kpi-card-top">
+      <div>
+        <span className="kpi-label">Disconnected</span>
+        <strong className="kpi-value">
+          {statusCounts.disconnected}
+        </strong>
+      </div>
+
+      <div className="kpi-icon">!</div>
+    </div>
+
+    <span className="kpi-description">
+      {totalAgents
+        ? ((statusCounts.disconnected / totalAgents) * 100).toFixed(0)
+        : 0}
+      % of total agents
+    </span>
+
+    <div className="kpi-trend">
+      <svg viewBox="0 0 220 45" preserveAspectRatio="none">
+        <path
+          d="M2 36 C20 35,30 30,45 34 S65 25,80 31 S100 22,115 27 S135 18,150 25 S170 12,185 23 S205 13,218 18"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+        />
+      </svg>
+    </div>
+  </div>
+
+  <div className="kpi-card kpi-pending">
+    <div className="kpi-card-top">
+      <div>
+        <span className="kpi-label">Pending</span>
+        <strong className="kpi-value">
+          {statusCounts.pending}
+        </strong>
+      </div>
+
+      <div className="kpi-icon">◷</div>
+    </div>
+
+    <span className="kpi-description">
+      {totalAgents
+        ? ((statusCounts.pending / totalAgents) * 100).toFixed(0)
+        : 0}
+      % of total agents
+    </span>
+
+    <div className="kpi-trend">
+      <svg viewBox="0 0 220 45" preserveAspectRatio="none">
+        <path
+          d="M2 35 C20 31,28 38,45 30 S70 39,85 25 S110 34,125 20 S145 32,160 18 S185 27,200 13 S210 18,218 10"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+        />
+      </svg>
+    </div>
+  </div>
+
+  <div className="kpi-card kpi-never">
+    <div className="kpi-card-top">
+      <div>
+        <span className="kpi-label">Never Connected</span>
+        <strong className="kpi-value">
+          {statusCounts.neverConnected}
+        </strong>
+      </div>
+
+      <div className="kpi-icon">○</div>
+    </div>
+
+    <span className="kpi-description">
+      {totalAgents
+        ? ((statusCounts.neverConnected / totalAgents) * 100).toFixed(0)
+        : 0}
+      % of total agents
+    </span>
+
+    <div className="kpi-trend">
+      <svg viewBox="0 0 220 45" preserveAspectRatio="none">
+        <path
+          d="M2 35 C20 32,30 37,45 29 S65 38,82 27 S105 35,120 21 S145 31,160 19 S180 28,195 14 S210 20,218 11"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+        />
+      </svg>
+    </div>
+  </div>
+
+</div>
 
       {/* Statistics Section */}
       <div className="stats-section">
-        <div className="stat-card">
+        {/* <div className="stat-card">
           <h3>AGENTS BY STATUS</h3>
           <div className="pie-chart">
             {renderDonut(statusSegments, "#cccccc")}
@@ -902,9 +1450,75 @@ function Dashboard() {
               Never connected ({statusCounts.neverConnected})
             </div>
           </div>
-        </div>
+        </div> */}
 
         <div className="stat-card">
+          
+  <div className="chart-card-header">
+  <h3>Agents by Status</h3>
+
+  <button
+    type="button"
+    className="chart-menu-button"
+  >
+    ⋮
+  </button>
+</div>
+
+  <div className="chart-content">
+    <div className="pie-chart">
+      {renderDonut(
+        statusSegments,
+        "#cccccc",
+        totalAgents
+      )}
+    </div>
+
+    <div className="legend">
+      <div className="legend-item">
+        <span
+          className="legend-color"
+          style={{
+            backgroundColor: STATUS_COLORS.active,
+          }}
+        ></span>
+        Active ({statusCounts.active})
+      </div>
+
+      <div className="legend-item">
+        <span
+          className="legend-color"
+          style={{
+            backgroundColor: STATUS_COLORS.disconnected,
+          }}
+        ></span>
+        Disconnected ({statusCounts.disconnected})
+      </div>
+
+      <div className="legend-item">
+        <span
+          className="legend-color"
+          style={{
+            backgroundColor: STATUS_COLORS.pending,
+          }}
+        ></span>
+        Pending ({statusCounts.pending})
+      </div>
+
+      <div className="legend-item">
+        <span
+          className="legend-color"
+          style={{
+            backgroundColor: STATUS_COLORS.neverConnected,
+          }}
+        ></span>
+        Never connected ({statusCounts.neverConnected})
+      </div>
+    </div>
+  </div>
+</div>
+
+        {/* <div className="stat-card">
           <h3>TOP 5 OS</h3>
           <div className="pie-chart">{renderDonut(osSegments, "#cccccc")}</div>
           <div className="legend">
@@ -930,9 +1544,65 @@ function Dashboard() {
               </div>
             )}
           </div>
-        </div>
+        </div> */}
 
         <div className="stat-card">
+  <div className="chart-card-header">
+  <h3>Top 5 Operating Systems</h3>
+
+  <button
+    type="button"
+    className="chart-menu-button"
+  >
+    ⋮
+  </button>
+</div>
+
+  <div className="chart-content">
+
+    <div className="pie-chart">
+      {renderDonut(
+        osSegments,
+        "#cccccc",
+        totalOsAgents
+      )}
+    </div>
+
+    <div className="legend">
+      {osStats.length > 0 ? (
+        osStats.map((os, index) => (
+          <div
+            key={index}
+            className="legend-item"
+          >
+            <span
+              className="legend-color"
+              style={{
+                backgroundColor:
+                  OS_COLORS[index % OS_COLORS.length],
+              }}
+            ></span>
+
+            {os.os_name} ({os.os_count})
+          </div>
+        ))
+      ) : (
+        <div className="legend-item">
+          <span
+            className="legend-color"
+            style={{
+              backgroundColor: "#cccccc",
+            }}
+          ></span>
+          No OS data
+        </div>
+      )}
+    </div>
+
+  </div>
+</div>
+
+        {/* <div className="stat-card">
           <h3>TOP 5 GROUPS</h3>
           <div className="pie-chart">
             {renderDonut(groupSegments, "#00a86b")}
@@ -961,12 +1631,71 @@ function Dashboard() {
               </div>
             )}
           </div>
+        </div> */}
+
+        <div className="stat-card">
+  <div className="chart-card-header">
+  <h3>Top 5 Groups</h3>
+
+  <button
+    type="button"
+    className="chart-menu-button"
+  >
+    ⋮
+  </button>
+</div>
+
+  <div className="chart-content">
+
+    <div className="pie-chart">
+      {renderDonut(
+        groupSegments,
+        "#00a86b",
+        totalGroupAgents
+      )}
+    </div>
+
+    <div className="legend">
+      {groupStats.length > 0 ? (
+        groupStats.map((group, index) => (
+          <div
+            key={index}
+            className="legend-item"
+          >
+            <span
+              className="legend-color"
+              style={{
+                backgroundColor:
+                  GROUP_COLORS[
+                    index % GROUP_COLORS.length
+                  ],
+              }}
+            ></span>
+
+            {group.group_name} ({group.group_count})
+          </div>
+        ))
+      ) : (
+        <div className="legend-item">
+          <span
+            className="legend-color"
+            style={{
+              backgroundColor: "#00a86b",
+            }}
+          ></span>
+
+          default (0)
         </div>
+      )}
+    </div>
+
+  </div>
+</div>
       </div>
 
       {/* Agents Table Section */}
       <div className="agents-section">
-        <div className="table-header">
+        {/* <div className="table-header">
           <h2>
             Agents ({filteredAgents.length}
             {filteredAgents.length !== agents.length
@@ -993,12 +1722,75 @@ function Dashboard() {
               </button>
             )}
           </div>
-        </div>
+        </div> */}
+
+        <div className="table-header">
+
+  <div className="table-title">
+    <h2>
+      Agents ({filteredAgents.length}
+      {filteredAgents.length !== agents.length
+        ? ` of ${agents.length}`
+        : ""}
+      )
+    </h2>
+
+    <span className="table-subtitle">
+      Manage and monitor your deployed agents
+    </span>
+  </div>
+
+  <div className="table-actions">
+
+    <div className="table-search">
+      <span className="search-icon">⌕</span>
+
+      <input
+        type="text"
+        className="search-input"
+        placeholder="Search agents..."
+        value={searchTerm}
+        onChange={(e) =>
+          setSearchTerm(e.target.value)
+        }
+      />
+
+      {searchTerm && (
+        <button
+          type="button"
+          className="search-clear"
+          onClick={() => setSearchTerm("")}
+          aria-label="Clear search"
+        >
+          ✕
+        </button>
+      )}
+    </div>
+
+    <button
+      type="button"
+      className="filter-button"
+      onClick={() => {}}
+    >
+      ⚱ Filters
+    </button>
+
+    <button
+      type="button"
+      className="deploy-table-button"
+      onClick={handleDeployAgent}
+    >
+      + Deploy new agent
+    </button>
+
+  </div>
+
+</div>
 
         <table className="agents-table">
           <thead>
             <tr>
-              <th className="col-expand" aria-label="Show available services" />
+              {/* <th className="col-expand" aria-label="Show available services" /> */}
               {/* <th>
                 <input
                   type="checkbox"
@@ -1006,7 +1798,7 @@ function Dashboard() {
                   onChange={handleSelectAll}
                 />
               </th> */}
-              <th>ID</th>
+              {/* <th>ID</th>
               <th>Agent Name</th>
               <th>MAC Address</th>
               <th>Host Name</th>
@@ -1014,13 +1806,23 @@ function Dashboard() {
               <th>Operating System</th>
               <th>Architecture</th>
               <th>Status</th>
-              <th>Actions</th>
+              <th>Actions</th> */}
+              <th className="col-expand" aria-label="Show available services" />
+<th>ID</th>
+<th>Agent Name</th>
+<th>IP Address</th>
+<th>Operating System</th>
+<th>Architecture</th>
+<th>Group</th>
+<th>Status</th>
+<th>Last Seen</th>
+<th>Actions</th>
             </tr>
           </thead>
           <tbody>
             {paginatedAgents.length === 0 ? (
               <tr>
-                <td colSpan={11} className="no-results">
+                <td colSpan={9} className="no-results">
                   {searchTerm
                     ? `No agents match "${searchTerm}".`
                     : "No agents found."}
@@ -1052,11 +1854,11 @@ function Dashboard() {
                       onChange={() => handleSelectAgent(agent.id)}
                     />
                   </td> */}
-                  <td>{agent.id}</td>
-                  <td>
+                  {/* <td>{agent.id}</td>
+                  <td> */}
                     {/* `agent` scopes the SOC2 report to this agent — it becomes
                         agent_name on every /soc2-report/* request. */}
-                    <a
+                    {/* <a
                       href={`/app/reports/soc2?agent=${encodeURIComponent(agent.name)}`}
                       target="_blank"
                       rel="noopener noreferrer"
@@ -1064,8 +1866,8 @@ function Dashboard() {
                       title={`Open the SOC2 report for ${agent.name}`}
                     >
                       {agent.name}
-                    </a>
-                  </td>
+                    </a> */}
+                  {/* </td>
                   <td>{agent.macAddress}</td>
                   <td>{agent.hostName}</td>
                   <td>{agent.ipAddress}</td>
@@ -1075,7 +1877,67 @@ function Dashboard() {
                     <span className={`status-badge status-${agent.status}`}>
                       ● {agent.status}
                     </span>
-                  </td>
+                  </td> */}
+                  <td>{agent.id}</td>
+
+<td>
+ <a
+  href={`/app/reports/soc2?agent=${encodeURIComponent(agent.name)}`}
+  target="_blank"
+  rel="noopener noreferrer"
+  className="agent-name-link"
+  title={`Open the SOC2 report for ${agent.name}`}
+>
+  <span className="agent-name-status-dot"></span>
+  {agent.name}
+</a>
+</td>
+
+<td>{agent.ipAddress}</td>
+
+<td>
+  <span className="os-cell">
+    <span className="os-icon">
+      {getOsIcon(agent.os)}
+    </span>
+
+    <span className="os-name">
+      {agent.os}
+    </span>
+  </span>
+</td>
+
+<td>{agent.architecture}</td>
+
+<td>
+  <span className="group-badge">
+    {agent.group}
+  </span>
+</td>
+
+<td>
+  <span
+    className={`status-badge status-${agent.status}`}
+  >
+    <span className="status-dot"></span>
+    {agent.status}
+  </span>
+</td>
+<td>
+  <span className="last-seen">
+    {agent.lastSeen ? (
+      <>
+        <span>{agent.lastSeen.split(" ").slice(0, 3).join(" ")}</span>
+
+        <span>
+          {agent.lastSeen.split(" ").slice(3).join(" ")}
+        </span>
+      </>
+    ) : (
+      "—"
+    )}
+  </span>
+</td>
                   <td>
                     <button
                       className="btn-action"
@@ -1087,7 +1949,7 @@ function Dashboard() {
                 </tr>
                 {expandedAgent === agent.name && (
                   <tr className="services-row">
-                    <td colSpan={11}>
+                    <td colSpan={9}>
                       <div className="services-panel">
                         <div className="services-title">
                           <span className="services-title-icon">🗄</span>
@@ -1120,7 +1982,7 @@ function Dashboard() {
         {filteredAgents.length > 0 && (
           <div className="pagination-bar1">
             <div className="pagination-info">
-              Showing {rangeStart}–{rangeEnd} of {filteredAgents.length}
+              Showing {rangeStart} to {rangeEnd} of {filteredAgents.length} entries
             </div>
 
             <div className="pagination-controls">
