@@ -3,6 +3,7 @@ import time
 import threading
 import importlib
 
+from collectors.flyprobe import fly as _fly
 from schema.fly_event import FlyEvent ,EventOutcome,Severity
 
 PROBE = "collectors.flyprobe.fly"
@@ -16,6 +17,7 @@ _CONTROL_KEYS = {"server", "engine", "action", "source", "id"}
 def _canon(s):
     s = str(s or "").strip().lower()
     return _ALIAS.get(s, s)
+
 
 
 def _driver_status(name):
@@ -38,19 +40,24 @@ def _driver_status(name):
 
 def _source_id(detail):
     backend = _canon(detail.get("backend") or detail.get("source"))
-    if backend == "cli-docker" or detail.get("container"):
+    # print("source",backend)
+    if backend == "cli-docker" and detail.get("container"):
         who = detail.get("container_name") or detail.get("container") or "?"
         return f"docker:{who}"
+    # print(backend)
     return f"host:{backend or 'auto'}"
 
 
 def _build_params(detail):
     params = {k: v for k, v in (detail or {}).items() if k not in _CONTROL_KEYS}
     backend = _canon(detail.get("backend") or detail.get("source"))
-    if detail.get("container") or backend == "cli-docker":
+    if backend == "cli-docker":
         params["backend"] = "cli-docker"
         params.setdefault("container", detail.get("container"))
         params.setdefault("fly_bin", detail.get("fly_bin", "fly"))
+    elif backend == "api" and not params.get("token"):
+        # api needs the REAL token, not the detect flag — surface it clearly
+        params["_error"] = "api backend started without a token (detect only sets api_token_present)"
     else:
         params["backend"] = backend or "auto"
     return params
@@ -118,8 +125,8 @@ class FlyInspector:
         ev.target_name = sid
         ev.tags = ["fly", "inspect", params.get("backend") or "auto"]
         try:
-            probe = importlib.import_module(PROBE)
-            status, msg = _driver_status(getattr(probe, "DRIVER", None))
+            # probe = importlib.import_module(PROBE)
+            status, msg = _driver_status(getattr(_fly, "DRIVER", None))
             if status != "ok":
                 raise ImportError(msg)
         except BaseException as e:
@@ -129,7 +136,7 @@ class FlyInspector:
             ev.inspect_error = msg; ev.notes = f"probe unavailable: {msg}"
             return ev
         try:
-            res = probe.inspect(params)
+            res = _fly.inspect(params)
             if res.get("backend") is None:
                 ev.running = False; ev.inspected = False
                 ev.notes = ("no usable backend — authenticate flyctl "

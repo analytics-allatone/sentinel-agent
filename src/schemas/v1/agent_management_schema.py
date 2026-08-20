@@ -5,7 +5,6 @@ from pydantic import BaseModel, Field, field_validator
 from utils.crypto import VALID_ENGINES, canon_engine
 from utils.web_config import VALID_SERVERS, canon_server, clean
 
-
 class AddAgentRequest(BaseModel):
     agent_name : str
     group_id : Optional[int] = None 
@@ -228,3 +227,33 @@ class AddWebConfigResponse(BaseModel):
 class GetWebConfigsResponse(BaseModel):
     total: int
     web_configs: List[WebConfigData]
+class FlyStartRequest(BaseModel):
+    agent_name: str
+    backend: Optional[str] = None          # "api" for remote; None/"cli" => local
+    token: Optional[str] = None            # REQUIRED for api backend, from BODY only
+    prefers: Optional[str] = None
+    org: Optional[str] = None
+    apps: Optional[List[str]] = None
+    container: Optional[str] = None        # for cli-docker
+    # opt-in extras (what to collect)
+    want_status: Optional[bool] = None
+    want_releases: Optional[bool] = None
+    want_checks: Optional[bool] = None
+    want_volumes: Optional[bool] = None
+    want_ips: Optional[bool] = None
+    want_scale: Optional[bool] = None
+    want_certs: Optional[bool] = None
+    want_metrics: Optional[bool] = None
+
+class AppServerStartRequest(BaseModel):
+    agent_name: str
+    server: Optional[str] = "wildfly"      # wildfly | jboss
+    backend: Optional[str] = "api"         # "api" (HTTP :9990, local/remote) | "cli" (local)
+    host: Optional[str] = "127.0.0.1"             # remote IP for remote api; default 127.0.0.1
+    port: Optional[int] = 9990             # default 9990
+    user: Optional[str] = None             # mgmt user (api backend, from BODY)
+    password: Optional[str] = None         # mgmt password (from BODY, never .env)
+    cli_path: Optional[str] = None         # jboss-cli path (cli backend; auto-found if omitted)
+    controller: Optional[str] = None       # host:port for cli remote (optional)
+    want_datasources: Optional[bool] = None
+ 

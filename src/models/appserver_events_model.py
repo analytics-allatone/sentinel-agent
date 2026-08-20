@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, BigInteger, String, Boolean, TIMESTAMP
+from sqlalchemy import Column, Integer, BigInteger, String, Boolean, Float, TIMESTAMP
 from sqlalchemy.dialects.postgresql import JSONB
 from datetime import datetime, timezone
 
@@ -14,16 +14,16 @@ except Exception:
     ForceDateTime = TIMESTAMP(timezone=True)
 
 
-class FlyEvents(Base):
-    __tablename__ = "fly_events"
+class AppServerEvents(Base):
+    __tablename__ = "appserver_events"
 
     id = Column(BigInteger, primary_key=True, autoincrement=True, index=True)
     agent_name = Column(String, nullable=False, index=True)
 
-    engine = Column(String)                 # "fly"
-    server = Column(String)                 # "fly"
-    backend = Column(String, index=True)    # cli | api
     category = Column(String)
+    engine = Column(String)                 # "appserver"
+    server = Column(String, index=True)     # wildfly | jboss | tomcat
+    backend = Column(String, index=True)    # api | cli
     action = Column(String, nullable=False)
     outcome = Column(String)
     severity = Column(String, index=True)
@@ -33,35 +33,35 @@ class FlyEvents(Base):
     inspected = Column(Boolean)
     health_status = Column(String, index=True)
 
-    # detect fields
     detected = Column(Boolean)
     running = Column(Boolean)
     process_pid = Column(Integer)
-    exe_path = Column(String)               # flyctl path (cli backend)
-    service_name = Column(String)
+    exe_path = Column(String)
     auth_method = Column(String)
     inspect_error = Column(String)
     system_resources = Column(JSONB)
 
-    # identity
     target_name = Column(String, index=True)
-    db_host = Column(String)
-    db_port = Column(Integer)
-    db_version = Column(String)             # flyctl version / "machines-api"
+    app_host = Column(String)
+    app_port = Column(Integer)
+    app_version = Column(String)
+    server_state = Column(String, index=True)
 
-    # promoted metrics
-    apps_total = Column(Integer)
-    machines_up = Column(Integer)
-    machines_down = Column(Integer)
-    regions = Column(Integer)
+    heap_pct = Column(Float)
+    heap_used = Column(BigInteger)
+    gc_time_ms = Column(BigInteger)
+    thread_count = Column(Integer)
+    datasource_wait_total = Column(BigInteger)
+    deployments_ok = Column(Integer)
+    deployments_total = Column(Integer)
+    uptime_ms = Column(BigInteger)
 
-    # sections
     connectivity_version = Column(JSONB)
-    apps = Column(JSONB)
-    machines = Column(JSONB)
-    releases = Column(JSONB)
-    volumes_ips = Column(JSONB)
-    metrics_section = Column(JSONB)
+    jvm = Column(JSONB)
+    threads = Column(JSONB)
+    thread_pools = Column(JSONB)
+    datasources = Column(JSONB)
+    deployments = Column(JSONB)
     health_summary = Column(JSONB)
 
     issues = Column(JSONB)
