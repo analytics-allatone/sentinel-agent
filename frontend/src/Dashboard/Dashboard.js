@@ -1054,14 +1054,15 @@ function Dashboard() {
                   </td> */}
                   <td>{agent.id}</td>
                   <td>
-                    {/* `agent` scopes the SOC2 report to this agent — it becomes
-                        agent_name on every /soc2-report/* request. */}
+                    {/* `agent` scopes the capacity report to this agent — it
+                        becomes agent_name on the /capacity-monitoring/overview
+                        request the report loads with. */}
                     <a
-                      href={`/app/reports/soc2?agent=${encodeURIComponent(agent.name)}`}
+                      href={`/app/reports/capacity?agent=${encodeURIComponent(agent.name)}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="agent-name-link"
-                      title={`Open the SOC2 report for ${agent.name}`}
+                      title={`Open the capacity report for ${agent.name}`}
                     >
                       {agent.name}
                     </a>
