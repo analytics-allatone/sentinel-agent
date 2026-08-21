@@ -1,209 +1,355 @@
 #requires -Version 5.1
 <#
-  setup-all.ps1 - one-shot stack bring-up:
-    Docker (install if missing) -> network -> PostgreSQL -> Mosquitto (MQTT)
-    -> optionally download + build + run your application. One shared network.
+  setup-all.ps1 - brings the whole sentinel stack up inside a Docker-in-Docker
+  container, driven entirely from PowerShell. No .sh file needed.
 
-  No editing or commenting needed. Just run:  .\setup-all.ps1
-  The app step runs ONLY if you set a real $Url below; otherwise it is skipped.
+    .\setup-all.ps1
+    .\setup-all.ps1 -Url https://your-host/code.zip
+
+  Requires Docker Desktop in Linux-container mode. --privileged is effectively
+  host root, so this is a dev/CI tool.
 #>
 
+[CmdletBinding()]
+param(
+    [string]$Url = ''
+)
+
+# IMPORTANT: must stay 'Continue'.
+# Docker writes progress and warnings to stderr. PowerShell turns native-command
+# stderr into error records, so with 'Stop' the script dies on the first such
+# line (that is the NativeCommandError you saw on "docker rm -f"). Exit codes are
+# checked explicitly below instead.
 $ErrorActionPreference = 'Continue'
 
 # ============================ CONFIG ============================
+$Dind    = 'sentinel-dind'
+$Image   = 'docker:27-dind'
+$Volume  = 'sentinel_dind_lib'
 $Network = 'sentinel-net'
 
-# --- PostgreSQL ---
-$PgContainer = 'sentineldb'
-$PgUser      = 'dbmasteruser'
-$PgPass      = 'dbmasterpassword'
-$PgDb        = 'productiondb'
-$PgPort      = 5432
-$PgImage     = 'postgres:16'
-$PgVolume    = 'sentinel_pgdata'
+$PgUser = $env:PG_USER;   if (-not $PgUser) { $PgUser = 'dbmasteruser' }
+$PgPass = $env:PG_PASS;   if (-not $PgPass) { $PgPass = 'dbmasterpassword' }
+$PgDb   = $env:PG_DB;     if (-not $PgDb)   { $PgDb   = 'productiondb' }
 
-# --- Mosquitto (MQTT) ---
-$MqttContainer = 'sentinel-mqtt'
-$MqttUser      = 'mqttmasteruser'
-$MqttPass      = 'mqttmasterpassword'
-$MqttPort      = 1883
-$MqttWsPort    = 9001
-$MqttImage     = 'eclipse-mosquitto:2'
-$MqttDataVol   = 'sentinel_mqtt_data'
-$MqttLogVol    = 'sentinel_mqtt_log'
-$MqttDir       = 'C:\sentinel\mosquitto'
-$MqttConfigDir = Join-Path $MqttDir 'config'
+$MqttUser = $env:MQTT_USER; if (-not $MqttUser) { $MqttUser = 'mqttmasteruser' }
+$MqttPass = $env:MQTT_PASS; if (-not $MqttPass) { $MqttPass = 'mqttmasterpassword' }
 
-# --- Application (leave $Url as-is to SKIP the app; set it to deploy) ---
-$Url          = 'https://REPLACE-WITH-YOUR-URL/code.zip'
-$AppImage     = 'sentinel-api'
-$AppContainer = 'sentinel-api'
-$AppPort      = 8000
-$AppModule    = 'main:app'
-$UrlPlaceholder = 'https://REPLACE-WITH-YOUR-URL/code.zip'
+$GfUser = $env:GF_USER; if (-not $GfUser) { $GfUser = 'admin' }
+$GfPass = $env:GF_PASS; if (-not $GfPass) { $GfPass = 'grafanamasterpassword' }
+
+$PgPort     = 5432
+$MqttPort   = 1883
+$MqttWsPort = 9001
+$GrafPort   = 3000
+$AppPort    = 8000
 # ===============================================================
 
-function Log($m)  { Write-Host "[+] $m" -ForegroundColor Green }
-function Warn($m) { Write-Host "[!] $m" -ForegroundColor Yellow }
-function Err($m)  { Write-Host "[x] $m" -ForegroundColor Red }
-function Test-Cmd($n) { [bool](Get-Command $n -ErrorAction SilentlyContinue) }
+function Log  ($m) { Write-Host "[+] $m" -ForegroundColor Green }
+function Warn ($m) { Write-Host "[!] $m" -ForegroundColor Yellow }
+function Fail ($m) { Write-Host "[x] $m" -ForegroundColor Red; exit 1 }
 
-function Install-DockerEngine {
-    if (Test-Cmd docker) { Log "Docker already installed: $(docker --version)"; return }
-    Log "Docker not found. Attempting install via winget (Docker Desktop)..."
-    if (Test-Cmd winget) {
-        winget install -e --id Docker.DockerDesktop --accept-package-agreements --accept-source-agreements
-        Warn "Docker Desktop installed. You may need to sign out/in or REBOOT,"
-        Warn "ensure Virtualization + WSL2 are enabled, then re-run this script."
-    } else {
-        Err "winget unavailable. Install Docker Desktop: https://www.docker.com/products/docker-desktop/"
-        exit 1
-    }
-}
+# Copies a text blob into the DinD container with LF endings.
+# Writing config via `sh -c` here-strings does not work reliably: a CRLF-saved
+# .ps1 sends "EOF`r" as the heredoc terminator, which never matches "EOF", so
+# the shell hangs or errors. docker cp sidesteps the problem entirely.
+function Copy-TextInto {
+    param([string]$Content, [string]$DestPath)
 
-function Wait-Docker {
-    Log "Waiting for the Docker engine..."
-    for ($i = 0; $i -lt 60; $i++) {
-        docker info *> $null
-        if ($LASTEXITCODE -eq 0) { Log "Docker engine is ready."; return }
-        if ($i -eq 0) {
-            $dd = Join-Path $Env:ProgramFiles 'Docker\Docker\Docker Desktop.exe'
-            if (Test-Path $dd) { Warn "Starting Docker Desktop..."; Start-Process $dd | Out-Null }
-        }
-        Start-Sleep -Seconds 5
-    }
-    Err "Docker engine did not become ready. Start Docker Desktop and re-run."
-    exit 1
-}
-
-function Ensure-Network {
-    docker network inspect $Network *> $null
-    if ($LASTEXITCODE -eq 0) { Log "Network '$Network' already exists." }
-    else { docker network create $Network | Out-Null; Log "Created network '$Network'." }
-}
-
-function Remove-IfExists($name) {
-    $x = docker ps -a --format '{{.Names}}' | Where-Object { $_ -eq $name }
-    if ($x) { Warn "Removing existing container: $name"; docker rm -f $name | Out-Null }
-}
-
-function Run-Postgres {
-    Log "Pulling $PgImage ..."; docker pull $PgImage
-    Remove-IfExists $PgContainer
-    docker volume create $PgVolume | Out-Null
-    docker run -d --name $PgContainer --restart unless-stopped --network $Network -e "POSTGRES_USER=$PgUser" -e "POSTGRES_PASSWORD=$PgPass" -e "POSTGRES_DB=$PgDb" -p "$($PgPort):5432" -v "$($PgVolume):/var/lib/postgresql/data" $PgImage | Out-Null
-    Log "PostgreSQL container '$PgContainer' started."
-}
-
-function Wait-Postgres {
-    Log "Waiting for PostgreSQL to accept connections..."
-    for ($i = 0; $i -lt 30; $i++) {
-        docker exec $PgContainer pg_isready -U $PgUser -d $PgDb *> $null
-        if ($LASTEXITCODE -eq 0) { Log "PostgreSQL is ready."; return }
-        Start-Sleep -Seconds 2
-    }
-    Warn "Could not confirm PostgreSQL readiness. Check: docker logs $PgContainer"
-}
-
-function Setup-Mosquitto {
-    New-Item -ItemType Directory -Force -Path $MqttConfigDir | Out-Null
-    $confB64 = 'cGVyc2lzdGVuY2UgdHJ1ZQpwZXJzaXN0ZW5jZV9sb2NhdGlvbiAvbW9zcXVpdHRvL2RhdGEvCmxvZ19kZXN0IGZpbGUgL21vc3F1aXR0by9sb2cvbW9zcXVpdHRvLmxvZwpsb2dfZGVzdCBzdGRvdXQKCmxpc3RlbmVyIF9fTVFUVF9QT1JUX18gMC4wLjAuMApwcm90b2NvbCBtcXR0CgpsaXN0ZW5lciBfX01RVFRfV1NfUE9SVF9fIDAuMC4wLjAKcHJvdG9jb2wgd2Vic29ja2V0cwoKYWxsb3dfYW5vbnltb3VzIGZhbHNlCnBhc3N3b3JkX2ZpbGUgL21vc3F1aXR0by9jb25maWcvcGFzc3dvcmRmaWxlCg=='
-    $conf = [System.Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($confB64))
-    $conf = $conf.Replace('__MQTT_PORT__', "$MqttPort").Replace('__MQTT_WS_PORT__', "$MqttWsPort")
-    [System.IO.File]::WriteAllText((Join-Path $MqttConfigDir 'mosquitto.conf'), $conf, (New-Object System.Text.UTF8Encoding($false)))
-    Log "Pulling $MqttImage ..."; docker pull $MqttImage
-    Log "Generating MQTT password file for user '$MqttUser'..."
-    docker run --rm --entrypoint mosquitto_passwd -v "$($MqttConfigDir):/mosquitto/config" $MqttImage -b -c /mosquitto/config/passwordfile $MqttUser $MqttPass
-}
-
-function Run-Mosquitto {
-    Remove-IfExists $MqttContainer
-    docker volume create $MqttDataVol | Out-Null
-    docker volume create $MqttLogVol  | Out-Null
-    docker run -d --name $MqttContainer --restart unless-stopped --network $Network -p "$($MqttPort):1883" -p "$($MqttWsPort):9001" -v "$($MqttConfigDir):/mosquitto/config" -v "$($MqttDataVol):/mosquitto/data" -v "$($MqttLogVol):/mosquitto/log" $MqttImage | Out-Null
-    Log "Mosquitto (MQTT) container '$MqttContainer' started."
-}
-
-function Deploy-App {
-    $work = Join-Path ([System.IO.Path]::GetTempPath()) ("deploy_" + [guid]::NewGuid().ToString('N'))
-    New-Item -ItemType Directory -Force -Path $work | Out-Null
+    $lf   = $Content -replace "`r`n", "`n"
+    $tmp  = Join-Path ([System.IO.Path]::GetTempPath()) ([guid]::NewGuid().ToString('N'))
+    [System.IO.File]::WriteAllText($tmp, $lf, (New-Object System.Text.UTF8Encoding($false)))
     try {
-        Log "Downloading and extracting app (in-memory, no zip saved) ..."
-        Add-Type -AssemblyName System.IO.Compression
-        Add-Type -AssemblyName System.IO.Compression.FileSystem
-        $wc = New-Object System.Net.WebClient
-        try { [byte[]]$bytes = $wc.DownloadData($Url) } finally { $wc.Dispose() }
-        $ms = New-Object System.IO.MemoryStream(,$bytes)
-        try {
-            $zip = New-Object System.IO.Compression.ZipArchive($ms)
-            try { [System.IO.Compression.ZipFileExtensions]::ExtractToDirectory($zip, $work) } finally { $zip.Dispose() }
-        } finally { $ms.Dispose() }
-
-        $ctx = $work
-        $top = Get-ChildItem -Force $ctx
-        if ($top.Count -eq 1 -and $top[0].PSIsContainer) { $ctx = $top[0].FullName }
-
-        $dockerfile = Join-Path $ctx 'Dockerfile'
-        if (Test-Path $dockerfile) {
-            Log "Using the project's own Dockerfile."
-        } else {
-            Warn "No Dockerfile found. Generating the multi-stage Dockerfile."
-            $dfB64 = 'RlJPTSBub2RlOjIwLWFscGluZSBBUyBmcm9udGVuZC1idWlsZApXT1JLRElSIC9hcHAvZnJvbnRlbmQKQ09QWSBmcm9udGVuZC9wYWNrYWdlKi5qc29uIC4vClJVTiBucG0gaW5zdGFsbApDT1BZIGZyb250ZW5kLyAuLwpSVU4gbnBtIHJ1biBidWlsZAoKCkZST00gcHl0aG9uOjMuMTItc2xpbQoKIyBQeXRob24gb3B0aW1pemF0aW9ucwpFTlYgUFlUSE9ORE9OVFdSSVRFQllURUNPREU9MQpFTlYgUFlUSE9OVU5CVUZGRVJFRD0xCgpXT1JLRElSIC9hcHAKCiMgSW5zdGFsbCBvbmx5IHN5c3RlbSBkZXBzIChrZWVwIG1pbmltYWwpClJVTiBhcHQtZ2V0IHVwZGF0ZSAmJiBhcHQtZ2V0IGluc3RhbGwgLXkgZ2NjIFwKICAgICYmIHJtIC1yZiAvdmFyL2xpYi9hcHQvbGlzdHMvKgoKIyBDb3B5IG9ubHkgcmVxdWlyZW1lbnRzIGZpcnN0IChiZXN0IGNhY2hpbmcpCkNPUFkgcmVxdWlyZW1lbnRzLnR4dCAuCgojIEluc3RhbGwgZGVwZW5kZW5jaWVzClJVTiBwaXAgaW5zdGFsbCAtLW5vLWNhY2hlLWRpciAtLXVwZ3JhZGUgcGlwICYmIFwKICAgIHBpcCBpbnN0YWxsIC0tbm8tY2FjaGUtZGlyIC1yIHJlcXVpcmVtZW50cy50eHQKCiMgQ29weSBzb3VyY2UgY29kZSBzZXBhcmF0ZWx5CkNPUFkgc3JjLyAuL3NyYwpDT1BZIGFnZW50LyAuL2FnZW50CgojIEJyaW5nIGluIHRoZSBidWlsdCBmcm9udGVuZCwgdGhlbiB3b3JrIGZyb20gc3JjIChpbXBvcnRzIGxpa2UgbWFpbjphcHApCkNPUFkgLS1mcm9tPWZyb250ZW5kLWJ1aWxkIC9hcHAvZnJvbnRlbmQvYnVpbGQgLi9mcm9udGVuZC9idWlsZApXT1JLRElSIC9hcHAvc3JjCgpFWFBPU0UgX19QT1JUX18KCkNNRCBbInV2aWNvcm4iLCAiX19BUFBfXyIsICItLWhvc3QiLCAiMC4wLjAuMCIsICItLXBvcnQiLCAiX19QT1JUX18iXQo='
-            $content = [System.Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($dfB64))
-            $content = $content.Replace('__PORT__', "$AppPort").Replace('__APP__', $AppModule)
-            [System.IO.File]::WriteAllText($dockerfile, $content, (New-Object System.Text.UTF8Encoding($false)))
-        }
-
-        Log "Building app image '$AppImage' ..."
-        docker build -t $AppImage $ctx
-        if ($LASTEXITCODE -ne 0) { throw "Docker build failed." }
-
-        Remove-IfExists $AppContainer
-        $envArgs = @()
-        $envFile = Join-Path $ctx '.env'
-        if (Test-Path $envFile) { $envArgs = @('--env-file', $envFile); Log "Using bundled .env" }
-
-        Log "Starting app container '$AppContainer' ..."
-        docker run -d --name $AppContainer --restart unless-stopped --network $Network -p "$($AppPort):$($AppPort)" @envArgs $AppImage | Out-Null
-        if ($LASTEXITCODE -ne 0) { throw "Docker run failed." }
-        Log "App container '$AppContainer' started."
+        $parent = $DestPath.Substring(0, $DestPath.LastIndexOf('/'))
+        docker exec $Dind mkdir -p $parent | Out-Null
+        docker cp $tmp "${Dind}:${DestPath}" | Out-Null
+        if ($LASTEXITCODE -ne 0) { Fail "Could not copy a file into $Dind ($DestPath)." }
     } finally {
-        if (Test-Path $work) { Remove-Item -Recurse -Force $work }
+        Remove-Item -Force $tmp -ErrorAction SilentlyContinue
     }
 }
 
-function Show-Summary {
-    Write-Host ""
-    Write-Host "============================================================" -ForegroundColor Cyan
-    Write-Host "  STACK IS UP  (network: $Network)" -ForegroundColor Cyan
-    Write-Host "============================================================" -ForegroundColor Cyan
-    Write-Host "PostgreSQL   container $PgContainer"
-    Write-Host "  external : postgresql+asyncpg://$($PgUser):$($PgPass)@localhost:$($PgPort)/$PgDb"
-    Write-Host "  in-app   : postgresql+asyncpg://$($PgUser):$($PgPass)@$($PgContainer):5432/$PgDb"
-    Write-Host ""
-    Write-Host "MQTT         container $MqttContainer"
-    Write-Host "  external : localhost:$MqttPort   (ws: $MqttWsPort)   $MqttUser/$MqttPass"
-    Write-Host "  in-app   : $($MqttContainer):1883"
-    Write-Host ""
-    Write-Host "Application  container $AppContainer"
-    Write-Host "  URL      : http://localhost:$AppPort"
-    Write-Host "  logs     : docker logs -f $AppContainer"
-    Write-Host "============================================================" -ForegroundColor Cyan
+# Name-based existence test. The old `docker inspect` + $LASTEXITCODE pattern is
+# fragile: any cmdlet in between leaves a stale exit code behind, and a missing
+# container makes docker print to stderr.
+function Remove-OuterContainer ($name) {
+    $hit = docker ps -a --filter "name=^/$name$" --format '{{.Names}}' 2>$null
+    if ($hit) { Warn "Removing existing $name"; docker rm -f $name 2>$null | Out-Null }
 }
 
-Install-DockerEngine
-Wait-Docker
-Ensure-Network
-Run-Postgres
-Setup-Mosquitto
-Run-Mosquitto
-Wait-Postgres
-
-if ($Url -and $Url -ne $UrlPlaceholder) {
-    Deploy-App
-} else {
-    Warn "Skipping app deploy: `$Url is not set (still the placeholder)."
-    Warn "Set `$Url and re-run to build and start the app."
+function Remove-InnerContainer ($name) {
+    $hit = docker exec $Dind docker ps -a --filter "name=^/$name$" --format '{{.Names}}' 2>$null
+    if ($hit) { docker exec $Dind docker rm -f $name 2>$null | Out-Null }
 }
 
-Show-Summary
+function Test-InnerRunning ($name) {
+    $state = docker exec $Dind docker inspect -f '{{.State.Running}}' $name 2>$null
+    return ($state -eq 'true')
+}
+
+# ------------------------- host Docker -------------------------
+docker info *> $null
+if ($LASTEXITCODE -ne 0) { Fail "Docker Desktop is not running." }
+
+if ((docker info --format '{{.OSType}}') -ne 'linux') {
+    Fail "Switch Docker Desktop to Linux containers."
+}
+Log "Docker ready"
+
+# --------------------------- DinD ------------------------------
+Remove-OuterContainer $Dind
+
+Log "Pulling $Image ..."
+docker pull $Image
+if ($LASTEXITCODE -ne 0) { Fail "Could not pull $Image." }
+
+docker volume create $Volume | Out-Null
+
+docker run -d `
+    --name $Dind `
+    --restart unless-stopped `
+    --privileged `
+    -e "DOCKER_TLS_CERTDIR=" `
+    -p "$($PgPort):5432" `
+    -p "$($MqttPort):1883" `
+    -p "$($MqttWsPort):9001" `
+    -p "$($GrafPort):3000" `
+    -p "$($AppPort):8000" `
+    -v "${Volume}:/var/lib/docker" `
+    $Image | Out-Null
+if ($LASTEXITCODE -ne 0) { Fail "Could not start $Dind - are those host ports free?" }
+Log "DinD started"
+
+# --------------------- wait for inner daemon -------------------
+Write-Host "[+] Waiting for inner Docker..."
+$innerReady = $false
+for ($i = 0; $i -lt 40; $i++) {
+    docker exec $Dind docker info *> $null
+    if ($LASTEXITCODE -eq 0) { $innerReady = $true; break }
+    Start-Sleep -Seconds 3
+}
+if (-not $innerReady) {
+    docker logs --tail 40 $Dind
+    Fail "Inner Docker failed to start."
+}
+Log "Inner Docker ready"
+
+# -------------------------- network ----------------------------
+docker exec $Dind docker network inspect $Network *> $null
+if ($LASTEXITCODE -ne 0) {
+    docker exec $Dind docker network create $Network | Out-Null
+}
+
+# ------------------------- PostgreSQL --------------------------
+Log "Pulling postgres:16 ..."
+docker exec $Dind docker pull postgres:16 | Out-Null
+if ($LASTEXITCODE -ne 0) { Fail "Could not pull postgres:16 inside $Dind." }
+
+Remove-InnerContainer 'sentineldb'
+docker exec $Dind docker volume create sentinel_pgdata | Out-Null
+
+docker exec $Dind docker run -d `
+    --name sentineldb `
+    --restart unless-stopped `
+    --network $Network `
+    -e "POSTGRES_USER=$PgUser" `
+    -e "POSTGRES_PASSWORD=$PgPass" `
+    -e "POSTGRES_DB=$PgDb" `
+    -p "5432:5432" `
+    -v "sentinel_pgdata:/var/lib/postgresql/data" `
+    postgres:16 | Out-Null
+if ($LASTEXITCODE -ne 0) { Fail "Could not start sentineldb." }
+Log "PostgreSQL started"
+
+# -------------------------- Mosquitto --------------------------
+Log "Pulling eclipse-mosquitto:2 ..."
+docker exec $Dind docker pull eclipse-mosquitto:2 | Out-Null
+if ($LASTEXITCODE -ne 0) { Fail "Could not pull eclipse-mosquitto:2 inside $Dind." }
+
+Remove-InnerContainer 'sentinel-mqtt'
+
+$mosquittoConf = @'
+persistence true
+persistence_location /mosquitto/data/
+log_dest stdout
+
+listener 1883 0.0.0.0
+protocol mqtt
+
+listener 9001 0.0.0.0
+protocol websockets
+
+allow_anonymous false
+password_file /mosquitto/config/passwordfile
+'@
+Copy-TextInto -Content $mosquittoConf -DestPath '/srv/sentinel/mosquitto/config/mosquitto.conf'
+
+docker exec $Dind docker run --rm `
+    --entrypoint mosquitto_passwd `
+    -v "/srv/sentinel/mosquitto/config:/mosquitto/config" `
+    eclipse-mosquitto:2 `
+    -b -c /mosquitto/config/passwordfile $MqttUser $MqttPass
+if ($LASTEXITCODE -ne 0) { Fail "Could not generate the MQTT password file." }
+docker exec $Dind chmod 0644 /srv/sentinel/mosquitto/config/passwordfile | Out-Null
+
+docker exec $Dind docker volume create sentinel_mqtt_data | Out-Null
+docker exec $Dind docker volume create sentinel_mqtt_log  | Out-Null
+
+docker exec $Dind docker run -d `
+    --name sentinel-mqtt `
+    --restart unless-stopped `
+    --network $Network `
+    -p "1883:1883" `
+    -p "9001:9001" `
+    -v "/srv/sentinel/mosquitto/config:/mosquitto/config" `
+    -v "sentinel_mqtt_data:/mosquitto/data" `
+    -v "sentinel_mqtt_log:/mosquitto/log" `
+    eclipse-mosquitto:2 | Out-Null
+if ($LASTEXITCODE -ne 0) { Fail "Could not start sentinel-mqtt." }
+
+Start-Sleep -Seconds 3
+if (-not (Test-InnerRunning 'sentinel-mqtt')) {
+    docker exec $Dind docker logs --tail 30 sentinel-mqtt
+    Fail "Mosquitto exited immediately - see the log above."
+}
+Log "Mosquitto started"
+
+# --------------------- wait for PostgreSQL ---------------------
+Write-Host "[+] Waiting for PostgreSQL..."
+$pgReady = $false
+for ($i = 0; $i -lt 30; $i++) {
+    docker exec $Dind docker exec sentineldb pg_isready -U $PgUser -d $PgDb *> $null
+    if ($LASTEXITCODE -eq 0) { $pgReady = $true; break }
+    Start-Sleep -Seconds 2
+}
+# The original loop discarded this result, so Grafana was provisioned against a
+# database that may never have come up.
+if (-not $pgReady) {
+    docker exec $Dind docker logs --tail 30 sentineldb
+    Fail "PostgreSQL did not become ready in ~60s."
+}
+Log "PostgreSQL ready"
+
+# --------------------------- Grafana ---------------------------
+$grafanaDs = @"
+apiVersion: 1
+
+datasources:
+  - name: SentinelDB
+    type: postgres
+    access: proxy
+    url: sentineldb:5432
+    database: $PgDb
+    user: $PgUser
+    isDefault: true
+    editable: true
+    secureJsonData:
+      password: $PgPass
+    jsonData:
+      sslmode: disable
+      postgresVersion: 1600
+"@
+Copy-TextInto -Content $grafanaDs -DestPath '/srv/sentinel/grafana/provisioning/datasources/sentineldb.yaml'
+
+Log "Pulling grafana/grafana-oss:11.1.0 ..."
+docker exec $Dind docker pull grafana/grafana-oss:11.1.0 | Out-Null
+if ($LASTEXITCODE -ne 0) { Fail "Could not pull grafana inside $Dind." }
+
+Remove-InnerContainer 'sentinel-grafana'
+docker exec $Dind docker volume create sentinel_grafana_data | Out-Null
+
+docker exec $Dind docker run -d `
+    --name sentinel-grafana `
+    --restart unless-stopped `
+    --network $Network `
+    -e "GF_SECURITY_ADMIN_USER=$GfUser" `
+    -e "GF_SECURITY_ADMIN_PASSWORD=$GfPass" `
+    -e "GF_USERS_ALLOW_SIGN_UP=false" `
+    -p "3000:3000" `
+    -v "sentinel_grafana_data:/var/lib/grafana" `
+    -v "/srv/sentinel/grafana/provisioning/datasources:/etc/grafana/provisioning/datasources" `
+    grafana/grafana-oss:11.1.0 | Out-Null
+if ($LASTEXITCODE -ne 0) { Fail "Could not start sentinel-grafana." }
+Log "Grafana started"
+
+# ------------------------- application -------------------------
+if ($Url) {
+    Log "Downloading application..."
+
+    # Single-line sh commands: no heredocs, so nothing to break on CRLF.
+    docker exec $Dind sh -c "command -v curl >/dev/null 2>&1 || apk add --no-cache curl >/dev/null"  | Out-Null
+    docker exec $Dind sh -c "command -v unzip >/dev/null 2>&1 || apk add --no-cache unzip >/dev/null" | Out-Null
+
+    docker exec $Dind sh -c "rm -rf /tmp/app && mkdir -p /tmp/app && curl -fsSL '$Url' -o /tmp/app/code.zip"
+    if ($LASTEXITCODE -ne 0) { Fail "Download failed: $Url" }
+
+    docker exec $Dind sh -c "cd /tmp/app && unzip -q code.zip && rm -f code.zip"
+    if ($LASTEXITCODE -ne 0) { Fail "Could not unpack the archive." }
+
+    # Most zips contain one top-level folder; the build context is that folder,
+    # not /tmp/app. Building /tmp/app directly is why "Dockerfile not found" hits.
+    $ctx = (docker exec $Dind sh -c 'n=$(find /tmp/app -mindepth 1 -maxdepth 1 ! -name __MACOSX | wc -l); d=$(find /tmp/app -mindepth 1 -maxdepth 1 -type d ! -name __MACOSX | head -n1); if [ "$n" -eq 1 ] && [ -n "$d" ]; then echo "$d"; else echo /tmp/app; fi').Trim()
+    Log "Build context: $ctx"
+
+    docker exec $Dind test -f "$ctx/Dockerfile" *> $null
+    if ($LASTEXITCODE -ne 0) {
+        Fail "No Dockerfile in the archive. Add one at the project root and re-run."
+    }
+
+    Log "Building sentinel-api ..."
+    docker exec $Dind docker build -t sentinel-api $ctx
+    if ($LASTEXITCODE -ne 0) { Fail "docker build failed - see the output above." }
+
+    Remove-InnerContainer 'sentinel-api'
+
+    docker exec $Dind test -f "$ctx/.env" *> $null
+    $hasEnv = ($LASTEXITCODE -eq 0)
+
+    if ($hasEnv) {
+        Log "Using bundled .env"
+        docker exec $Dind docker run -d `
+            --name sentinel-api `
+            --restart unless-stopped `
+            --network $Network `
+            -p "8000:8000" `
+            --env-file "$ctx/.env" `
+            sentinel-api | Out-Null
+    } else {
+        Warn "No .env in the archive - injecting default DB/MQTT settings"
+        docker exec $Dind docker run -d `
+            --name sentinel-api `
+            --restart unless-stopped `
+            --network $Network `
+            -p "8000:8000" `
+            -e "DATABASE_URL=postgresql+asyncpg://${PgUser}:${PgPass}@sentineldb:5432/${PgDb}" `
+            -e "MQTT_HOST=sentinel-mqtt" `
+            -e "MQTT_PORT=1883" `
+            -e "MQTT_USERNAME=$MqttUser" `
+            -e "MQTT_PASSWORD=$MqttPass" `
+            sentinel-api | Out-Null
+    }
+    if ($LASTEXITCODE -ne 0) { Fail "Could not start sentinel-api." }
+
+    Start-Sleep -Seconds 3
+    if (Test-InnerRunning 'sentinel-api') {
+        Log "API started"
+    } else {
+        docker exec $Dind docker logs --tail 40 sentinel-api
+        Warn "API container exited - see the log above."
+    }
+}
+
+# ---------------------------- done -----------------------------
+Write-Host ""
+Write-Host "========================================" -ForegroundColor Cyan
+Write-Host " Sentinel stack is running" -ForegroundColor Cyan
+Write-Host "========================================" -ForegroundColor Cyan
+Write-Host "PostgreSQL : localhost:$PgPort   (user $PgUser, db $PgDb)"
+Write-Host "MQTT       : localhost:$MqttPort   (user $MqttUser)"
+Write-Host "MQTT WS    : localhost:$MqttWsPort"
+Write-Host "Grafana    : http://localhost:$GrafPort   (user $GfUser)"
+if ($Url) { Write-Host "API        : http://localhost:$AppPort" }
+Write-Host ""
+docker exec $Dind docker ps --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}'
+Write-Host ""
+Write-Host "Tear down:  docker rm -f $Dind; docker volume rm $Volume" -ForegroundColor DarkGray
