@@ -19,7 +19,7 @@ from utils.command_registry import register
 from collectors.web_inspector import WebInspector
 from utils.command_registry import register
 from collectors.fly_inspector import FlyInspector
-
+from collectors.appserver_inspector import AppServerInspector
 
 
 
@@ -64,6 +64,14 @@ class SentinelAgent:
     def start(self):
         self._dispatcher = self._build_dispatcher()
         dispatch = self._make_dispatch()
+
+        try :
+            AppInsp = AppServerInspector(dispatch, machine_info=self.machine_info)
+            register("Appserver_inspector", AppInsp)
+            self._collectors.append(AppInsp)
+        except Exception as e:
+            print(f"FlyInspector error: {e}")
+
 
         try :
             insp = FlyInspector(dispatch, machine_info=self.machine_info, interval=60)

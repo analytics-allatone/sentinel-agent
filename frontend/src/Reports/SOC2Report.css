@@ -24,6 +24,7 @@
   /* App.css ships CRA's boilerplate `.App { text-align: center }`, which
      otherwise centres every label, card title and table cell on this page */
   text-align: left;
+  margin-top:10px;
 }
 
 /* ── top bar ───────────────────────────────────────────── */

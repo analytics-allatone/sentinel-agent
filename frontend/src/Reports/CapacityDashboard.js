@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import {
   Area,
   AreaChart,
@@ -1322,7 +1323,18 @@ function PrintReport({ payload, rows, gaps, stats, periodText, theme }) {
 export default function CapacityDashboard() {
   const initial = defaultLocalRange();
 
-  const [agentName, setAgentName] = useState("UpdatedWindowAgent");
+  // `?agent=<name>` scopes the report on arrival — that is how the dashboard's
+  // agent table hands an agent over. `agent_name` is accepted too, for URLs
+  // written by hand against the API's own parameter name.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const initialAgent = useMemo(
+    () => (searchParams.get("agent") || searchParams.get("agent_name") || "").trim(),
+    // read once, on arrival: later edits come from the controls, not the URL
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    []
+  );
+
+  const [agentName, setAgentName] = useState(initialAgent || "UpdatedWindowAgent");
   const [fromLocal, setFromLocal] = useState(initial.from);
   const [toLocal, setToLocal] = useState(initial.to);
   // the selected "Range" preset in hours ("12"), or "custom" once From/To is edited
@@ -1461,9 +1473,23 @@ export default function CapacityDashboard() {
     setPrinting(true);
   };
 
+  /** Mirror the scope into the URL, so a refresh or a shared link keeps it. */
+  const syncUrl = useCallback(
+    (name) => {
+      const next = new URLSearchParams(searchParams);
+      next.delete("agent_name"); // normalise the alias away
+      if (name) next.set("agent", name);
+      else next.delete("agent");
+      setSearchParams(next, { replace: true });
+    },
+    [searchParams, setSearchParams]
+  );
+
   const onSubmit = (event) => {
     event.preventDefault();
-    load(toParams());
+    const params = toParams();
+    syncUrl(params.agentName);
+    load(params);
   };
 
   // Seed From/To to the last `hours` (IST) and load immediately — the dropdown.
@@ -1472,6 +1498,7 @@ export default function CapacityDashboard() {
     setFromLocal(next.from);
     setToLocal(next.to);
     setPreset(String(hours));
+    syncUrl(agentName.trim());
     load({
       agentName: agentName.trim(),
       fromDt: istInputToApi(next.from, "00"),

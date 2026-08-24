@@ -23,7 +23,7 @@ import Sidebar from "../Sidebar/Sidebar";
 import "./Layout.css";
 
 const Layout = ({ children }) => {
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const toggleSidebar = () => {
     setSidebarOpen((prev) => !prev);

@@ -9,6 +9,7 @@ import {
   LuDownload,
   LuChevronDown,
   LuChevronUp,
+  LuPlus,
 } from "react-icons/lu";
 
 import {
@@ -40,7 +41,6 @@ function Dashboard() {
   const [agents, setAgents] = useState([]);
   const [selectedAgents, setSelectedAgents] = useState(new Set());
 
-
   // Chart data — kept as the API's own aggregate counts, not recomputed
   // from the (possibly filtered/paginated) agents table, since these
   // represent the full account-wide picture regardless of what's on screen.
@@ -54,32 +54,32 @@ function Dashboard() {
   const [groupStats, setGroupStats] = useState([]);
 
   const totalAgents =
-  statusCounts.active +
-  statusCounts.disconnected +
-  statusCounts.pending +
-  statusCounts.neverConnected;
+    statusCounts.active +
+    statusCounts.disconnected +
+    statusCounts.pending +
+    statusCounts.neverConnected;
 
-const totalOsAgents = osStats.reduce(
-  (sum, item) => sum + Number(item.os_count || 0),
-  0
-);
+  const totalOsAgents = osStats.reduce(
+    (sum, item) => sum + Number(item.os_count || 0),
+    0,
+  );
 
-const totalGroupAgents = groupStats.reduce(
-  (sum, item) => sum + Number(item.group_count || 0),
-  0
-);
+  const totalGroupAgents = groupStats.reduce(
+    (sum, item) => sum + Number(item.group_count || 0),
+    0,
+  );
 
   // Search
   const [searchTerm, setSearchTerm] = useState("");
 
   // Date filter
-const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
+  const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
 
-const [appliedStartDate, setAppliedStartDate] = useState("");
-const [appliedEndDate, setAppliedEndDate] = useState("");
+  const [appliedStartDate, setAppliedStartDate] = useState("");
+  const [appliedEndDate, setAppliedEndDate] = useState("");
 
-const [startDate, setStartDate] = useState("");
-const [endDate, setEndDate] = useState("");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
 
   // Available-services expansion: which agent row is open, plus a per-agent
   // cache of { loading, error, list } so re-opening a row doesn't refetch.
@@ -115,66 +115,64 @@ const [endDate, setEndDate] = useState("");
   }, []);
 
   const formatLastSeen = (value) => {
-  if (!value) {
+    if (!value) {
+      return {
+        date: "—",
+        time: "",
+      };
+    }
+
+    const text = String(value).trim();
+
+    const match = text.match(
+      /^(.*?\d{4})\s+(\d{1,2}:\d{2}(?::\d{2})?\s*[AP]M.*)?$/i,
+    );
+
+    if (!match) {
+      return {
+        date: text,
+        time: "",
+      };
+    }
+
     return {
-      date: "—",
-      time: "",
+      date: match[1],
+      time: match[2] || "",
     };
-  }
-
-  
-
-  const text = String(value).trim();
-
-  const match = text.match(
-    /^(.*?\d{4})\s+(\d{1,2}:\d{2}(?::\d{2})?\s*[AP]M.*)?$/i
-  );
-
-  if (!match) {
-    return {
-      date: text,
-      time: "",
-    };
-  }
-
-  return {
-    date: match[1],
-    time: match[2] || "",
   };
-};
 
-const parseAgentDate = (value) => {
-  if (!value) return null;
+  const parseAgentDate = (value) => {
+    if (!value) return null;
 
-  const date = new Date(value);
+    const date = new Date(value);
 
-  if (Number.isNaN(date.getTime())) {
+    if (Number.isNaN(date.getTime())) {
+      return null;
+    }
+
+    return date;
+  };
+
+  const getOsIcon = (os) => {
+    const value = String(os || "").toLowerCase();
+
+    if (value.includes("windows")) {
+      return <FaWindows className="windows-icon" />;
+    }
+
+    if (
+      value.includes("linux") ||
+      value.includes("ubuntu") ||
+      value.includes("debian") ||
+      value.includes("centos") ||
+      value.includes("red hat") ||
+      value.includes("rhel")
+    ) {
+      return <FaLinux className="linux-icon" />;
+    }
+
     return null;
-  }
-
-  return date;
-};
-
-const getOsIcon = (os) => {
-  const value = String(os || "").toLowerCase();
-
-  if (value.includes("windows")) {
-    return <FaWindows className="windows-icon" />;
-  }
-
-  if (
-    value.includes("linux") ||
-    value.includes("ubuntu") ||
-    value.includes("debian") ||
-    value.includes("centos") ||
-    value.includes("red hat") ||
-    value.includes("rhel")
-  ) {
-    return <FaLinux className="linux-icon" />;
-  }
-
-  return null;
-};
+  };
 
   const fetchAgents = () => {
     api
@@ -285,170 +283,157 @@ const getOsIcon = (os) => {
   );
 
   console.log("OS TOTAL:", totalOsAgents);
-console.log("GROUP TOTAL:", totalGroupAgents);
+  console.log("GROUP TOTAL:", totalGroupAgents);
 
-//   const renderDonut = (segments, emptyColor, total = 0) => (
-//   <div className="donut-wrapper">
-//     <svg width="150" height="150" viewBox="0 0 150 150">
-//       <g transform="rotate(-90 75 75)">
-//         {segments.length > 0 ? (
-//           segments.map((segment, index) => (
-//             <circle
-//               key={index}
-//               cx="75"
-//               cy="75"
-//               r={RADIUS}
-//               fill="none"
-//               stroke={segment.color}
-//               strokeWidth="18"
-//               strokeDasharray={`${segment.dasharray} ${CIRCUMFERENCE.toFixed(2)}`}
-//               strokeDashoffset={segment.dashoffset}
-//             >
-//               <title>{`${segment.percentage}%`}</title>
-//             </circle>
-//           ))
-//         ) : (
-//           <circle
-//             cx="75"
-//             cy="75"
-//             r={RADIUS}
-//             fill="none"
-//             stroke={emptyColor}
-//             strokeWidth="18"
-//             strokeDasharray={`${CIRCUMFERENCE.toFixed(2)} ${CIRCUMFERENCE.toFixed(2)}`}
-//           />
-//         )}
-//       </g>
-//     </svg>
+  //   const renderDonut = (segments, emptyColor, total = 0) => (
+  //   <div className="donut-wrapper">
+  //     <svg width="150" height="150" viewBox="0 0 150 150">
+  //       <g transform="rotate(-90 75 75)">
+  //         {segments.length > 0 ? (
+  //           segments.map((segment, index) => (
+  //             <circle
+  //               key={index}
+  //               cx="75"
+  //               cy="75"
+  //               r={RADIUS}
+  //               fill="none"
+  //               stroke={segment.color}
+  //               strokeWidth="18"
+  //               strokeDasharray={`${segment.dasharray} ${CIRCUMFERENCE.toFixed(2)}`}
+  //               strokeDashoffset={segment.dashoffset}
+  //             >
+  //               <title>{`${segment.percentage}%`}</title>
+  //             </circle>
+  //           ))
+  //         ) : (
+  //           <circle
+  //             cx="75"
+  //             cy="75"
+  //             r={RADIUS}
+  //             fill="none"
+  //             stroke={emptyColor}
+  //             strokeWidth="18"
+  //             strokeDasharray={`${CIRCUMFERENCE.toFixed(2)} ${CIRCUMFERENCE.toFixed(2)}`}
+  //           />
+  //         )}
+  //       </g>
+  //     </svg>
 
-//     <div className="donut-center">
-//       <strong>{total}</strong>
-//       <span>Total</span>
-//     </div>
-//   </div>
-// );
-const renderDonut = (segments, emptyColor, total = 0) => {
-  console.log("RENDER DONUT TOTAL:", total);
+  //     <div className="donut-center">
+  //       <strong>{total}</strong>
+  //       <span>Total</span>
+  //     </div>
+  //   </div>
+  // );
+  const renderDonut = (segments, emptyColor, total = 0) => {
+    console.log("RENDER DONUT TOTAL:", total);
 
-  return (
-    <div className="donut-wrapper">
-      <svg width="150" height="150" viewBox="0 0 150 150">
-        <g transform="rotate(-90 75 75)">
-          {segments.length > 0 ? (
-            segments.map((segment, index) => (
+    return (
+      <div className="donut-wrapper">
+        <svg width="150" height="150" viewBox="0 0 150 150">
+          <g transform="rotate(-90 75 75)">
+            {segments.length > 0 ? (
+              segments.map((segment, index) => (
+                <circle
+                  key={index}
+                  cx="75"
+                  cy="75"
+                  r={RADIUS}
+                  fill="none"
+                  stroke={segment.color}
+                  strokeWidth="18"
+                  strokeDasharray={`${segment.dasharray} ${CIRCUMFERENCE.toFixed(2)}`}
+                  strokeDashoffset={segment.dashoffset}
+                >
+                  <title>{`${segment.percentage}%`}</title>
+                </circle>
+              ))
+            ) : (
               <circle
-                key={index}
                 cx="75"
                 cy="75"
                 r={RADIUS}
                 fill="none"
-                stroke={segment.color}
+                stroke={emptyColor}
                 strokeWidth="18"
-                strokeDasharray={`${segment.dasharray} ${CIRCUMFERENCE.toFixed(2)}`}
-                strokeDashoffset={segment.dashoffset}
-              >
-                <title>{`${segment.percentage}%`}</title>
-              </circle>
-            ))
-          ) : (
-            <circle
-              cx="75"
-              cy="75"
-              r={RADIUS}
-              fill="none"
-              stroke={emptyColor}
-              strokeWidth="18"
-              strokeDasharray={`${CIRCUMFERENCE.toFixed(2)} ${CIRCUMFERENCE.toFixed(2)}`}
-            />
-          )}
-        </g>
-      </svg>
+                strokeDasharray={`${CIRCUMFERENCE.toFixed(2)} ${CIRCUMFERENCE.toFixed(2)}`}
+              />
+            )}
+          </g>
+        </svg>
 
-      <div className="donut-center">
-        <strong>{total}</strong>
-        <span>Total</span>
+        <div className="donut-center">
+          <strong>{total}</strong>
+          <span>Total</span>
+        </div>
       </div>
-    </div>
-  );
-};
+    );
+  };
 
   // ---------------------------------------------------------------------
   // Search — matches against every visible column of the agents table.
   // ---------------------------------------------------------------------
   const filteredAgents = useMemo(() => {
-  let result = [...agents];
+    let result = [...agents];
 
-  // ---------------------------------------
-  // DATE FILTER
-  // ---------------------------------------
-  if (appliedStartDate || appliedEndDate) {
-    const start = appliedStartDate
-      ? new Date(`${appliedStartDate}T00:00:00`)
-      : null;
+    // ---------------------------------------
+    // DATE FILTER
+    // ---------------------------------------
+    if (appliedStartDate || appliedEndDate) {
+      const start = appliedStartDate
+        ? new Date(`${appliedStartDate}T00:00:00`)
+        : null;
 
-    const end = appliedEndDate
-      ? new Date(`${appliedEndDate}T23:59:59.999`)
-      : null;
+      const end = appliedEndDate
+        ? new Date(`${appliedEndDate}T23:59:59.999`)
+        : null;
 
-    result = result.filter((agent) => {
-      const agentDate = parseAgentDate(agent.lastSeen);
+      result = result.filter((agent) => {
+        const agentDate = parseAgentDate(agent.lastSeen);
 
-      // If agent has no date, don't include it
-      // in a date-specific result.
-      if (!agentDate) {
-        return false;
-      }
+        // If agent has no date, don't include it
+        // in a date-specific result.
+        if (!agentDate) {
+          return false;
+        }
 
-      if (start && agentDate < start) {
-        return false;
-      }
+        if (start && agentDate < start) {
+          return false;
+        }
 
-      if (end && agentDate > end) {
-        return false;
-      }
+        if (end && agentDate > end) {
+          return false;
+        }
 
-      return true;
-    });
-  }
+        return true;
+      });
+    }
 
-  // ---------------------------------------
-  // SEARCH FILTER
-  // ---------------------------------------
-  const term = searchTerm.trim().toLowerCase();
+    // ---------------------------------------
+    // SEARCH FILTER
+    // ---------------------------------------
+    const term = searchTerm.trim().toLowerCase();
 
-  if (term) {
-    result = result.filter((agent) =>
-      [
-        agent.id,
-        agent.name,
-        agent.macAddress,
-        agent.hostName,
-        agent.ipAddress,
-        agent.os,
-        agent.architecture,
-        agent.status,
-        agent.group,
-      ]
-        .filter(
-          (value) =>
-            value !== null &&
-            value !== undefined
-        )
-        .some((value) =>
-          String(value)
-            .toLowerCase()
-            .includes(term)
-        )
-    );
-  }
+    if (term) {
+      result = result.filter((agent) =>
+        [
+          agent.id,
+          agent.name,
+          agent.macAddress,
+          agent.hostName,
+          agent.ipAddress,
+          agent.os,
+          agent.architecture,
+          agent.status,
+          agent.group,
+        ]
+          .filter((value) => value !== null && value !== undefined)
+          .some((value) => String(value).toLowerCase().includes(term)),
+      );
+    }
 
-  return result;
-}, [
-  agents,
-  searchTerm,
-  appliedStartDate,
-  appliedEndDate,
-]);
+    return result;
+  }, [agents, searchTerm, appliedStartDate, appliedEndDate]);
 
   // Reset to page 1 whenever the search term or page size changes.
   useEffect(() => {
@@ -488,58 +473,56 @@ const renderDonut = (segments, emptyColor, total = 0) => {
   };
 
   const handleApplyDateFilter = () => {
-  if (!startDate || !endDate) {
-    return;
-  }
+    if (!startDate || !endDate) {
+      return;
+    }
 
-  if (startDate > endDate) {
-    alert("From Date cannot be greater than To Date.");
-    return;
-  }
+    if (startDate > endDate) {
+      alert("From Date cannot be greater than To Date.");
+      return;
+    }
 
-  setAppliedStartDate(startDate);
-  setAppliedEndDate(endDate);
+    setAppliedStartDate(startDate);
+    setAppliedEndDate(endDate);
 
-  setCurrentPage(1);
-  setIsDatePickerOpen(false);
-};
-
-const handleClearDateFilter = () => {
-  setStartDate("");
-  setEndDate("");
-  setAppliedStartDate("");
-  setAppliedEndDate("");
-
-  setCurrentPage(1);
-  setIsDatePickerOpen(false);
-};
-
-const formatDateRange = () => {
-  if (!appliedStartDate || !appliedEndDate) {
-    return "All dates";
-  }
-
-  const start = new Date(`${appliedStartDate}T00:00:00`);
-  const end = new Date(`${appliedEndDate}T00:00:00`);
-
-  const options = {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
+    setCurrentPage(1);
+    setIsDatePickerOpen(false);
   };
 
-  return `${start.toLocaleDateString("en-US", options)} – ${end.toLocaleDateString(
-    "en-US",
-    options
-  )}`;
-};
+  const handleClearDateFilter = () => {
+    setStartDate("");
+    setEndDate("");
+    setAppliedStartDate("");
+    setAppliedEndDate("");
 
-const getPercentage = (count) => {
-  if (!totalAgents) return 0;
-  return Math.round((count / totalAgents) * 100);
-};
+    setCurrentPage(1);
+    setIsDatePickerOpen(false);
+  };
 
+  const formatDateRange = () => {
+    if (!appliedStartDate || !appliedEndDate) {
+      return "All dates";
+    }
 
+    const start = new Date(`${appliedStartDate}T00:00:00`);
+    const end = new Date(`${appliedEndDate}T00:00:00`);
+
+    const options = {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    };
+
+    return `${start.toLocaleDateString("en-US", options)} – ${end.toLocaleDateString(
+      "en-US",
+      options,
+    )}`;
+  };
+
+  const getPercentage = (count) => {
+    if (!totalAgents) return 0;
+    return Math.round((count / totalAgents) * 100);
+  };
 
   const handleExportFormatted = () => {
     if (filteredAgents.length === 0) return;
@@ -678,61 +661,65 @@ const getPercentage = (count) => {
     }
     if (!state.list.length) {
       return (
-        <div className="services-status">No services available for this agent.</div>
+        <div className="services-status">
+          No services available for this agent.
+        </div>
       );
     }
 
     return (
       <>
-      <table className="services-table">
-        <thead>
-          <tr>
-            <th>Engine</th>
-            <th>Service Name</th>
-            <th>Username</th>
-            <th>Status</th>
-            <th className="svc-th-action" />
-          </tr>
-        </thead>
-        <tbody>
-          {state.list.map((svc, i) => {
-            const style = getEngineStyle(svc.engine);
-            return (
-              <tr
-                key={`${svc.engine}-${i}`}
-                className="svc-row"
-                onClick={() => handleEngineClick(agentName, svc.engine)}
-                title={`View ${svc.engine} credentials`}
-              >
-                <td className="svc-engine">
-                  <span className="svc-engine-cell">
-                    <span
-                      className="engine-avatar engine-avatar-sm"
-                      style={{ background: style.color }}
-                    >
-                      {style.label}
+        <table className="services-table">
+          <thead>
+            <tr>
+              <th>Engine</th>
+              <th>Service Name</th>
+              <th>Username</th>
+              <th>Status</th>
+              <th className="svc-th-action" />
+            </tr>
+          </thead>
+          <tbody>
+            {state.list.map((svc, i) => {
+              const style = getEngineStyle(svc.engine);
+              return (
+                <tr
+                  key={`${svc.engine}-${i}`}
+                  className="svc-row"
+                  onClick={() => handleEngineClick(agentName, svc.engine)}
+                  title={`View ${svc.engine} credentials`}
+                >
+                  <td className="svc-engine">
+                    <span className="svc-engine-cell">
+                      <span
+                        className="engine-avatar engine-avatar-sm"
+                        style={{ background: style.color }}
+                      >
+                        {style.label}
+                      </span>
+                      <span className="svc-engine-name">{svc.engine}</span>
                     </span>
-                    <span className="svc-engine-name">{svc.engine}</span>
-                  </span>
-                </td>
-                <td>{svc.service_name || "—"}</td>
-                <td>{svc.username || "—"}</td>
-                <td>
-                  <span className={`cred-chip ${svc.is_enable ? "chip-on" : "chip-off"}`}>
-                    <i className="chip-dot" />
-                    {svc.is_enable ? "Enabled" : "Disabled"}
-                  </span>
-                </td>
-                <td className="svc-td-action">
-                  <span className="svc-view-hint">
-                    View credentials <span className="svc-chevron">›</span>
-                  </span>
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
+                  </td>
+                  <td>{svc.service_name || "—"}</td>
+                  <td>{svc.username || "—"}</td>
+                  <td>
+                    <span
+                      className={`cred-chip ${svc.is_enable ? "chip-on" : "chip-off"}`}
+                    >
+                      <i className="chip-dot" />
+                      {svc.is_enable ? "Enabled" : "Disabled"}
+                    </span>
+                  </td>
+                  <td className="svc-td-action">
+                    <span className="svc-view-hint">
+                      View credentials <span className="svc-chevron">›</span>
+                    </span>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
       </>
     );
   };
@@ -927,7 +914,8 @@ const getPercentage = (count) => {
       .then(() => {
         setCopiedField(fieldKey);
         setTimeout(
-          () => setCopiedField((current) => (current === fieldKey ? "" : current)),
+          () =>
+            setCopiedField((current) => (current === fieldKey ? "" : current)),
           1200,
         );
       })
@@ -946,7 +934,9 @@ const getPercentage = (count) => {
       sqlserver: { color: "#a91d22", label: "MS" },
       redis: { color: "#d82c20", label: "Rd" },
     };
-    return styles[key] || { color: "#667eea", label: (engine || "?").slice(0, 2) };
+    return (
+      styles[key] || { color: "#667eea", label: (engine || "?").slice(0, 2) }
+    );
   };
 
   // Response shape: data.credentials = [{ id, agent_name, engine, host, port,
@@ -962,141 +952,258 @@ const getPercentage = (count) => {
     const credentials = credModal.data?.credentials;
     if (!Array.isArray(credentials) || credentials.length === 0) {
       return (
-        <div className="cred-status">
-          No credentials found for this engine.
-        </div>
+        <div className="cred-status">No credentials found for this engine.</div>
       );
     }
 
     return (
       <>
-      {saveMsg && <div className="cred-saved-notice">✓ {saveMsg}</div>}
-      {saveError && <div className="cred-status cred-error">{saveError}</div>}
-      <div className="cred-count">
-        <span className="cred-count-num">{credentials.length}</span>
-        credential{credentials.length === 1 ? "" : "s"} found
-      </div>
-      <div className="cred-list">
-        {credentials.map((cred, i) => {
-          const style = getEngineStyle(cred.engine);
-          const fields = [
-            ["Host", cred.host],
-            ["Port", cred.port],
-            ["Username", cred.user_name],
-            ["Service", cred.service_name],
-            ["Database", cred.dbname],
-          ];
-          return (
-            <div className="cred-card" key={cred.id ?? i}>
-              <div
-                className="cred-card-accent"
-                style={{ background: style.color }}
-              />
-              <div className="cred-card-head">
-                <span
-                  className="engine-avatar"
+        {saveMsg && <div className="cred-saved-notice">✓ {saveMsg}</div>}
+        {saveError && <div className="cred-status cred-error">{saveError}</div>}
+        <div className="cred-count">
+          <span className="cred-count-num">{credentials.length}</span>
+          credential{credentials.length === 1 ? "" : "s"} found
+        </div>
+        <div className="cred-list">
+          {credentials.map((cred, i) => {
+            const style = getEngineStyle(cred.engine);
+            const fields = [
+              ["Host", cred.host],
+              ["Port", cred.port],
+              ["Username", cred.user_name],
+              ["Service", cred.service_name],
+              ["Database", cred.dbname],
+            ];
+            return (
+              <div className="cred-card" key={cred.id ?? i}>
+                <div
+                  className="cred-card-accent"
                   style={{ background: style.color }}
-                >
-                  {style.label}
-                </span>
-                <div className="cred-card-titles">
-                  <span className="cred-card-engine">
-                    {cred.engine || "—"}
-                    <span className="cred-id">#{cred.id ?? "—"}</span>
-                  </span>
-                  <span className="cred-card-agent">{cred.agent_name || "—"}</span>
-                </div>
-                <div className="cred-card-chips">
-                  <span className={`cred-chip ${cred.is_active ? "chip-on" : "chip-off"}`}>
-                    <i className="chip-dot" />
-                    {cred.is_active ? "Active" : "Inactive"}
-                  </span>
+                />
+                <div className="cred-card-head">
                   <span
-                    className={`cred-chip ${cred.has_password ? "chip-on" : "chip-warn"}`}
-                    title={cred.has_password ? "Password is set" : "No password set"}
+                    className="engine-avatar"
+                    style={{ background: style.color }}
                   >
-                    <i className="chip-dot" />
-                    {cred.has_password ? "Password" : "No password"}
+                    {style.label}
                   </span>
-                  <button
-                    type="button"
-                    className="cred-edit-btn"
-                    title="Edit this credential"
-                    onClick={() => startEditCred(cred)}
-                  >
-                    ✎ Edit
-                  </button>
-                  {confirmDeleteId === cred.id ? (
-                    <span className="cred-del-confirm">
-                      Delete?
-                      <button
-                        type="button"
-                        className="cred-del-yes"
-                        onClick={() => handleDeleteCred(cred.id)}
-                        disabled={deletingId === cred.id}
-                      >
-                        {deletingId === cred.id ? "…" : "Yes"}
-                      </button>
-                      <button
-                        type="button"
-                        className="cred-del-no"
-                        onClick={() => setConfirmDeleteId(null)}
-                        disabled={deletingId === cred.id}
-                      >
-                        No
-                      </button>
+                  <div className="cred-card-titles">
+                    <span className="cred-card-engine">
+                      {cred.engine || "—"}
+                      <span className="cred-id">#{cred.id ?? "—"}</span>
                     </span>
-                  ) : (
+                    <span className="cred-card-agent">
+                      {cred.agent_name || "—"}
+                    </span>
+                  </div>
+                  <div className="cred-card-chips">
+                    <span
+                      className={`cred-chip ${cred.is_active ? "chip-on" : "chip-off"}`}
+                    >
+                      <i className="chip-dot" />
+                      {cred.is_active ? "Active" : "Inactive"}
+                    </span>
+                    <span
+                      className={`cred-chip ${cred.has_password ? "chip-on" : "chip-warn"}`}
+                      title={
+                        cred.has_password
+                          ? "Password is set"
+                          : "No password set"
+                      }
+                    >
+                      <i className="chip-dot" />
+                      {cred.has_password ? "Password" : "No password"}
+                    </span>
                     <button
                       type="button"
-                      className="cred-del-btn"
-                      title="Delete this credential"
-                      onClick={() => setConfirmDeleteId(cred.id)}
+                      className="cred-edit-btn"
+                      title="Edit this credential"
+                      onClick={() => startEditCred(cred)}
                     >
-                      🗑 Delete
+                      ✎ Edit
                     </button>
-                  )}
+                    {confirmDeleteId === cred.id ? (
+                      <span className="cred-del-confirm">
+                        Delete?
+                        <button
+                          type="button"
+                          className="cred-del-yes"
+                          onClick={() => handleDeleteCred(cred.id)}
+                          disabled={deletingId === cred.id}
+                        >
+                          {deletingId === cred.id ? "…" : "Yes"}
+                        </button>
+                        <button
+                          type="button"
+                          className="cred-del-no"
+                          onClick={() => setConfirmDeleteId(null)}
+                          disabled={deletingId === cred.id}
+                        >
+                          No
+                        </button>
+                      </span>
+                    ) : (
+                      <button
+                        type="button"
+                        className="cred-del-btn"
+                        title="Delete this credential"
+                        onClick={() => setConfirmDeleteId(cred.id)}
+                      >
+                        🗑 Delete
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                <div className="cred-grid">
+                  {fields.map(([label, value]) => {
+                    const fieldKey = `${cred.id ?? i}-${label}`;
+                    const display = value ?? "—";
+                    const copyable =
+                      value !== null && value !== undefined && value !== "";
+                    return (
+                      <div className="cred-field" key={label}>
+                        <span className="cred-field-label">{label}</span>
+                        <span className="cred-field-value">
+                          <span className="cred-field-text">
+                            {display === "" ? "—" : display}
+                          </span>
+                          {copyable && (
+                            <button
+                              type="button"
+                              className={`copy-btn ${copiedField === fieldKey ? "copied" : ""}`}
+                              title={
+                                copiedField === fieldKey
+                                  ? "Copied!"
+                                  : `Copy ${label.toLowerCase()}`
+                              }
+                              onClick={() => copyValue(fieldKey, value)}
+                            >
+                              {copiedField === fieldKey ? "✓" : "⧉"}
+                            </button>
+                          )}
+                        </span>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
-
-              <div className="cred-grid">
-                {fields.map(([label, value]) => {
-                  const fieldKey = `${cred.id ?? i}-${label}`;
-                  const display = value ?? "—";
-                  const copyable = value !== null && value !== undefined && value !== "";
-                  return (
-                    <div className="cred-field" key={label}>
-                      <span className="cred-field-label">{label}</span>
-                      <span className="cred-field-value">
-                        <span className="cred-field-text">{display === "" ? "—" : display}</span>
-                        {copyable && (
-                          <button
-                            type="button"
-                            className={`copy-btn ${copiedField === fieldKey ? "copied" : ""}`}
-                            title={copiedField === fieldKey ? "Copied!" : `Copy ${label.toLowerCase()}`}
-                            onClick={() => copyValue(fieldKey, value)}
-                          >
-                            {copiedField === fieldKey ? "✓" : "⧉"}
-                          </button>
-                        )}
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          );
-        })}
-      </div>
+            );
+          })}
+        </div>
       </>
     );
+  };
+
+  const buildTrendData = (agents, type) => {
+    if (!agents || agents.length === 0) {
+      return [0, 0, 0, 0, 0, 0, 0];
+    }
+
+    const total = agents.length;
+
+    const values = [];
+
+    // Agents ko 7 logical segments mein divide kar rahe hain.
+    // Har segment actual backend agents ke subset se calculate hoga.
+    for (let i = 1; i <= 7; i++) {
+      const endIndex = Math.ceil((total * i) / 7);
+      const subset = agents.slice(0, endIndex);
+
+      let value = 0;
+
+      switch (type) {
+        case "total":
+          value = subset.length;
+          break;
+
+        case "active":
+          value = subset.filter(
+            (agent) => agent.status === "active" || agent.is_active === true,
+          ).length;
+          break;
+
+        case "disconnected":
+          value = subset.filter(
+            (agent) => agent.status === "disconnected",
+          ).length;
+          break;
+
+        case "pending":
+          value = subset.filter((agent) => agent.status === "pending").length;
+          break;
+
+        case "neverConnected":
+          value = subset.filter(
+            (agent) => agent.status === "never_connected",
+          ).length;
+          break;
+
+        default:
+          value = 0;
+      }
+
+      values.push(value);
+    }
+
+    return values;
+  };
+
+  const totalTrend = buildTrendData(filteredAgents, "total");
+
+  const activeTrend = buildTrendData(filteredAgents, "active");
+
+  const disconnectedTrend = buildTrendData(filteredAgents, "disconnected");
+
+  const pendingTrend = buildTrendData(filteredAgents, "pending");
+
+  const neverConnectedTrend = buildTrendData(filteredAgents, "neverConnected");
+
+  const generateTrendPath = (values) => {
+    if (!values || values.length === 0) {
+      return "M2 38 L218 38";
+    }
+
+    const width = 216;
+    const height = 30;
+    const startX = 2;
+    const bottomY = 40;
+
+    const maxValue = Math.max(...values, 1);
+
+    const points = values.map((value, index) => {
+      const x = startX + (index / (values.length - 1)) * width;
+
+      const y = bottomY - (value / maxValue) * height;
+
+      return {
+        x,
+        y,
+      };
+    });
+
+    let path = `M ${points[0].x} ${points[0].y}`;
+
+    for (let i = 1; i < points.length; i++) {
+      const previous = points[i - 1];
+      const current = points[i];
+
+      const controlX = (previous.x + current.x) / 2;
+
+      path += `
+      C
+      ${controlX} ${previous.y},
+      ${controlX} ${current.y},
+      ${current.x} ${current.y}
+    `;
+    }
+
+    return path;
   };
 
   const goToPage = (page) => {
     setCurrentPage(Math.min(Math.max(page, 1), totalPages));
   };
-
-  
 
   // Compact page-number list with ellipses for large page counts.
   const pageNumbers = useMemo(() => {
@@ -1134,284 +1241,284 @@ const getPercentage = (count) => {
       </div> */}
 
       <div className="dashboard-title-row">
-  <div className="dashboard-title">
-    <h1>Dashboard</h1>
-    <p>Overview of your network security</p>
-  </div>
-
-  <div className="dashboard-title-actions">
-    <div className="date-filter-wrapper">
-
-  <button
-    type="button"
-    className="date-filter"
-    onClick={() =>
-      setIsDatePickerOpen((prev) => !prev)
-    }
-  >
-   <span className="date-filter-icon">
-  <LuCalendarDays />
-</span>
-
-<span className="date-filter-text">
-  {formatDateRange()}
-</span>
-
-<span className="date-filter-arrow">
-  {isDatePickerOpen ? <LuChevronUp /> : <LuChevronDown />}
-</span>
-  </button>
-
-
-  {isDatePickerOpen && (
-    <div className="date-picker-popup">
-
-      <div className="date-picker-header">
-        <div>
-          <h4>Select Date Range</h4>
-          <p>Filter dashboard data by date</p>
-        </div>
-      </div>
-
-
-      <div className="date-picker-body">
-
-        <div className="date-field">
-
-          <label>
-            From Date
-          </label>
-
-          <input
-            type="date"
-            value={startDate}
-            onChange={(e) =>
-              setStartDate(e.target.value)
-            }
-          />
-
+        <div className="dashboard-title">
+          <h1>Dashboard</h1>
+          <p>Overview of your network security</p>
         </div>
 
-
-        <div className="date-field">
-
-          <label>
-            To Date
-          </label>
-
-          <input
-            type="date"
-            value={endDate}
-            min={startDate || undefined}
-            onChange={(e) =>
-              setEndDate(e.target.value)
-            }
-          />
-
-        </div>
-
-      </div>
-
-
-      <div className="date-picker-footer">
-
-        <button
-          type="button"
-          className="date-clear-btn"
-          onClick={handleClearDateFilter}
-        >
-          Clear
-        </button>
-
-        <button
-          type="button"
-          className="date-apply-btn"
-          onClick={handleApplyDateFilter}
-        >
-          Apply Filter
-        </button>
-
-      </div>
-
-    </div>
-  )}
-
-</div>
-
-   <button
+        <div className="dashboard-title-actions">
+          <button
   type="button"
-  className="btn-refresh"
-  onClick={handleRefresh}
-  title="Refresh"
+  className="deploy-header-button"
+  onClick={handleDeployAgent}
 >
-  <LuRefreshCw />
+  <LuPlus />
+  <span>Deploy new agent</span>
 </button>
+          <div className="date-filter-wrapper">
+            <button
+              type="button"
+              className="date-filter"
+              onClick={() => setIsDatePickerOpen((prev) => !prev)}
+            >
+              <span className="date-filter-icon">
+                <LuCalendarDays />
+              </span>
 
-    <button
-  type="button"
-  className="btn-export"
-  onClick={handleExportFormatted}
->
-  <LuDownload />
-  <span> Export</span>
-</button>
-  </div>
-</div>
+              <span className="date-filter-text">{formatDateRange()}</span>
 
-{/* KPI Summary */}
-<div className="dashboard-kpi-section">
+              <span className="date-filter-arrow">
+                {isDatePickerOpen ? <LuChevronUp /> : <LuChevronDown />}
+              </span>
+            </button>
 
-  <div className="kpi-card kpi-total">
-    <div className="kpi-card-top">
-      <div>
-        <span className="kpi-label">Total Agents</span>
-        <strong className="kpi-value">{totalAgents}</strong>
+            {isDatePickerOpen && (
+              <div className="date-picker-popup">
+                <div className="date-picker-header">
+                  <div>
+                    <h4>Select Date Range</h4>
+                    <p>Filter dashboard data by date</p>
+                  </div>
+                </div>
+
+                <div className="date-picker-body">
+                  <div className="date-field">
+                    <label>From Date</label>
+
+                    <input
+                      type="date"
+                      value={startDate}
+                      onChange={(e) => setStartDate(e.target.value)}
+                    />
+                  </div>
+
+                  <div className="date-field">
+                    <label>To Date</label>
+
+                    <input
+                      type="date"
+                      value={endDate}
+                      min={startDate || undefined}
+                      onChange={(e) => setEndDate(e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                <div className="date-picker-footer">
+                  <button
+                    type="button"
+                    className="date-clear-btn"
+                    onClick={handleClearDateFilter}
+                  >
+                    Clear
+                  </button>
+
+                  <button
+                    type="button"
+                    className="date-apply-btn"
+                    onClick={handleApplyDateFilter}
+                  >
+                    Apply Filter
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <button
+            type="button"
+            className="btn-refresh"
+            onClick={handleRefresh}
+            title="Refresh"
+          >
+            <LuRefreshCw />
+          </button>
+
+          <button
+            type="button"
+            className="btn-export"
+            onClick={handleExportFormatted}
+          >
+            <LuDownload />
+            <span> Export</span>
+          </button>
+        </div>
       </div>
 
-      <div className="kpi-icon">◉</div>
-    </div>
+      {/* KPI Summary */}
+      <div className="dashboard-kpi-section">
+        <div className="kpi-card kpi-total">
+          <div className="kpi-card-top">
+            <div>
+              <span className="kpi-label">Total Agents</span>
+              <strong className="kpi-value">{totalAgents}</strong>
+            </div>
 
-    <span className="kpi-description">
-      All registered agents
-    </span>
+            <div className="kpi-icon">◉</div>
+          </div>
 
-    <div className="kpi-trend">
-      <svg viewBox="0 0 220 45" preserveAspectRatio="none">
-        <path
-          d="M2 34 C20 30,25 35,40 28 S60 38,75 25 S95 35,110 18 S130 31,145 14 S165 30,180 13 S200 22,218 8"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-        />
-      </svg>
-    </div>
-  </div>
+          <span className="kpi-description">All registered agents</span>
 
-  <div className="kpi-card kpi-active">
-    <div className="kpi-card-top">
-      <div>
-        <span className="kpi-label">Active Agents</span>
-        <strong className="kpi-value">
-          {statusCounts.active}
-        </strong>
+          <div className="kpi-trend">
+            <svg viewBox="0 0 220 45" preserveAspectRatio="none">
+              {/* <path
+                d="M2 34 C20 30,25 35,40 28 S60 38,75 25 S95 35,110 18 S130 31,145 14 S165 30,180 13 S200 22,218 8"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+              /> */}
+              <path
+                d={generateTrendPath(totalTrend)}
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+              />
+            </svg>
+          </div>
+        </div>
+
+        <div className="kpi-card kpi-active">
+          <div className="kpi-card-top">
+            <div>
+              <span className="kpi-label">Active Agents</span>
+              <strong className="kpi-value">{statusCounts.active}</strong>
+            </div>
+
+            <div className="kpi-icon">✓</div>
+          </div>
+
+          <span className="kpi-description">
+            {totalAgents
+              ? ((statusCounts.active / totalAgents) * 100).toFixed(0)
+              : 0}
+            % of total agents
+          </span>
+
+          <div className="kpi-trend">
+            <svg viewBox="0 0 220 45" preserveAspectRatio="none">
+              {/* <path
+                d="M2 35 C20 24,28 36,45 25 S70 39,90 22 S115 31,135 18 S160 35,180 15 S200 28,218 10"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+              /> */}
+              <path
+                d={generateTrendPath(activeTrend)}
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+              />
+            </svg>
+          </div>
+        </div>
+
+        <div className="kpi-card kpi-disconnected">
+          <div className="kpi-card-top">
+            <div>
+              <span className="kpi-label">Disconnected</span>
+              <strong className="kpi-value">{statusCounts.disconnected}</strong>
+            </div>
+
+            <div className="kpi-icon">!</div>
+          </div>
+
+          <span className="kpi-description">
+            {totalAgents
+              ? ((statusCounts.disconnected / totalAgents) * 100).toFixed(0)
+              : 0}
+            % of total agents
+          </span>
+
+          <div className="kpi-trend">
+            <svg viewBox="0 0 220 45" preserveAspectRatio="none">
+              {/* <path
+                d="M2 36 C20 35,30 30,45 34 S65 25,80 31 S100 22,115 27 S135 18,150 25 S170 12,185 23 S205 13,218 18"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+              /> */}
+              <path
+                d={generateTrendPath(disconnectedTrend)}
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+              />
+            </svg>
+          </div>
+        </div>
+
+        <div className="kpi-card kpi-pending">
+          <div className="kpi-card-top">
+            <div>
+              <span className="kpi-label">Pending</span>
+              <strong className="kpi-value">{statusCounts.pending}</strong>
+            </div>
+
+            <div className="kpi-icon">◷</div>
+          </div>
+
+          <span className="kpi-description">
+            {totalAgents
+              ? ((statusCounts.pending / totalAgents) * 100).toFixed(0)
+              : 0}
+            % of total agents
+          </span>
+
+          <div className="kpi-trend">
+            <svg viewBox="0 0 220 45" preserveAspectRatio="none">
+              {/* <path
+                d="M2 35 C20 31,28 38,45 30 S70 39,85 25 S110 34,125 20 S145 32,160 18 S185 27,200 13 S210 18,218 10"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+              /> */}
+              <path
+                d={generateTrendPath(pendingTrend)}
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+              />
+            </svg>
+          </div>
+        </div>
+
+        <div className="kpi-card kpi-never">
+          <div className="kpi-card-top">
+            <div>
+              <span className="kpi-label">Never Connected</span>
+              <strong className="kpi-value">
+                {statusCounts.neverConnected}
+              </strong>
+            </div>
+
+            <div className="kpi-icon">○</div>
+          </div>
+
+          <span className="kpi-description">
+            {totalAgents
+              ? ((statusCounts.neverConnected / totalAgents) * 100).toFixed(0)
+              : 0}
+            % of total agents
+          </span>
+
+          <div className="kpi-trend">
+            <svg viewBox="0 0 220 45" preserveAspectRatio="none">
+              {/* <path
+                d="M2 35 C20 32,30 37,45 29 S65 38,82 27 S105 35,120 21 S145 31,160 19 S180 28,195 14 S210 20,218 11"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+              /> */}
+              <path
+                d={generateTrendPath(neverConnectedTrend)}
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+              />
+            </svg>
+          </div>
+        </div>
       </div>
-
-      <div className="kpi-icon">✓</div>
-    </div>
-
-    <span className="kpi-description">
-      {totalAgents
-        ? ((statusCounts.active / totalAgents) * 100).toFixed(0)
-        : 0}
-      % of total agents
-    </span>
-
-    <div className="kpi-trend">
-      <svg viewBox="0 0 220 45" preserveAspectRatio="none">
-        <path
-          d="M2 35 C20 24,28 36,45 25 S70 39,90 22 S115 31,135 18 S160 35,180 15 S200 28,218 10"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-        />
-      </svg>
-    </div>
-  </div>
-
-  <div className="kpi-card kpi-disconnected">
-    <div className="kpi-card-top">
-      <div>
-        <span className="kpi-label">Disconnected</span>
-        <strong className="kpi-value">
-          {statusCounts.disconnected}
-        </strong>
-      </div>
-
-      <div className="kpi-icon">!</div>
-    </div>
-
-    <span className="kpi-description">
-      {totalAgents
-        ? ((statusCounts.disconnected / totalAgents) * 100).toFixed(0)
-        : 0}
-      % of total agents
-    </span>
-
-    <div className="kpi-trend">
-      <svg viewBox="0 0 220 45" preserveAspectRatio="none">
-        <path
-          d="M2 36 C20 35,30 30,45 34 S65 25,80 31 S100 22,115 27 S135 18,150 25 S170 12,185 23 S205 13,218 18"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-        />
-      </svg>
-    </div>
-  </div>
-
-  <div className="kpi-card kpi-pending">
-    <div className="kpi-card-top">
-      <div>
-        <span className="kpi-label">Pending</span>
-        <strong className="kpi-value">
-          {statusCounts.pending}
-        </strong>
-      </div>
-
-      <div className="kpi-icon">◷</div>
-    </div>
-
-    <span className="kpi-description">
-      {totalAgents
-        ? ((statusCounts.pending / totalAgents) * 100).toFixed(0)
-        : 0}
-      % of total agents
-    </span>
-
-    <div className="kpi-trend">
-      <svg viewBox="0 0 220 45" preserveAspectRatio="none">
-        <path
-          d="M2 35 C20 31,28 38,45 30 S70 39,85 25 S110 34,125 20 S145 32,160 18 S185 27,200 13 S210 18,218 10"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-        />
-      </svg>
-    </div>
-  </div>
-
-  <div className="kpi-card kpi-never">
-    <div className="kpi-card-top">
-      <div>
-        <span className="kpi-label">Never Connected</span>
-        <strong className="kpi-value">
-          {statusCounts.neverConnected}
-        </strong>
-      </div>
-
-      <div className="kpi-icon">○</div>
-    </div>
-
-    <span className="kpi-description">
-      {totalAgents
-        ? ((statusCounts.neverConnected / totalAgents) * 100).toFixed(0)
-        : 0}
-      % of total agents
-    </span>
-
-    <div className="kpi-trend">
-      <svg viewBox="0 0 220 45" preserveAspectRatio="none">
-        <path
-          d="M2 35 C20 32,30 37,45 29 S65 38,82 27 S105 35,120 21 S145 31,160 19 S180 28,195 14 S210 20,218 11"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-        />
-      </svg>
-    </div>
-  </div>
-
-</div>
 
       {/* Statistics Section */}
       <div className="stats-section">
@@ -1453,70 +1560,62 @@ const getPercentage = (count) => {
         </div> */}
 
         <div className="stat-card">
-          
-  <div className="chart-card-header">
-  <h3>Agents by Status</h3>
+          <div className="chart-card-header">
+            <h3>Agents by Status</h3>
 
-  <button
-    type="button"
-    className="chart-menu-button"
-  >
-    ⋮
-  </button>
-</div>
+            <button type="button" className="chart-menu-button">
+              ⋮
+            </button>
+          </div>
 
-  <div className="chart-content">
-    <div className="pie-chart">
-      {renderDonut(
-        statusSegments,
-        "#cccccc",
-        totalAgents
-      )}
-    </div>
+          <div className="chart-content">
+            <div className="pie-chart">
+              {renderDonut(statusSegments, "#cccccc", totalAgents)}
+            </div>
 
-    <div className="legend">
-      <div className="legend-item">
-        <span
-          className="legend-color"
-          style={{
-            backgroundColor: STATUS_COLORS.active,
-          }}
-        ></span>
-        Active ({statusCounts.active})
-      </div>
+            <div className="legend">
+              <div className="legend-item">
+                <span
+                  className="legend-color"
+                  style={{
+                    backgroundColor: STATUS_COLORS.active,
+                  }}
+                ></span>
+                Active ({statusCounts.active})
+              </div>
 
-      <div className="legend-item">
-        <span
-          className="legend-color"
-          style={{
-            backgroundColor: STATUS_COLORS.disconnected,
-          }}
-        ></span>
-        Disconnected ({statusCounts.disconnected})
-      </div>
+              <div className="legend-item">
+                <span
+                  className="legend-color"
+                  style={{
+                    backgroundColor: STATUS_COLORS.disconnected,
+                  }}
+                ></span>
+                Disconnected ({statusCounts.disconnected})
+              </div>
 
-      <div className="legend-item">
-        <span
-          className="legend-color"
-          style={{
-            backgroundColor: STATUS_COLORS.pending,
-          }}
-        ></span>
-        Pending ({statusCounts.pending})
-      </div>
+              <div className="legend-item">
+                <span
+                  className="legend-color"
+                  style={{
+                    backgroundColor: STATUS_COLORS.pending,
+                  }}
+                ></span>
+                Pending ({statusCounts.pending})
+              </div>
 
-      <div className="legend-item">
-        <span
-          className="legend-color"
-          style={{
-            backgroundColor: STATUS_COLORS.neverConnected,
-          }}
-        ></span>
-        Never connected ({statusCounts.neverConnected})
-      </div>
-    </div>
-  </div>
-</div>
+              <div className="legend-item">
+                <span
+                  className="legend-color"
+                  style={{
+                    backgroundColor: STATUS_COLORS.neverConnected,
+                  }}
+                ></span>
+                Never connected ({statusCounts.neverConnected})
+              </div>
+            </div>
+          </div>
+        </div>
 
         {/* <div className="stat-card">
           <h3>TOP 5 OS</h3>
@@ -1547,60 +1646,46 @@ const getPercentage = (count) => {
         </div> */}
 
         <div className="stat-card">
-  <div className="chart-card-header">
-  <h3>Top 5 Operating Systems</h3>
+          <div className="chart-card-header">
+            <h3>Top 5 Operating Systems</h3>
 
-  <button
-    type="button"
-    className="chart-menu-button"
-  >
-    ⋮
-  </button>
-</div>
-
-  <div className="chart-content">
-
-    <div className="pie-chart">
-      {renderDonut(
-        osSegments,
-        "#cccccc",
-        totalOsAgents
-      )}
-    </div>
-
-    <div className="legend">
-      {osStats.length > 0 ? (
-        osStats.map((os, index) => (
-          <div
-            key={index}
-            className="legend-item"
-          >
-            <span
-              className="legend-color"
-              style={{
-                backgroundColor:
-                  OS_COLORS[index % OS_COLORS.length],
-              }}
-            ></span>
-
-            {os.os_name} ({os.os_count})
+            <button type="button" className="chart-menu-button">
+              ⋮
+            </button>
           </div>
-        ))
-      ) : (
-        <div className="legend-item">
-          <span
-            className="legend-color"
-            style={{
-              backgroundColor: "#cccccc",
-            }}
-          ></span>
-          No OS data
-        </div>
-      )}
-    </div>
 
-  </div>
-</div>
+          <div className="chart-content">
+            <div className="pie-chart">
+              {renderDonut(osSegments, "#cccccc", totalOsAgents)}
+            </div>
+
+            <div className="legend">
+              {osStats.length > 0 ? (
+                osStats.map((os, index) => (
+                  <div key={index} className="legend-item">
+                    <span
+                      className="legend-color"
+                      style={{
+                        backgroundColor: OS_COLORS[index % OS_COLORS.length],
+                      }}
+                    ></span>
+                    {os.os_name} ({os.os_count})
+                  </div>
+                ))
+              ) : (
+                <div className="legend-item">
+                  <span
+                    className="legend-color"
+                    style={{
+                      backgroundColor: "#cccccc",
+                    }}
+                  ></span>
+                  No OS data
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
 
         {/* <div className="stat-card">
           <h3>TOP 5 GROUPS</h3>
@@ -1634,63 +1719,47 @@ const getPercentage = (count) => {
         </div> */}
 
         <div className="stat-card">
-  <div className="chart-card-header">
-  <h3>Top 5 Groups</h3>
+          <div className="chart-card-header">
+            <h3>Top 5 Groups</h3>
 
-  <button
-    type="button"
-    className="chart-menu-button"
-  >
-    ⋮
-  </button>
-</div>
-
-  <div className="chart-content">
-
-    <div className="pie-chart">
-      {renderDonut(
-        groupSegments,
-        "#00a86b",
-        totalGroupAgents
-      )}
-    </div>
-
-    <div className="legend">
-      {groupStats.length > 0 ? (
-        groupStats.map((group, index) => (
-          <div
-            key={index}
-            className="legend-item"
-          >
-            <span
-              className="legend-color"
-              style={{
-                backgroundColor:
-                  GROUP_COLORS[
-                    index % GROUP_COLORS.length
-                  ],
-              }}
-            ></span>
-
-            {group.group_name} ({group.group_count})
+            <button type="button" className="chart-menu-button">
+              ⋮
+            </button>
           </div>
-        ))
-      ) : (
-        <div className="legend-item">
-          <span
-            className="legend-color"
-            style={{
-              backgroundColor: "#00a86b",
-            }}
-          ></span>
 
-          default (0)
+          <div className="chart-content">
+            <div className="pie-chart">
+              {renderDonut(groupSegments, "#00a86b", totalGroupAgents)}
+            </div>
+
+            <div className="legend">
+              {groupStats.length > 0 ? (
+                groupStats.map((group, index) => (
+                  <div key={index} className="legend-item">
+                    <span
+                      className="legend-color"
+                      style={{
+                        backgroundColor:
+                          GROUP_COLORS[index % GROUP_COLORS.length],
+                      }}
+                    ></span>
+                    {group.group_name} ({group.group_count})
+                  </div>
+                ))
+              ) : (
+                <div className="legend-item">
+                  <span
+                    className="legend-color"
+                    style={{
+                      backgroundColor: "#00a86b",
+                    }}
+                  ></span>
+                  default (0)
+                </div>
+              )}
+            </div>
+          </div>
         </div>
-      )}
-    </div>
-
-  </div>
-</div>
       </div>
 
       {/* Agents Table Section */}
@@ -1725,67 +1794,57 @@ const getPercentage = (count) => {
         </div> */}
 
         <div className="table-header">
+          <div className="table-title">
+            <h2>
+              Agents ({filteredAgents.length}
+              {filteredAgents.length !== agents.length
+                ? ` of ${agents.length}`
+                : ""}
+              )
+            </h2>
 
-  <div className="table-title">
-    <h2>
-      Agents ({filteredAgents.length}
-      {filteredAgents.length !== agents.length
-        ? ` of ${agents.length}`
-        : ""}
-      )
-    </h2>
+            <span className="table-subtitle">
+              Manage and monitor your deployed agents
+            </span>
+          </div>
 
-    <span className="table-subtitle">
-      Manage and monitor your deployed agents
-    </span>
-  </div>
+          <div className="table-actions">
+            <div className="table-search">
+              <span className="search-icon">⌕</span>
 
-  <div className="table-actions">
+              <input
+                type="text"
+                className="search-input"
+                placeholder="Search agents..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
 
-    <div className="table-search">
-      <span className="search-icon">⌕</span>
+              {searchTerm && (
+                <button
+                  type="button"
+                  className="search-clear"
+                  onClick={() => setSearchTerm("")}
+                  aria-label="Clear search"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
 
-      <input
-        type="text"
-        className="search-input"
-        placeholder="Search agents..."
-        value={searchTerm}
-        onChange={(e) =>
-          setSearchTerm(e.target.value)
-        }
-      />
+            <button type="button" className="filter-button" onClick={() => {}}>
+              ⚱ Filters
+            </button>
 
-      {searchTerm && (
-        <button
-          type="button"
-          className="search-clear"
-          onClick={() => setSearchTerm("")}
-          aria-label="Clear search"
-        >
-          ✕
-        </button>
-      )}
-    </div>
-
-    <button
-      type="button"
-      className="filter-button"
-      onClick={() => {}}
-    >
-      ⚱ Filters
-    </button>
-
-    <button
-      type="button"
-      className="deploy-table-button"
-      onClick={handleDeployAgent}
-    >
-      + Deploy new agent
-    </button>
-
-  </div>
-
-</div>
+            {/* <button
+              type="button"
+              className="deploy-table-button"
+              onClick={handleDeployAgent}
+            >
+              + Deploy new agent
+            </button> */}
+          </div>
+        </div>
 
         <table className="agents-table">
           <thead>
@@ -1808,15 +1867,15 @@ const getPercentage = (count) => {
               <th>Status</th>
               <th>Actions</th> */}
               <th className="col-expand" aria-label="Show available services" />
-<th>ID</th>
-<th>Agent Name</th>
-<th>IP Address</th>
-<th>Operating System</th>
-<th>Architecture</th>
-<th>Group</th>
-<th>Status</th>
-<th>Last Seen</th>
-<th>Actions</th>
+              <th>ID</th>
+              <th>Agent Name</th>
+              <th>IP Address</th>
+              <th>Operating System</th>
+              <th>Architecture</th>
+              <th>Group</th>
+              <th>Status</th>
+              {/* <th>Last Seen</th> */}
+              <th>Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -1831,43 +1890,44 @@ const getPercentage = (count) => {
             ) : (
               paginatedAgents.map((agent) => (
                 <Fragment key={agent.id}>
-                <tr>
-                  <td className="col-expand">
-                    <button
-                      type="button"
-                      className={`btn-expand ${expandedAgent === agent.name ? "open" : ""}`}
-                      onClick={() => handleToggleServices(agent.name)}
-                      title={
-                        expandedAgent === agent.name
-                          ? "Hide available services"
-                          : "Show available services"
-                      }
-                      aria-expanded={expandedAgent === agent.name}
-                    >
-                      {expandedAgent === agent.name ? "−" : "+"}
-                    </button>
-                  </td>
-                  {/* <td>
+                  <tr>
+                    <td className="col-expand">
+                      <button
+                        type="button"
+                        className={`btn-expand ${expandedAgent === agent.name ? "open" : ""}`}
+                        onClick={() => handleToggleServices(agent.name)}
+                        title={
+                          expandedAgent === agent.name
+                            ? "Hide available services"
+                            : "Show available services"
+                        }
+                        aria-expanded={expandedAgent === agent.name}
+                      >
+                        {expandedAgent === agent.name ? "−" : "+"}
+                      </button>
+                    </td>
+                    {/* <td>
                     <input
                       type="checkbox"
                       checked={selectedAgents.has(agent.id)}
                       onChange={() => handleSelectAgent(agent.id)}
                     />
                   </td> */}
-                  {/* <td>{agent.id}</td>
-                  <td> */}
-                    {/* `agent` scopes the SOC2 report to this agent — it becomes
-                        agent_name on every /soc2-report/* request. */}
+                    <td>{agent.id}</td>
+                    {/* <td> */}
+                    {/* `agent` scopes the capacity report to this agent — it
+                        becomes agent_name on the /capacity-monitoring/overview
+                        request the report loads with. */}
                     {/* <a
-                      href={`/app/reports/soc2?agent=${encodeURIComponent(agent.name)}`}
+                      href={`/app/reports/capacity?agent=${encodeURIComponent(agent.name)}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="agent-name-link"
-                      title={`Open the SOC2 report for ${agent.name}`}
+                      title={`Open the capacity report for ${agent.name}`}
                     >
                       {agent.name}
                     </a> */}
-                  {/* </td>
+                    {/* </td>
                   <td>{agent.macAddress}</td>
                   <td>{agent.hostName}</td>
                   <td>{agent.ipAddress}</td>
@@ -1878,101 +1938,95 @@ const getPercentage = (count) => {
                       ● {agent.status}
                     </span>
                   </td> */}
-                  <td>{agent.id}</td>
+                    {/* <td>{agent.id}</td> */}
 
-<td>
- <a
-  href={`/app/reports/soc2?agent=${encodeURIComponent(agent.name)}`}
-  target="_blank"
-  rel="noopener noreferrer"
-  className="agent-name-link"
-  title={`Open the SOC2 report for ${agent.name}`}
->
-  <span className="agent-name-status-dot"></span>
-  {agent.name}
-</a>
-</td>
+                    <td>
+                      <a
+                        href={`/app/reports/soc2?agent=${encodeURIComponent(agent.name)}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="agent-name-link"
+                        title={`Open the SOC2 report for ${agent.name}`}
+                      >
+                        <span className="agent-name-status-dot"></span>
+                        {agent.name}
+                      </a>
+                    </td>
 
-<td>{agent.ipAddress}</td>
+                    <td>{agent.ipAddress}</td>
 
-<td>
-  <span className="os-cell">
-    <span className="os-icon">
-      {getOsIcon(agent.os)}
-    </span>
+                    <td>
+                      <span className="os-cell">
+                        <span className="os-icon">{getOsIcon(agent.os)}</span>
 
-    <span className="os-name">
-      {agent.os}
-    </span>
-  </span>
-</td>
+                        <span className="os-name">{agent.os}</span>
+                      </span>
+                    </td>
 
-<td>{agent.architecture}</td>
+                    <td>{agent.architecture}</td>
 
-<td>
-  <span className="group-badge">
-    {agent.group}
-  </span>
-</td>
+                    <td>
+                      <span className="group-badge">{agent.group}</span>
+                    </td>
 
-<td>
-  <span
-    className={`status-badge status-${agent.status}`}
-  >
-    <span className="status-dot"></span>
-    {agent.status}
-  </span>
-</td>
-<td>
-  <span className="last-seen">
-    {agent.lastSeen ? (
-      <>
-        <span>{agent.lastSeen.split(" ").slice(0, 3).join(" ")}</span>
-
-        <span>
-          {agent.lastSeen.split(" ").slice(3).join(" ")}
-        </span>
-      </>
-    ) : (
-      "—"
-    )}
-  </span>
-</td>
-                  <td>
-                    <button
-                      className="btn-action"
-                      onClick={() => handleAgentAction(agent.id, agent.name)}
-                    >
-                      ⋯
-                    </button>
-                  </td>
-                </tr>
-                {expandedAgent === agent.name && (
-                  <tr className="services-row">
-                    <td colSpan={9}>
-                      <div className="services-panel">
-                        <div className="services-title">
-                          <span className="services-title-icon">🗄</span>
-                          Available services — <strong>{agent.name}</strong>
-                          {services[agent.name]?.list?.length > 0 && (
-                            <span className="services-count">
-                              {services[agent.name].list.length}
+                    <td>
+                      <span className={`status-badge status-${agent.status}`}>
+                        <span className="status-dot"></span>
+                        {agent.status}
+                      </span>
+                    </td>
+                    {/* <td>
+                      <span className="last-seen">
+                        {agent.lastSeen ? (
+                          <>
+                            <span>
+                              {agent.lastSeen.split(" ").slice(0, 3).join(" ")}
                             </span>
-                          )}
-                          <button
-                            type="button"
-                            className="services-add-btn"
-                            title={`Add a new credential for ${agent.name}`}
-                            onClick={() => handleAddCred(agent.name)}
-                          >
-                            + Add credential
-                          </button>
-                        </div>
-                        {renderServices(agent.name)}
-                      </div>
+
+                            <span>
+                              {agent.lastSeen.split(" ").slice(3).join(" ")}
+                            </span>
+                          </>
+                        ) : (
+                          "—"
+                        )}
+                      </span>
+                    </td> */}
+                    <td>
+                      <button
+                        className="btn-action"
+                        onClick={() => handleAgentAction(agent.id, agent.name)}
+                      >
+                        ⋯
+                      </button>
                     </td>
                   </tr>
-                )}
+                  {expandedAgent === agent.name && (
+                    <tr className="services-row">
+                      <td colSpan={9}>
+                        <div className="services-panel">
+                          <div className="services-title">
+                            <span className="services-title-icon">🗄</span>
+                            Available services — <strong>{agent.name}</strong>
+                            {services[agent.name]?.list?.length > 0 && (
+                              <span className="services-count">
+                                {services[agent.name].list.length}
+                              </span>
+                            )}
+                            <button
+                              type="button"
+                              className="services-add-btn"
+                              title={`Add a new credential for ${agent.name}`}
+                              onClick={() => handleAddCred(agent.name)}
+                            >
+                              + Add credential
+                            </button>
+                          </div>
+                          {renderServices(agent.name)}
+                        </div>
+                      </td>
+                    </tr>
+                  )}
                 </Fragment>
               ))
             )}
@@ -1982,7 +2036,8 @@ const getPercentage = (count) => {
         {filteredAgents.length > 0 && (
           <div className="pagination-bar1">
             <div className="pagination-info">
-              Showing {rangeStart} to {rangeEnd} of {filteredAgents.length} entries
+              Showing {rangeStart} to {rangeEnd} of {filteredAgents.length}{" "}
+              entries
             </div>
 
             <div className="pagination-controls">
@@ -2129,7 +2184,9 @@ const getPercentage = (count) => {
                       <input
                         value={editCred.host}
                         placeholder="127.0.0.1"
-                        onChange={(e) => updateEditField("host", e.target.value)}
+                        onChange={(e) =>
+                          updateEditField("host", e.target.value)
+                        }
                         disabled={saving}
                       />
                     </div>
@@ -2141,7 +2198,9 @@ const getPercentage = (count) => {
                         max="65535"
                         value={editCred.port}
                         placeholder="5432"
-                        onChange={(e) => updateEditField("port", e.target.value)}
+                        onChange={(e) =>
+                          updateEditField("port", e.target.value)
+                        }
                         disabled={saving}
                       />
                     </div>
@@ -2239,7 +2298,11 @@ const getPercentage = (count) => {
 
             {!editCred && (
               <div className="cred-foot">
-                <button type="button" className="cred-ok" onClick={closeCredModal}>
+                <button
+                  type="button"
+                  className="cred-ok"
+                  onClick={closeCredModal}
+                >
                   Close
                 </button>
               </div>
