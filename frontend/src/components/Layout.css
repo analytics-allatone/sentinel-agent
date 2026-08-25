@@ -1,11 +1,91 @@
-.layout {
+/* .layout {
   /* display: flex;
   flex-direction: column; */
+  /* min-height: 100vh; */
+/* } */
+
+/* .layout-content { */
+  /* flex: 1;
+  display: flex; */
+  /* width: 100%; */
+/* } */
+
+.layout {
   min-height: 100vh;
+  background: #f7f9fc;
+  overflow-x: hidden;
+}
+
+
+/* =========================================
+   SIDEBAR OPEN
+   ========================================= */
+
+.layout.sidebar-open .layout-main {
+  margin-left: 246px;
+  width: calc(100% - 246px);
+}
+
+
+/* =========================================
+   SIDEBAR CLOSED
+   ========================================= */
+
+.layout.sidebar-closed .layout-main {
+  margin-left: 0;
+  width: 100%;
+}
+
+
+/* =========================================
+   MAIN
+   ========================================= */
+
+.layout-main {
+  padding-top: 56px;
+  min-height: 100vh;
+
+  transition:
+    margin-left 0.25s ease,
+    width 0.25s ease;
+
+  box-sizing: border-box;
 }
 
 .layout-content {
-  /* flex: 1;
-  display: flex; */
   width: 100%;
+  min-height: calc(100vh - 56px);
+}
+
+
+/* =========================================
+   TABLET
+   ========================================= */
+
+@media (max-width: 1100px) {
+
+  .layout.sidebar-open .layout-main {
+    margin-left: 220px;
+    width: calc(100% - 220px);
+  }
+
+}
+
+
+/* =========================================
+   MOBILE
+   ========================================= */
+
+@media (max-width: 768px) {
+
+  .layout.sidebar-open .layout-main,
+  .layout.sidebar-closed .layout-main {
+    margin-left: 0;
+    width: 100%;
+  }
+
+  .layout-main {
+    padding-top: 56px;
+  }
+
 }

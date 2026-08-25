@@ -962,84 +962,282 @@ function buildIncidents(sections, agentName) {
  * `pendingCount` only changes the "nothing found" fallback: with requests still
  * open, a clean bill of health would be premature.
  */
+// function buildRecommendations(sections, views, pendingCount = 0) {
+//   const recs = [];
+//   const auth = (sections.auth && sections.auth.summary) || {};
+
+//   if (Number(auth.failed_auths) > 0 && Number(auth.failure_rate_pct) >= 20) {
+//     recs.push({
+//       priority: "critical",
+//       text: `${plural(auth.failed_auths, "failed authentication")} (${auth.failure_rate_pct}% of all attempts). Review the top failing users and source IPs, and confirm lockout thresholds are enforced.`,
+//     });
+//   } else if (Number(auth.failed_auths) > 0) {
+//     recs.push({
+//       priority: "info",
+//       text: `${plural(auth.failed_auths, "failed authentication")} (${auth.failure_rate_pct || 0}%). Within tolerance — keep the failure trend under review.`,
+//     });
+//   }
+
+//   if (Number(auth.privileged_actions) > 0) {
+//     recs.push({
+//       priority: "warning",
+//       text: `${plural(auth.privileged_actions, "privileged (sudo) action")} ${verb(auth.privileged_actions, "was", "were")} recorded. Confirm each maps to an approved change or ticket.`,
+//     });
+//   }
+
+//   Object.keys(BUILDERS).forEach((key) => {
+//     const sum = (sections[key] && sections[key].summary) || {};
+//     const label = CRITERIA_LABELS[key];
+//     if (Number(sum.ioc_matches) > 0) {
+//       recs.push({
+//         priority: "critical",
+//         text: `${label}: ${plural(sum.ioc_matches, "event")} matched a threat indicator. Triage these first — they are the highest-signal findings in the window.`,
+//       });
+//     }
+//     if (Number(sum.high_severity_events) > 0) {
+//       recs.push({
+//         priority: "warning",
+//         text: `${label}: ${plural(sum.high_severity_events, "high or critical event")} ${verb(sum.high_severity_events, "needs", "need")} documented review to evidence the control.`,
+//       });
+//     }
+//     if (Number(sum.anomalies) > 0) {
+//       recs.push({
+//         priority: "warning",
+//         text: `${label}: ${plural(sum.anomalies, "anomalous event")} ${verb(sum.anomalies, "was", "were")} flagged. Confirm each is expected behaviour or raise an incident.`,
+//       });
+//     }
+//   });
+
+//   const usb = (sections.usb && sections.usb.summary) || {};
+//   if (Number(usb.total_bytes_transferred) > 0) {
+//     recs.push({
+//       priority: "warning",
+//       text: `${fmtBytes(usb.total_bytes_transferred)} moved across removable media on ${plural(usb.unique_devices, "device")}. Verify the transfers were authorised under the data-handling policy.`,
+//     });
+//   }
+
+//   const external = (sections.network && sections.network.external_connections) || [];
+//   if (external.length > 0) {
+//     recs.push({
+//       priority: "info",
+//       text: `${plural(external.length, "public destination")} ${verb(external.length, "was", "were")} contacted. Reconcile the list against the approved egress allowlist.`,
+//     });
+//   }
+
+//   const weakest = Object.values(views)
+//     .filter((v) => v && !v.unavailable && v.total > 0)
+//     .sort((a, b) => a.score - b.score)[0];
+//   if (weakest && weakest.score < 90) {
+//     recs.push({
+//       priority: weakest.score < 75 ? "critical" : "warning",
+//       text: `${weakest.heading} scored ${weakest.score}% — the lowest of the domains with events in this window. Prioritise its exceptions in the next remediation cycle.`,
+//     });
+//   }
+
+//   if (recs.length === 0) {
+//     recs.push({
+//       priority: "info",
+//       text: pendingCount
+//         ? `Still collecting ${plural(pendingCount, "domain report")} — findings will appear as they arrive.`
+//         : "No control exceptions were recorded in this window. Keep the evidence for the audit period and re-run the report for the next window.",
+//     });
+//   }
+
+//   return recs;
+// }
+
+
 function buildRecommendations(sections, views, pendingCount = 0) {
   const recs = [];
+
+  const addFinding = ({
+    priority,
+    category,
+    finding,
+    evidence,
+    recommendedAction,
+  }) => {
+    recs.push({
+      priority,
+      category,
+      finding,
+      evidence,
+      recommendedAction,
+      // Keep text for backward compatibility with any existing consumer.
+      text: `${finding} ${evidence}`,
+    });
+  };
+
   const auth = (sections.auth && sections.auth.summary) || {};
 
+  // ------------------------------------------------------------
+  // Authentication failures
+  // ------------------------------------------------------------
   if (Number(auth.failed_auths) > 0 && Number(auth.failure_rate_pct) >= 20) {
-    recs.push({
+    addFinding({
       priority: "critical",
-      text: `${plural(auth.failed_auths, "failed authentication")} (${auth.failure_rate_pct}% of all attempts). Review the top failing users and source IPs, and confirm lockout thresholds are enforced.`,
+      category: "Access Control",
+      finding: "Excessive authentication failures detected.",
+      evidence: `${plural(auth.failed_auths, "failed authentication")} (${auth.failure_rate_pct}% of all attempts).`,
+      recommendedAction:
+        "Review the top failing users and source IPs, investigate repeated failures, and confirm account lockout thresholds are enforced.",
     });
   } else if (Number(auth.failed_auths) > 0) {
-    recs.push({
+    addFinding({
       priority: "info",
-      text: `${plural(auth.failed_auths, "failed authentication")} (${auth.failure_rate_pct || 0}%). Within tolerance — keep the failure trend under review.`,
+      category: "Access Control",
+      finding: "Authentication failures were recorded during the reporting window.",
+      evidence: `${plural(auth.failed_auths, "failed authentication")} (${auth.failure_rate_pct || 0}% of all attempts).`,
+      recommendedAction:
+        "Keep the authentication failure trend under review and investigate any recurring users, source IPs, or unusual patterns.",
     });
   }
 
+  // ------------------------------------------------------------
+  // Privileged actions
+  // ------------------------------------------------------------
   if (Number(auth.privileged_actions) > 0) {
-    recs.push({
+    addFinding({
       priority: "warning",
-      text: `${plural(auth.privileged_actions, "privileged (sudo) action")} ${verb(auth.privileged_actions, "was", "were")} recorded. Confirm each maps to an approved change or ticket.`,
+      category: "Privileged Access",
+      finding: "Privileged actions were recorded.",
+      evidence: `${plural(auth.privileged_actions, "privileged (sudo) action")} ${verb(
+        auth.privileged_actions,
+        "was",
+        "were"
+      )} recorded.`,
+      recommendedAction:
+        "Confirm each privileged action maps to an approved change, ticket, or documented administrative activity.",
     });
   }
 
+  // ------------------------------------------------------------
+  // Domain-level findings
+  // ------------------------------------------------------------
   Object.keys(BUILDERS).forEach((key) => {
     const sum = (sections[key] && sections[key].summary) || {};
     const label = CRITERIA_LABELS[key];
+
+    // IOC matches
     if (Number(sum.ioc_matches) > 0) {
-      recs.push({
+      addFinding({
         priority: "critical",
-        text: `${label}: ${plural(sum.ioc_matches, "event")} matched a threat indicator. Triage these first — they are the highest-signal findings in the window.`,
+        category: label,
+        finding: "Threat-indicator matches require immediate review.",
+        evidence: `${plural(sum.ioc_matches, "event")} matched a threat indicator.`,
+        recommendedAction:
+          "Prioritise these events for triage, validate the associated indicators, investigate affected assets, and document the resulting response.",
       });
     }
+
+    // High / critical severity
     if (Number(sum.high_severity_events) > 0) {
-      recs.push({
+      addFinding({
         priority: "warning",
-        text: `${label}: ${plural(sum.high_severity_events, "high or critical event")} ${verb(sum.high_severity_events, "needs", "need")} documented review to evidence the control.`,
+        category: label,
+        finding: "High-severity events require documented review.",
+        evidence: `${plural(
+          sum.high_severity_events,
+          "high or critical event"
+        )} ${verb(sum.high_severity_events, "was", "were")} recorded.`,
+        recommendedAction:
+          "Review each high-severity event, document the investigation outcome, and retain supporting evidence to demonstrate control operation.",
       });
     }
+
+    // Anomalies
     if (Number(sum.anomalies) > 0) {
-      recs.push({
+      addFinding({
         priority: "warning",
-        text: `${label}: ${plural(sum.anomalies, "anomalous event")} ${verb(sum.anomalies, "was", "were")} flagged. Confirm each is expected behaviour or raise an incident.`,
+        category: label,
+        finding: "Anomalous activity was detected.",
+        evidence: `${plural(sum.anomalies, "anomalous event")} ${verb(
+          sum.anomalies,
+          "was",
+          "were"
+        )} flagged.`,
+        recommendedAction:
+          "Validate whether each anomaly represents expected behaviour. Escalate unexpected activity as an incident and retain the investigation evidence.",
       });
     }
   });
 
+  // ------------------------------------------------------------
+  // Removable media
+  // ------------------------------------------------------------
   const usb = (sections.usb && sections.usb.summary) || {};
+
   if (Number(usb.total_bytes_transferred) > 0) {
-    recs.push({
+    addFinding({
       priority: "warning",
-      text: `${fmtBytes(usb.total_bytes_transferred)} moved across removable media on ${plural(usb.unique_devices, "device")}. Verify the transfers were authorised under the data-handling policy.`,
+      category: "Removable Media",
+      finding: "Data was transferred through removable media.",
+      evidence: `${fmtBytes(
+        usb.total_bytes_transferred
+      )} moved across removable media on ${plural(
+        usb.unique_devices,
+        "device"
+      )}.`,
+      recommendedAction:
+        "Verify that the transfers were authorised under the applicable data-handling policy and retain evidence of the approval where required.",
     });
   }
 
-  const external = (sections.network && sections.network.external_connections) || [];
+  // ------------------------------------------------------------
+  // External network destinations
+  // ------------------------------------------------------------
+  const external =
+    (sections.network && sections.network.external_connections) || [];
+
   if (external.length > 0) {
-    recs.push({
+    addFinding({
       priority: "info",
-      text: `${plural(external.length, "public destination")} ${verb(external.length, "was", "were")} contacted. Reconcile the list against the approved egress allowlist.`,
+      category: "Network Security",
+      finding: "Public network destinations were contacted.",
+      evidence: `${plural(external.length, "public destination")} ${verb(
+        external.length,
+        "was",
+        "were"
+      )} contacted.`,
+      recommendedAction:
+        "Reconcile the observed destinations against the approved egress allowlist and investigate any destination that cannot be justified.",
     });
   }
 
+  // ------------------------------------------------------------
+  // Lowest scoring domain
+  // ------------------------------------------------------------
   const weakest = Object.values(views)
     .filter((v) => v && !v.unavailable && v.total > 0)
     .sort((a, b) => a.score - b.score)[0];
+
   if (weakest && weakest.score < 90) {
-    recs.push({
+    addFinding({
       priority: weakest.score < 75 ? "critical" : "warning",
-      text: `${weakest.heading} scored ${weakest.score}% — the lowest of the domains with events in this window. Prioritise its exceptions in the next remediation cycle.`,
+      category: weakest.heading,
+      finding: "This domain has the lowest compliance score in the reporting window.",
+      evidence: `${weakest.heading} scored ${weakest.score}%.`,
+      recommendedAction:
+        "Prioritise the exceptions identified in this domain during the next remediation cycle and retain evidence demonstrating the corrective actions.",
     });
   }
 
+  // ------------------------------------------------------------
+  // No findings
+  // ------------------------------------------------------------
   if (recs.length === 0) {
-    recs.push({
+    addFinding({
       priority: "info",
-      text: pendingCount
-        ? `Still collecting ${plural(pendingCount, "domain report")} — findings will appear as they arrive.`
-        : "No control exceptions were recorded in this window. Keep the evidence for the audit period and re-run the report for the next window.",
+      category: "Overall",
+      finding: pendingCount
+        ? "The report is still collecting domain evidence."
+        : "No control exceptions were recorded in this reporting window.",
+      evidence: pendingCount
+        ? `${plural(pendingCount, "domain report")} is still pending.`
+        : "No generated recommendation criteria were triggered.",
+      recommendedAction: pendingCount
+        ? "Wait for the remaining domain evidence before treating the report as complete."
+        : "Retain the evidence for the audit period and re-run the report for the next reporting window.",
     });
   }
 

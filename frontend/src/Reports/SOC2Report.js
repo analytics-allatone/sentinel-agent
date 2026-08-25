@@ -660,72 +660,559 @@ function printSections(report, agents) {
   ];
 }
 
+// function PrintableReport({ report, agents, scopeText }) {
+//   const sections = printSections(report, agents);
+
+//   return (
+//     <div className="soc2-print-root" aria-hidden="true">
+//       {/* ── cover page ── */}
+//       <section className="soc2-print-cover">
+//         <div className="soc2-print-header">
+//           <div className="soc2-print-brand">
+//             <ShieldIcon />
+//             <span className="soc2-print-title">Guardlynx — SOC 2 evidence report</span>
+//           </div>
+//           <div className="soc2-print-period">{scopeText}</div>
+//         </div>
+
+//         <p className="soc2-print-lead">
+//           This report collects the activity the Guardlynx agents recorded for the period above,
+//           arranged against the SOC 2 trust service criteria. It is generated from the agents'
+//           own telemetry — nothing in it is entered by hand — and each section states what it
+//           covers and how to read it. All times are India Standard Time (UTC+5:30).
+//         </p>
+
+//         <div className="soc2-print-meta">
+//           <div>
+//             <span className="soc2-print-meta-key">Scope</span>
+//             <span className="soc2-print-meta-val">{report.meta.agentName || "All agents"}</span>
+//           </div>
+//           <div>
+//             <span className="soc2-print-meta-key">Generated</span>
+//             <span className="soc2-print-meta-val">
+//               {report.meta.generatedAt !== "—" ? `${report.meta.generatedAt} IST` : "—"}
+//             </span>
+//           </div>
+//           <div>
+//             <span className="soc2-print-meta-key">Events</span>
+//             <span className="soc2-print-meta-val">{fmtInt(report.summary.totalEvents)}</span>
+//           </div>
+//         </div>
+
+//         <div className="soc2-print-toc">
+//           <div className="soc2-print-toc-head">Contents</div>
+//           <ol className="soc2-print-toc-list">
+//             {sections.map((s) => (
+//               <li key={s.title}>{s.title}</li>
+//             ))}
+//           </ol>
+//         </div>
+//       </section>
+
+//       {sections.map((s, i) => (
+//         <PrintSection key={s.title} number={i + 1} title={s.title} lead={s.lead}>
+//           {s.body}
+//         </PrintSection>
+//       ))}
+//     </div>
+//   );
+// }
+
 function PrintableReport({ report, agents, scopeText }) {
   const sections = printSections(report, agents);
 
   return (
     <div className="soc2-print-root" aria-hidden="true">
-      {/* ── cover page ── */}
+
+      
+
+      {/* =========================================================
+          COVER PAGE
+      ========================================================= */}
       <section className="soc2-print-cover">
-        <div className="soc2-print-header">
+
+        <div className="soc2-print-cover-top">
           <div className="soc2-print-brand">
-            <ShieldIcon />
-            <span className="soc2-print-title">Guardlynx — SOC 2 evidence report</span>
-          </div>
-          <div className="soc2-print-period">{scopeText}</div>
-        </div>
-
-        <p className="soc2-print-lead">
-          This report collects the activity the Guardlynx agents recorded for the period above,
-          arranged against the SOC 2 trust service criteria. It is generated from the agents'
-          own telemetry — nothing in it is entered by hand — and each section states what it
-          covers and how to read it. All times are India Standard Time (UTC+5:30).
-        </p>
-
-        <div className="soc2-print-meta">
-          <div>
-            <span className="soc2-print-meta-key">Scope</span>
-            <span className="soc2-print-meta-val">{report.meta.agentName || "All agents"}</span>
-          </div>
-          <div>
-            <span className="soc2-print-meta-key">Generated</span>
-            <span className="soc2-print-meta-val">
-              {report.meta.generatedAt !== "—" ? `${report.meta.generatedAt} IST` : "—"}
+            <span className="soc2-print-logo">
+              <ShieldIcon />
             </span>
+
+            <div>
+              <div className="soc2-print-brand-name">
+                GUARDLYNX
+              </div>
+
+              <div className="soc2-print-brand-subtitle">
+                Security & Compliance Monitoring
+              </div>
+            </div>
           </div>
-          <div>
-            <span className="soc2-print-meta-key">Events</span>
-            <span className="soc2-print-meta-val">{fmtInt(report.summary.totalEvents)}</span>
+
+          <div className="soc2-print-classification">
+            CONFIDENTIAL
           </div>
         </div>
 
-        <div className="soc2-print-toc">
-          <div className="soc2-print-toc-head">Contents</div>
-          <ol className="soc2-print-toc-list">
-            {sections.map((s) => (
-              <li key={s.title}>{s.title}</li>
-            ))}
-          </ol>
+        <div className="soc2-print-cover-main">
+
+          <div className="soc2-print-eyebrow">
+            COMPLIANCE EVIDENCE REPORT
+          </div>
+
+          <h1 className="soc2-print-cover-title">
+            SOC 2 Evidence Report
+          </h1>
+
+          <p className="soc2-print-cover-description">
+            Security and compliance evidence collected from
+            Guardlynx monitored agents during the selected
+            reporting period.
+          </p>
+
+          <div className="soc2-print-period-card">
+            <div className="soc2-print-period-label">
+              REPORTING PERIOD
+            </div>
+
+            <div className="soc2-print-period-value">
+              {scopeText}
+            </div>
+          </div>
+
+          <div className="soc2-print-meta-grid">
+
+            <div className="soc2-print-meta-box">
+              <span className="soc2-print-meta-key">
+                Agent Scope
+              </span>
+
+              <span className="soc2-print-meta-val">
+                {report.meta.agentName || "All agents"}
+              </span>
+            </div>
+
+            <div className="soc2-print-meta-box">
+              <span className="soc2-print-meta-key">
+                Generated
+              </span>
+
+              <span className="soc2-print-meta-val">
+                {report.meta.generatedAt !== "—"
+                  ? `${report.meta.generatedAt} IST`
+                  : "—"}
+              </span>
+            </div>
+
+            <div className="soc2-print-meta-box">
+              <span className="soc2-print-meta-key">
+                Total Events
+              </span>
+
+              <span className="soc2-print-meta-val">
+                {fmtInt(report.summary.totalEvents)}
+              </span>
+            </div>
+
+            <div className="soc2-print-meta-box">
+              <span className="soc2-print-meta-key">
+                Timezone
+              </span>
+
+              <span className="soc2-print-meta-val">
+                IST (UTC+5:30)
+              </span>
+            </div>
+
+          </div>
+
         </div>
+
+        <div className="soc2-print-cover-bottom">
+          <div>
+            Generated from Guardlynx agent telemetry.
+          </div>
+
+          <div>
+            SOC 2 Evidence Report
+          </div>
+        </div>
+
       </section>
 
+
+      {/* =========================================================
+          EXECUTIVE SUMMARY
+      ========================================================= */}
+      <PrintExecutiveSummary report={report} />
+
+
+      {/* =========================================================
+          TABLE OF CONTENTS
+      ========================================================= */}
+      <section className="soc2-print-toc-page">
+
+        <div className="soc2-print-page-eyebrow">
+          REPORT STRUCTURE
+        </div>
+
+        <h2 className="soc2-print-toc-title">
+          Contents
+        </h2>
+
+        <p className="soc2-print-toc-description">
+          Sections included in this SOC 2 evidence report.
+        </p>
+
+        <ol className="soc2-print-toc-list">
+
+          <li>
+            <span className="soc2-toc-number">01</span>
+            <span className="soc2-toc-label">
+              Executive Summary
+            </span>
+          </li>
+
+          {sections.map((s, i) => (
+            <li key={s.title}>
+              <span className="soc2-toc-number">
+                {String(i + 2).padStart(2, "0")}
+              </span>
+
+              <span className="soc2-toc-label">
+                {s.title}
+              </span>
+            </li>
+          ))}
+
+        </ol>
+
+      </section>
+
+
+      {/* =========================================================
+          REPORT SECTIONS
+      ========================================================= */}
       {sections.map((s, i) => (
-        <PrintSection key={s.title} number={i + 1} title={s.title} lead={s.lead}>
+        <PrintSection
+          key={s.title}
+          number={i + 2}
+          title={s.title}
+          lead={s.lead}
+        >
           {s.body}
         </PrintSection>
       ))}
+
     </div>
   );
 }
 
-function PrintSection({ number, title, lead, children }) {
+function PrintExecutiveSummary({ report }) {
+  const summary = report?.summary || {};
+
+  const compliance = summary.complianceScore;
+
+  const complianceStatus =
+    compliance == null
+      ? "No score available"
+      : compliance >= 90
+        ? "Good standing"
+        : compliance >= 75
+          ? "Needs attention"
+          : "Critical attention";
+
   return (
-    <section className="soc2-print-section">
-      <h2 className="soc2-print-h2">
-        {number}. {title}
+    <section className="soc2-print-executive">
+
+      <div className="soc2-print-page-eyebrow">
+        01 · EXECUTIVE SUMMARY
+      </div>
+
+      <h2 className="soc2-print-executive-title">
+        Executive Summary
       </h2>
-      {lead && <p className="soc2-print-lead">{lead}</p>}
-      {children}
+
+      <p className="soc2-print-executive-lead">
+        This summary provides a high-level view of the security
+        and compliance evidence recorded during the selected
+        reporting period.
+      </p>
+
+
+      {/* =======================================================
+          KPI AREA
+      ======================================================= */}
+      <div className="soc2-print-kpi-grid">
+
+        <div className="soc2-print-kpi">
+          <span className="soc2-print-kpi-label">
+            Total Events
+          </span>
+
+          <strong className="soc2-print-kpi-value">
+            {fmtInt(summary.totalEvents)}
+          </strong>
+
+          <span className="soc2-print-kpi-sub">
+            Across all monitored domains
+          </span>
+        </div>
+
+
+        <div className="soc2-print-kpi">
+          <span className="soc2-print-kpi-label">
+            High Severity
+          </span>
+
+          <strong className="soc2-print-kpi-value">
+            {fmtInt(summary.highSeverity)}
+          </strong>
+
+          <span
+            className={`soc2-print-kpi-sub ${
+              Number(summary.highSeverity)
+                ? "danger"
+                : "success"
+            }`}
+          >
+            {Number(summary.highSeverity)
+              ? "Requires review"
+              : "None recorded"}
+          </span>
+        </div>
+
+
+        <div className="soc2-print-kpi">
+          <span className="soc2-print-kpi-label">
+            Anomalies
+          </span>
+
+          <strong className="soc2-print-kpi-value">
+            {fmtInt(summary.anomalies)}
+          </strong>
+
+          <span className="soc2-print-kpi-sub">
+            {fmtInt(summary.iocMatches)} IOC matches
+          </span>
+        </div>
+
+
+        <div className="soc2-print-kpi soc2-print-kpi-score">
+          <span className="soc2-print-kpi-label">
+            Compliance
+          </span>
+
+          <strong className="soc2-print-kpi-score-value">
+            {compliance != null
+              ? `${compliance}%`
+              : "—"}
+          </strong>
+
+          <span
+            className={`soc2-print-kpi-sub ${
+              compliance == null
+                ? ""
+                : compliance >= 90
+                  ? "success"
+                  : compliance >= 75
+                    ? "warning"
+                    : "danger"
+            }`}
+          >
+            {complianceStatus}
+          </span>
+        </div>
+
+      </div>
+
+
+      {/* =======================================================
+          COMPLIANCE OVERVIEW
+      ======================================================= */}
+      <div className="soc2-print-summary-grid">
+
+        <div className="soc2-print-summary-card">
+
+          <div className="soc2-print-card-eyebrow">
+            COMPLIANCE OVERVIEW
+          </div>
+
+          <div className="soc2-print-compliance">
+
+            <div className="soc2-print-compliance-score">
+              {compliance != null
+                ? `${compliance}%`
+                : "—"}
+            </div>
+
+            <div className="soc2-print-compliance-copy">
+
+              <strong>
+                Overall compliance score
+              </strong>
+
+              <span>
+                Mean score across scored trust service
+                criteria for the selected reporting window.
+              </span>
+
+            </div>
+
+          </div>
+
+          {compliance != null && (
+            <div className="soc2-print-compliance-track">
+              <div
+                className="soc2-print-compliance-fill"
+                style={{
+                  width: `${Math.max(
+                    0,
+                    Math.min(100, Number(compliance))
+                  )}%`,
+                }}
+              />
+            </div>
+          )}
+
+        </div>
+
+
+        <div className="soc2-print-summary-card">
+
+          <div className="soc2-print-card-eyebrow">
+            REPORT SCOPE
+          </div>
+
+          <div className="soc2-print-scope-row">
+            <span>Agent</span>
+
+            <strong>
+              {report.meta.agentName || "All agents"}
+            </strong>
+          </div>
+
+          <div className="soc2-print-scope-row">
+            <span>Events</span>
+
+            <strong>
+              {fmtInt(summary.totalEvents)}
+            </strong>
+          </div>
+
+          <div className="soc2-print-scope-row">
+            <span>Timezone</span>
+
+            <strong>
+              IST (UTC+5:30)
+            </strong>
+          </div>
+
+          <div className="soc2-print-scope-row">
+            <span>Generated</span>
+
+            <strong>
+              {report.meta.generatedAt !== "—"
+                ? `${report.meta.generatedAt} IST`
+                : "—"}
+            </strong>
+          </div>
+
+        </div>
+
+      </div>
+
+
+      {/* =======================================================
+          TRUST SERVICE CRITERIA
+      ======================================================= */}
+      <div className="soc2-print-summary-section">
+
+        <div className="soc2-print-card-eyebrow">
+          TRUST SERVICE CRITERIA
+        </div>
+
+        <h3 className="soc2-print-summary-heading">
+          Compliance by monitored domain
+        </h3>
+
+        {(summary.criteria || []).length > 0 ? (
+          <div className="soc2-print-criteria">
+            <CriteriaScores scores={summary.criteria} />
+          </div>
+        ) : (
+          <div className="soc2-print-empty">
+            No scored domains were recorded in this window.
+          </div>
+        )}
+
+      </div>
+
+
+      {/* =======================================================
+          NOTE
+      ======================================================= */}
+      {(summary.silentDomains || []).length > 0 && (
+        <div className="soc2-print-summary-note">
+          <strong>Note:</strong>{" "}
+          The following domains were not scored because
+          no events were recorded during this window:{" "}
+          {summary.silentDomains.join(", ")}.
+        </div>
+      )}
+
+    </section>
+  );
+}
+
+// function PrintSection({ number, title, lead, children }) {
+//   return (
+//     <section className="soc2-print-section">
+//       <h2 className="soc2-print-h2">
+//         {number}. {title}
+//       </h2>
+//       {lead && <p className="soc2-print-lead">{lead}</p>}
+//       {children}
+//     </section>
+//   );
+// }
+
+function PrintSection({ number, title, lead, children }) {
+
+  const sectionClass =
+    title === "System operations (CC7)"
+      ? "soc2-print-section soc2-print-section-process"
+      : title === "Change management (CC8)"
+        ? "soc2-print-section soc2-print-section-change"
+        : "soc2-print-section";
+  return (
+    <section className={sectionClass}>
+
+      <div className="soc2-print-section-number">
+        {String(number).padStart(2, "0")}
+      </div>
+
+      <div className="soc2-print-section-heading">
+
+        <div className="soc2-print-page-eyebrow">
+          SOC 2 EVIDENCE
+        </div>
+
+        <h2 className="soc2-print-h2">
+          {title}
+        </h2>
+
+        {lead && (
+          <p className="soc2-print-lead">
+            {lead}
+          </p>
+        )}
+
+      </div>
+
+      <div className="soc2-print-section-body">
+        {children}
+      </div>
+
     </section>
   );
 }
@@ -821,37 +1308,199 @@ function BreakdownList({ items = [] }) {
 }
 
 /** Detail table for the row-level evidence (privileged access, transfers, …). */
+// function DataTable({ columns = [], rows = [], maxRows = 50 }) {
+//   const shown = rows.slice(0, maxRows);
+//   if (rows.length === 0) return <div className="evt-empty">Nothing recorded.</div>;
+
+//   return (
+//     <div className="inc-table-wrap">
+//       <table className="inc-table soc2-tbl">
+//         <thead>
+//           <tr>
+//             {columns.map((c) => (
+//               <th key={c.key}>{c.label}</th>
+//             ))}
+//           </tr>
+//         </thead>
+//         <tbody>
+//           {shown.map((r, i) => (
+//             <tr key={i}>
+//               {columns.map((c) => (
+//                 <td key={c.key} title={String(r[c.key] == null ? "" : r[c.key])}>
+//                   {r[c.key] == null || r[c.key] === "" ? "—" : r[c.key]}
+//                 </td>
+//               ))}
+//             </tr>
+//           ))}
+//         </tbody>
+//       </table>
+//       {rows.length > shown.length && (
+//         <div className="soc2-tbl-more">
+//           Showing {shown.length} of {fmtInt(rows.length)} rows.
+//         </div>
+//       )}
+//     </div>
+//   );
+// }
+
 function DataTable({ columns = [], rows = [], maxRows = 50 }) {
   const shown = rows.slice(0, maxRows);
-  if (rows.length === 0) return <div className="evt-empty">Nothing recorded.</div>;
+
+  if (rows.length === 0) {
+    return <div className="evt-empty">Nothing recorded.</div>;
+  }
+
+  const isSeverityColumn = (key, label) => {
+    const value = `${key || ""} ${label || ""}`.toLowerCase();
+
+    return (
+      value.includes("severity") ||
+      value === "severity" ||
+      value.includes("priority")
+    );
+  };
+
+  const isCategoryColumn = (key, label) => {
+    const value = `${key || ""} ${label || ""}`.toLowerCase();
+
+    return (
+      value.includes("category") ||
+      value.includes("domain")
+    );
+  };
+
+  const normalizeSeverity = (value) => {
+    const normalized = String(value || "")
+      .trim()
+      .toLowerCase();
+
+    if (normalized === "critical") return "critical";
+    if (normalized === "high") return "high";
+    if (normalized === "medium") return "medium";
+    if (normalized === "low") return "low";
+
+    return "";
+  };
+
+  const normalizeCategory = (value) => {
+    const normalized = String(value || "")
+      .trim()
+      .toLowerCase()
+      .replace(/\s+/g, "-");
+
+    if (
+      normalized.includes("auth") ||
+      normalized.includes("access")
+    ) {
+      return "auth";
+    }
+
+    if (normalized.includes("network")) {
+      return "network";
+    }
+
+    if (
+      normalized.includes("file") ||
+      normalized.includes("change")
+    ) {
+      return "file";
+    }
+
+    if (
+      normalized.includes("process") ||
+      normalized.includes("system")
+    ) {
+      return "process";
+    }
+
+    if (
+      normalized.includes("usb") ||
+      normalized.includes("removable")
+    ) {
+      return "usb";
+    }
+
+    return "";
+  };
 
   return (
     <div className="inc-table-wrap">
       <table className="inc-table soc2-tbl">
+
         <thead>
           <tr>
             {columns.map((c) => (
-              <th key={c.key}>{c.label}</th>
+              <th key={c.key}>
+                {c.label}
+              </th>
             ))}
           </tr>
         </thead>
+
         <tbody>
           {shown.map((r, i) => (
             <tr key={i}>
-              {columns.map((c) => (
-                <td key={c.key} title={String(r[c.key] == null ? "" : r[c.key])}>
-                  {r[c.key] == null || r[c.key] === "" ? "—" : r[c.key]}
-                </td>
-              ))}
+
+              {columns.map((c) => {
+                const rawValue = r[c.key];
+                const displayValue =
+                  rawValue == null || rawValue === ""
+                    ? "—"
+                    : rawValue;
+
+                const severity =
+                  isSeverityColumn(c.key, c.label)
+                    ? normalizeSeverity(rawValue)
+                    : "";
+
+                const category =
+                  isCategoryColumn(c.key, c.label)
+                    ? normalizeCategory(rawValue)
+                    : "";
+
+                return (
+                  <td
+                    key={c.key}
+                    title={String(displayValue)}
+                    className={
+                      severity
+                        ? "soc2-table-severity-cell"
+                        : category
+                          ? "soc2-table-category-cell"
+                          : ""
+                    }
+                  >
+                    {severity ? (
+                      <span
+                        className={`sev-badge sev-${severity}`}
+                      >
+                        {String(rawValue).toUpperCase()}
+                      </span>
+                    ) : category ? (
+                      <span
+                        className={`cat-badge cat-${category}`}
+                      >
+                        {String(rawValue)}
+                      </span>
+                    ) : (
+                      displayValue
+                    )}
+                  </td>
+                );
+              })}
+
             </tr>
           ))}
         </tbody>
+
       </table>
+
       {rows.length > shown.length && (
         <div className="soc2-tbl-more">
           Showing {shown.length} of {fmtInt(rows.length)} rows.
         </div>
       )}
+
     </div>
   );
 }
@@ -881,12 +1530,25 @@ function SectionView({ view, expanded = false }) {
   // so the wait is visible on the tab itself and not only on the loader strip.
   if (view.pending) {
     return (
-      <div className="soc2-tab-body">
-        <div className="soc2-section-head">{view.heading}</div>
+      <div className="soc2-tab-body soc2-domain-section">
+        {/* <div className="soc2-section-head">{view.heading}</div> */}
+        <div className="soc2-section-head soc2-domain-heading">
+  <span className="soc2-domain-eyebrow">
+    SOC 2 EVIDENCE
+  </span>
+
+  <span className="soc2-domain-title">
+    {view.heading}
+  </span>
+</div>
         <div className="soc2-note soc2-note-loading">
           <Spinner />
           Loading this report…
         </div>
+
+        <div className="soc2-print-domain-label">
+  KEY METRICS
+</div>
         <StatRow>
           {[0, 1, 2, 3].map((i) => (
             <StatCard key={i} loading />
@@ -938,6 +1600,10 @@ function SectionView({ view, expanded = false }) {
         <div className="soc2-note">No events of this type were recorded in the selected window.</div>
       )}
 
+      <div className="soc2-print-domain-label">
+  KEY ACTIVITY
+</div>
+
       <div className="soc2-two-col">
         <Section title={view.bars.title}>
           {view.bars.items.map((b) => (
@@ -955,15 +1621,25 @@ function SectionView({ view, expanded = false }) {
         </Section>
       </div>
 
+      {charts.length > 0 && (
+  <div className="soc2-print-domain-label">
+    EVIDENCE
+  </div>
+)}
+
       {charts.map((c) => (
         <Section key={c.title} title={c.title} wide>
-          <TimeSeriesChart series={c.series} yMax={c.yMax} unit={c.unit} height={220} />
+          <TimeSeriesChart series={c.series} yMax={c.yMax} unit={c.unit} height={300}  minimap={false}/>
         </Section>
       ))}
 
       {/* The detail is the bulk of the page, so it stays folded away until it is
           asked for — the printed report opens everything instead. */}
       {view.breakdowns.length > 0 && (
+         <>
+    <div className="soc2-print-domain-label">
+      BREAKDOWNS
+    </div>
         <Disclosure
           title="Breakdowns"
           hint={`${view.breakdowns.length} lists`}
@@ -977,7 +1653,14 @@ function SectionView({ view, expanded = false }) {
             ))}
           </div>
         </Disclosure>
+        </>
       )}
+
+      {view.tables.length > 0 && (
+  <div className="soc2-print-domain-label">
+    EVIDENCE DETAILS
+  </div>
+)}
 
       {view.tables.map((t) => (
         <Disclosure
@@ -1165,19 +1848,207 @@ function AgentsTab({ agents, loading, onSelect, selectedName }) {
   );
 }
 
+// function RecommendationsTab({ items, loading }) {
+//   if (loading) return <SkelLines n={6} />;
+//   return (
+//     <div className="soc2-tab-body">
+//       <div className="soc2-section-head">Recommendations and remediation</div>
+//       <ol className="soc2-recs">
+//         {(items || []).map((r, i) => (
+//           <li key={i} className={`soc2-rec soc2-rec-${r.priority || "info"}`}>
+//             <span className="soc2-rec-num">{String(i + 1).padStart(2, "0")}</span>
+//             <span className="soc2-rec-text">{r.text}</span>
+//           </li>
+//         ))}
+//       </ol>
+//     </div>
+//   );
+// }
+// function RecommendationsTab({ items, loading }) {
+//   if (loading) return <SkelLines n={6} />;
+
+//   const recommendations = items || [];
+
+//   if (recommendations.length === 0) {
+//     return (
+//       <div className="soc2-tab-body">
+//         <div className="soc2-section-head">
+//           Recommendations and remediation
+//         </div>
+
+//         <div className="soc2-recommendation-empty">
+//           No recommendations were generated for the selected reporting window.
+//         </div>
+//       </div>
+//     );
+//   }
+
+//   return (
+//     <div className="soc2-tab-body">
+//       <div className="soc2-section-head">
+//         Recommendations and remediation
+//       </div>
+
+//       <div className="soc2-recommendation-list">
+//         {recommendations.map((r, i) => {
+//           const priority = String(r.priority || "info").toLowerCase();
+
+//           const priorityLabel =
+//             priority === "critical"
+//               ? "CRITICAL"
+//               : priority === "high"
+//                 ? "HIGH"
+//                 : priority === "medium"
+//                   ? "MEDIUM"
+//                   : priority === "low"
+//                     ? "LOW"
+//                     : "INFO";
+
+//           return (
+//             <article
+//               key={i}
+//               className={`soc2-recommendation-card soc2-recommendation-${priority}`}
+//             >
+//               <div className="soc2-recommendation-top">
+//                 <div className="soc2-recommendation-finding">
+//                   FINDING {String(i + 1).padStart(2, "0")}
+//                 </div>
+
+//                 <span className={`soc2-recommendation-priority soc2-priority-${priority}`}>
+//                   {priorityLabel}
+//                 </span>
+//               </div>
+
+//               <div className="soc2-recommendation-divider" />
+
+//               <div className="soc2-recommendation-block">
+//                 <div className="soc2-recommendation-label">
+//                   Finding
+//                 </div>
+
+//                 <div className="soc2-recommendation-text">
+//                   {r.text || "No finding description available."}
+//                 </div>
+//               </div>
+
+//               <div className="soc2-recommendation-block">
+//                 <div className="soc2-recommendation-label">
+//                   Recommended Action
+//                 </div>
+
+//                 <div className="soc2-recommendation-action">
+//                   Review the finding, validate the underlying evidence, and
+//                   take appropriate remediation action based on the identified
+//                   risk.
+//                 </div>
+//               </div>
+//             </article>
+//           );
+//         })}
+//       </div>
+//     </div>
+//   );
+// }
+
 function RecommendationsTab({ items, loading }) {
   if (loading) return <SkelLines n={6} />;
+
+  const recommendations = items || [];
+
+  if (recommendations.length === 0) {
+    return (
+      <div className="soc2-tab-body">
+        <div className="soc2-section-head">
+          Recommendations and remediation
+        </div>
+
+        <div className="soc2-recommendation-empty">
+          No recommendations were generated for the selected reporting window.
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="soc2-tab-body">
-      <div className="soc2-section-head">Recommendations and remediation</div>
-      <ol className="soc2-recs">
-        {(items || []).map((r, i) => (
-          <li key={i} className={`soc2-rec soc2-rec-${r.priority || "info"}`}>
-            <span className="soc2-rec-num">{String(i + 1).padStart(2, "0")}</span>
-            <span className="soc2-rec-text">{r.text}</span>
-          </li>
-        ))}
-      </ol>
+      <div className="soc2-section-head">
+        Recommendations and remediation
+      </div>
+
+      <div className="soc2-recommendation-list">
+        {recommendations.map((r, i) => {
+          const priority = String(r.priority || "info").toLowerCase();
+
+          const priorityLabel =
+            priority === "critical"
+              ? "CRITICAL"
+              : priority === "warning"
+                ? "HIGH"
+                : priority === "info"
+                  ? "INFO"
+                  : priority.toUpperCase();
+
+          return (
+            <article
+              key={i}
+              className={`soc2-recommendation-card soc2-recommendation-${priority}`}
+            >
+              <div className="soc2-recommendation-top">
+                <div>
+                  <div className="soc2-recommendation-finding">
+                    FINDING {String(i + 1).padStart(2, "0")}
+                  </div>
+
+                  {r.category && (
+                    <div className="soc2-recommendation-category">
+                      {r.category}
+                    </div>
+                  )}
+                </div>
+
+                <span
+                  className={`soc2-recommendation-priority soc2-priority-${priority}`}
+                >
+                  {priorityLabel}
+                </span>
+              </div>
+
+              <div className="soc2-recommendation-divider" />
+
+              <div className="soc2-recommendation-block">
+                <div className="soc2-recommendation-label">
+                  Finding
+                </div>
+
+                <div className="soc2-recommendation-text">
+                  {r.finding || r.text || "No finding description available."}
+                </div>
+              </div>
+
+              <div className="soc2-recommendation-block">
+                <div className="soc2-recommendation-label">
+                  Evidence
+                </div>
+
+                <div className="soc2-recommendation-evidence">
+                  {r.evidence || "No supporting evidence was recorded."}
+                </div>
+              </div>
+
+              <div className="soc2-recommendation-block">
+                <div className="soc2-recommendation-label">
+                  Recommended Action
+                </div>
+
+                <div className="soc2-recommendation-action">
+                  {r.recommendedAction ||
+                    "Review the finding and take appropriate remediation action."}
+                </div>
+              </div>
+            </article>
+          );
+        })}
+      </div>
     </div>
   );
 }
