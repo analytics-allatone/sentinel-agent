@@ -346,16 +346,16 @@ async def delete_credential(credential_id: int = Query(),
     return standard_success_response(data={"id": credential_id},
                                      message="Credential deleted successfully")
 @agent_management_router.post("/stop-db", status_code=200)
-async def stop_fly(engine: str =Query(),agent_name: str = Query(),
+async def stop_db(engine: str =Query(),agent_name: str = Query(),
                    db: AsyncSession = Depends(get_async_db)):
     """Stop Fly.io monitoring on an agent."""
    
     result = await mqtt_request(agent_name=agent_name, command="stop_engine",
-                                args={"engine" : engine} ,timeout=10.0)
+                                args={"engine" : engine} ) #,timeout=10.0)
     if result is None:
         raise HTTPException(504, "Agent did not respond (may be offline)")
     return standard_success_response(data={"result": result},
-                                     message="Fly monitoring stopped")
+                                     message="db monitoring stopped")
 
 def _web_config_data(row) -> "WebConfigData":
     """Row -> response model. The password is never included."""
