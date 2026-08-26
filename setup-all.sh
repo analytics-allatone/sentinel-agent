@@ -1,222 +1,177 @@
 #!/usr/bin/env bash
+# setup-all.sh — postgres + mosquitto + grafana (+ optional app) on one docker network,
+# running directly on the host Docker daemon.
 #
-# setup-all.sh — one-shot stack bring-up:
-#   Docker (install if missing) -> network -> PostgreSQL -> Mosquitto (MQTT)
-#   -> download + build + run your application. All on one shared network.
+#   ./setup-all.sh
+#   ZIP_URL=https://host/code.zip ./setup-all.sh
 #
-# Everything is hardcoded below. No arguments. Just:  ./setup-all.sh
-#
-# The app zip is streamed into memory (never saved) and extracted into an
-# ephemeral dir wiped on exit. Postgres/MQTT data live in named volumes;
-# Mosquitto config lives in ./mosquitto (kept, since the broker needs it).
-#
+# Credentials can be overridden from the environment, e.g.
+#   PG_PASS='...' GF_PASS='...' ./setup-all.sh
+
+# --- must be bash: ${BASH_SOURCE[0]} below is bash-only -----------------------
+if [ -z "${BASH_VERSION:-}" ]; then
+  echo "[x] Run this with bash, not sh:  bash $0" >&2
+  exit 1
+fi
+
 set -euo pipefail
 
-# ============================ CONFIG (edit these) ============================
-# Shared network
-NETWORK="sentinel-net"
+NET="${NET:-sentinel-net}"
+PG_USER="${PG_USER:-dbmasteruser}"
+PG_PASS="${PG_PASS:-dbmasterpassword}"
+PG_DB="${PG_DB:-productiondb}"
+MQ_USER="${MQ_USER:-mqttmasteruser}"
+MQ_PASS="${MQ_PASS:-mqttmasterpassword}"
+GF_USER="${GF_USER:-admin}"
+GF_PASS="${GF_PASS:-grafanamasterpassword}"
 
-# --- PostgreSQL ---
-PG_CONTAINER="sentineldb"
-PG_USER="dbmasteruser"
-PG_PASS="dbmasterpassword"
-PG_DB="productiondb"
-PG_PORT="5432"
-PG_IMAGE="postgres:16"
-PG_VOLUME="sentinel_pgdata"
+DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+MQ_DIR="$DIR/mosquitto/config"
+GF_DIR="$DIR/grafana/datasources"
 
-# --- Mosquitto (MQTT) ---
-MQTT_CONTAINER="sentinel-mqtt"
-MQTT_USER="mqttmasteruser"
-MQTT_PASS="mqttmasterpassword"
-MQTT_PORT="1883"
-MQTT_WS_PORT="9001"
-MQTT_IMAGE="eclipse-mosquitto:2"
-MQTT_DATA_VOL="sentinel_mqtt_data"
-MQTT_LOG_VOL="sentinel_mqtt_log"
-MQTT_DIR="$(pwd)/mosquitto"
-MQTT_CONFIG_DIR="${MQTT_DIR}/config"
+APP_IMAGE="${APP_IMAGE:-sentinel-api}"
+APP_PORT="${APP_PORT:-8000}"
+APP_MODULE="${APP_MODULE:-main:app}"
+ZIP_URL="${ZIP_URL:-}"
 
-# --- Application ---
-ZIP_URL="https://REPLACE-WITH-YOUR-URL/code.zip"   # <-- set your zip URL here
-APP_IMAGE="sentinel-api"
-APP_CONTAINER="sentinel-api"
-APP_PORT="8000"
-APP_MODULE="main:app"
-# =============================================================================
+log()  { printf '\033[1;32m[+] %s\033[0m\n' "$*"; }
+warn() { printf '\033[1;33m[!] %s\033[0m\n' "$*"; }
+die()  { printf '\033[1;31m[x] %s\033[0m\n' "$*" >&2; exit 1; }
 
-log()  { printf '\n\033[1;32m[+] %s\033[0m\n' "$*"; }
-warn() { printf '\n\033[1;33m[!] %s\033[0m\n' "$*"; }
-err()  { printf '\n\033[1;31m[x] %s\033[0m\n' "$*" >&2; }
+# ------------------------------- docker --------------------------------------
+command -v docker >/dev/null || die "docker not installed: curl -fsSL https://get.docker.com | sh"
+docker info >/dev/null 2>&1 || die "docker daemon unreachable (try: sudo usermod -aG docker \$USER, then re-login)"
+docker network create "$NET" >/dev/null 2>&1 || true
 
-# --- ephemeral workspace for app source, wiped on exit ---
-WORK="$(mktemp -d)"
-cleanup() { rm -rf "$WORK"; }
-trap cleanup EXIT INT TERM
+# ------------------------------ postgres -------------------------------------
+log "pulling postgres:16 ..."
+docker pull -q postgres:16 >/dev/null
+docker rm -f sentineldb >/dev/null 2>&1 || true
+docker run -d --name sentineldb --restart unless-stopped --network "$NET" \
+  -e POSTGRES_USER="$PG_USER" -e POSTGRES_PASSWORD="$PG_PASS" -e POSTGRES_DB="$PG_DB" \
+  -p 5432:5432 -v sentinel_pgdata:/var/lib/postgresql/data postgres:16 >/dev/null
+log "postgres started"
 
-# --- sudo helper for install steps ---
-if [ "$(id -u)" -eq 0 ]; then SUDO=""
-elif command -v sudo >/dev/null 2>&1; then SUDO="sudo"
-else SUDO=""; fi
-
-# ----------------------------- Docker install --------------------------------
-install_docker() {
-  if command -v docker >/dev/null 2>&1; then
-    log "Docker already installed: $(docker --version)"
-  else
-    log "Docker not found — installing via https://get.docker.com ..."
-    if command -v curl >/dev/null 2>&1; then
-      curl -fsSL https://get.docker.com -o /tmp/get-docker.sh
-    elif command -v wget >/dev/null 2>&1; then
-      wget -qO /tmp/get-docker.sh https://get.docker.com
-    else
-      err "Neither curl nor wget is available. Install one and re-run."; exit 1
-    fi
-    $SUDO sh /tmp/get-docker.sh
-    rm -f /tmp/get-docker.sh
-  fi
-  if command -v systemctl >/dev/null 2>&1; then
-    $SUDO systemctl enable docker >/dev/null 2>&1 || true
-    $SUDO systemctl start  docker >/dev/null 2>&1 || true
-  fi
-}
-
-wait_and_pick_docker() {
-  log "Waiting for the Docker daemon..."
-  for _ in $(seq 1 30); do
-    if docker info >/dev/null 2>&1; then
-      DOCKER() { docker "$@"; }; log "Docker engine is ready."; return 0
-    fi
-    if [ -n "$SUDO" ] && $SUDO docker info >/dev/null 2>&1; then
-      DOCKER() { $SUDO docker "$@"; }; log "Docker engine is ready (via sudo)."; return 0
-    fi
-    sleep 2
-  done
-  err "Docker daemon did not become ready."; exit 1
-}
-
-ensure_network() {
-  if DOCKER network inspect "$NETWORK" >/dev/null 2>&1; then
-    log "Network '${NETWORK}' already exists."
-  else
-    DOCKER network create "$NETWORK" >/dev/null
-    log "Created network '${NETWORK}'."
-  fi
-}
-
-recreate() {  # $1 = container name
-  if DOCKER ps -a --format '{{.Names}}' | grep -qx "$1"; then
-    warn "Removing existing container: $1"
-    DOCKER rm -f "$1" >/dev/null
-  fi
-}
-
-# ------------------------------- PostgreSQL ----------------------------------
-run_postgres() {
-  log "Pulling ${PG_IMAGE} ..."; DOCKER pull "$PG_IMAGE"
-  recreate "$PG_CONTAINER"
-  DOCKER volume create "$PG_VOLUME" >/dev/null
-  DOCKER run -d \
-    --name "$PG_CONTAINER" \
-    --restart unless-stopped \
-    --network "$NETWORK" \
-    -e POSTGRES_USER="$PG_USER" \
-    -e POSTGRES_PASSWORD="$PG_PASS" \
-    -e POSTGRES_DB="$PG_DB" \
-    -p "${PG_PORT}:5432" \
-    -v "${PG_VOLUME}:/var/lib/postgresql/data" \
-    "$PG_IMAGE" >/dev/null
-  log "PostgreSQL container '${PG_CONTAINER}' started."
-}
-
-wait_postgres() {
-  log "Waiting for PostgreSQL to accept connections..."
-  for _ in $(seq 1 30); do
-    if DOCKER exec "$PG_CONTAINER" pg_isready -U "$PG_USER" -d "$PG_DB" >/dev/null 2>&1; then
-      log "PostgreSQL is ready."; return 0
-    fi
-    sleep 2
-  done
-  warn "Could not confirm PostgreSQL readiness — check: docker logs ${PG_CONTAINER}"
-}
-
-# -------------------------------- Mosquitto ----------------------------------
-setup_mosquitto() {
-  mkdir -p "$MQTT_CONFIG_DIR"
-  cat > "${MQTT_CONFIG_DIR}/mosquitto.conf" <<EOF
+# ------------------------------ mosquitto ------------------------------------
+# Listeners below are container-internal; host ports come from -p.
+mkdir -p "$MQ_DIR"
+cat > "$MQ_DIR/mosquitto.conf" <<'EOF'
 persistence true
 persistence_location /mosquitto/data/
-log_dest file /mosquitto/log/mosquitto.log
 log_dest stdout
-
-listener ${MQTT_PORT} 0.0.0.0
+listener 1883 0.0.0.0
 protocol mqtt
-
-listener ${MQTT_WS_PORT} 0.0.0.0
+listener 9001 0.0.0.0
 protocol websockets
-
 allow_anonymous false
 password_file /mosquitto/config/passwordfile
 EOF
-  log "Pulling ${MQTT_IMAGE} ..."; DOCKER pull "$MQTT_IMAGE"
-  log "Generating MQTT password file for user '${MQTT_USER}'..."
-  DOCKER run --rm --entrypoint mosquitto_passwd \
-    -v "${MQTT_CONFIG_DIR}:/mosquitto/config" \
-    "$MQTT_IMAGE" -b -c /mosquitto/config/passwordfile "$MQTT_USER" "$MQTT_PASS"
-  $SUDO chmod 0644 "${MQTT_CONFIG_DIR}/passwordfile" 2>/dev/null \
-    || chmod 0644 "${MQTT_CONFIG_DIR}/passwordfile" 2>/dev/null || true
-}
 
-run_mosquitto() {
-  recreate "$MQTT_CONTAINER"
-  DOCKER volume create "$MQTT_DATA_VOL" >/dev/null
-  DOCKER volume create "$MQTT_LOG_VOL"  >/dev/null
-  DOCKER run -d \
-    --name "$MQTT_CONTAINER" \
-    --restart unless-stopped \
-    --network "$NETWORK" \
-    -p "${MQTT_PORT}:1883" \
-    -p "${MQTT_WS_PORT}:9001" \
-    -v "${MQTT_CONFIG_DIR}:/mosquitto/config" \
-    -v "${MQTT_DATA_VOL}:/mosquitto/data" \
-    -v "${MQTT_LOG_VOL}:/mosquitto/log" \
-    "$MQTT_IMAGE" >/dev/null
-  log "Mosquitto (MQTT) container '${MQTT_CONTAINER}' started."
-}
+log "pulling eclipse-mosquitto:2 ..."
+docker pull -q eclipse-mosquitto:2 >/dev/null
+docker run --rm --entrypoint mosquitto_passwd -v "$MQ_DIR:/mosquitto/config" \
+  eclipse-mosquitto:2 -b -c /mosquitto/config/passwordfile "$MQ_USER" "$MQ_PASS"
+chmod 0644 "$MQ_DIR/passwordfile" 2>/dev/null || true
+[ -s "$MQ_DIR/passwordfile" ] || die "MQTT password file not created"
 
-# ------------------------------- Application ---------------------------------
-deploy_app() {
-  if [ -z "$ZIP_URL" ] || [ "$ZIP_URL" = "https://REPLACE-WITH-YOUR-URL/code.zip" ]; then
-    err "Edit ZIP_URL at the top of the script and set your real zip URL."; exit 1
+docker rm -f sentinel-mqtt >/dev/null 2>&1 || true
+docker run -d --name sentinel-mqtt --restart unless-stopped --network "$NET" \
+  -p 1883:1883 -p 9001:9001 -v "$MQ_DIR:/mosquitto/config" \
+  -v sentinel_mqtt_data:/mosquitto/data -v sentinel_mqtt_log:/mosquitto/log \
+  eclipse-mosquitto:2 >/dev/null
+sleep 3
+if [ "$(docker inspect -f '{{.State.Running}}' sentinel-mqtt)" != true ]; then
+  docker logs --tail 20 sentinel-mqtt
+  die "mosquitto exited"
+fi
+log "mosquitto started"
+
+# --------------------------- wait for postgres -------------------------------
+pg_ok=0
+for _ in $(seq 1 30); do
+  if docker exec sentineldb pg_isready -U "$PG_USER" -d "$PG_DB" >/dev/null 2>&1; then
+    pg_ok=1
+    log "postgres ready"
+    break
   fi
+  sleep 2
+done
+# FIX: previously the loop could time out silently and Grafana would be
+# provisioned against a database that never came up.
+if [ "$pg_ok" -ne 1 ]; then
+  docker logs --tail 30 sentineldb
+  die "postgres did not become ready in ~60s"
+fi
 
-  log "Downloading and extracting app (in-memory, no zip saved) ..."
-  if command -v curl >/dev/null 2>&1; then FETCH=(curl -fsSL "$ZIP_URL")
-  elif command -v wget >/dev/null 2>&1; then FETCH=(wget -qO- "$ZIP_URL")
-  else err "Neither curl nor wget is available."; exit 1; fi
+# ------------------------------- grafana -------------------------------------
+mkdir -p "$GF_DIR"
+cat > "$GF_DIR/sentineldb.yaml" <<EOF
+apiVersion: 1
+datasources:
+  - name: SentinelDB
+    type: postgres
+    access: proxy
+    url: sentineldb:5432
+    database: $PG_DB
+    user: $PG_USER
+    isDefault: true
+    editable: true
+    secureJsonData:
+      password: $PG_PASS
+    jsonData:
+      sslmode: disable
+      postgresVersion: 1600
+EOF
 
-  if command -v python3 >/dev/null 2>&1; then
-    "${FETCH[@]}" | python3 -c "import sys,io,zipfile; zipfile.ZipFile(io.BytesIO(sys.stdin.buffer.read())).extractall('$WORK')"
-  else
-    warn "python3 not found — buffering the zip inside the ephemeral dir."
-    "${FETCH[@]}" > "$WORK/.code.zip"
-    ( cd "$WORK" && unzip -q .code.zip && rm -f .code.zip )
-  fi
+log "pulling grafana/grafana-oss:11.1.0 ..."
+docker pull -q grafana/grafana-oss:11.1.0 >/dev/null
+docker rm -f sentinel-grafana >/dev/null 2>&1 || true
+docker run -d --name sentinel-grafana --restart unless-stopped --network "$NET" \
+  -e GF_SECURITY_ADMIN_USER="$GF_USER" \
+  -e GF_SECURITY_ADMIN_PASSWORD="$GF_PASS" \
+  -e GF_USERS_ALLOW_SIGN_UP=false \
+  -p 3000:3000 -v sentinel_grafana_data:/var/lib/grafana \
+  -v "$GF_DIR:/etc/grafana/provisioning/datasources" \
+  grafana/grafana-oss:11.1.0 >/dev/null
+log "grafana started"
 
-  # build context (descend into a lone top-level folder)
+# --------------------------- app (only if ZIP_URL) ---------------------------
+if [ -n "$ZIP_URL" ]; then
+  command -v curl  >/dev/null || die "curl is required to fetch ZIP_URL"
+  command -v unzip >/dev/null || die "unzip is required to unpack ZIP_URL"
+
+  WORK="$(mktemp -d)"
+  trap 'rm -rf "$WORK"' EXIT INT TERM
+
+  log "downloading app ..."
+  curl -fsSL "$ZIP_URL" -o "$WORK/c.zip"
+  ( cd "$WORK" && unzip -q c.zip && rm -f c.zip )
+
   CTX="$WORK"
-  entries=$(find "$WORK" -mindepth 1 -maxdepth 1 | wc -l)
-  lone_dir=$(find "$WORK" -mindepth 1 -maxdepth 1 -type d | head -n1)
-  if [ "$entries" -eq 1 ] && [ -n "$lone_dir" ]; then CTX="$lone_dir"; fi
+  n=$(find "$WORK" -mindepth 1 -maxdepth 1 ! -name __MACOSX | wc -l)
+  d=$(find "$WORK" -mindepth 1 -maxdepth 1 -type d ! -name __MACOSX | head -n1)
+  if [ "$n" -eq 1 ] && [ -n "$d" ]; then CTX="$d"; fi
 
   if [ -f "$CTX/Dockerfile" ]; then
-    log "Using the project's own Dockerfile."
+    log "using the project's own Dockerfile"
   else
-    warn "No Dockerfile found — generating the project's multi-stage Dockerfile."
-    for expected in requirements.txt src frontend; do
-      [ -e "$CTX/$expected" ] || warn "Expected '$expected' not found — the build may fail."
+    # FIX: the old generated Dockerfile hardcoded COPY frontend/ src/ agent/ and
+    # failed with an opaque COPY error whenever the archive lacked any of them.
+    # Now each stage/line is emitted only if that directory actually exists.
+    warn "no Dockerfile in the archive — generating one"
+    [ -f "$CTX/requirements.txt" ] || die "no requirements.txt in the archive; add a Dockerfile instead"
+
+    HAS_FRONTEND=0
+    if [ -d "$CTX/frontend" ] && [ -f "$CTX/frontend/package.json" ]; then HAS_FRONTEND=1; fi
+
+    APP_SRC_DIR=""
+    for cand in src app .; do
+      if [ -d "$CTX/$cand" ]; then APP_SRC_DIR="$cand"; break; fi
     done
-    cat > "$CTX/Dockerfile" <<EOF
+
+    : > "$CTX/Dockerfile"
+    if [ "$HAS_FRONTEND" -eq 1 ]; then
+      cat >> "$CTX/Dockerfile" <<'EOF'
 FROM node:20-alpine AS frontend-build
 WORKDIR /app/frontend
 COPY frontend/package*.json ./
@@ -224,92 +179,73 @@ RUN npm install
 COPY frontend/ ./
 RUN npm run build
 
+EOF
+    else
+      warn "no frontend/ directory — skipping the node build stage"
+    fi
 
+    cat >> "$CTX/Dockerfile" <<'EOF'
 FROM python:3.12-slim
-
-# Python optimizations
-ENV PYTHONDONTWRITEBYTECODE=1
-ENV PYTHONUNBUFFERED=1
-
+ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
 WORKDIR /app
-
-# Install only system deps (keep minimal)
-RUN apt-get update && apt-get install -y gcc \\
+RUN apt-get update && apt-get install -y --no-install-recommends gcc \
     && rm -rf /var/lib/apt/lists/*
-
-# Copy only requirements first (best caching)
 COPY requirements.txt .
+RUN pip install --no-cache-dir --upgrade pip && pip install --no-cache-dir -r requirements.txt
+EOF
 
-# Install dependencies
-RUN pip install --no-cache-dir --upgrade pip && \\
-    pip install --no-cache-dir -r requirements.txt
+    if [ "$APP_SRC_DIR" = "." ]; then
+      echo 'COPY . .' >> "$CTX/Dockerfile"
+      WORKDIR_IN_IMAGE="/app"
+    else
+      echo "COPY ${APP_SRC_DIR}/ ./${APP_SRC_DIR}" >> "$CTX/Dockerfile"
+      WORKDIR_IN_IMAGE="/app/${APP_SRC_DIR}"
+    fi
+    [ -d "$CTX/agent" ] && echo 'COPY agent/ ./agent' >> "$CTX/Dockerfile"
+    [ "$HAS_FRONTEND" -eq 1 ] && \
+      echo 'COPY --from=frontend-build /app/frontend/build ./frontend/build' >> "$CTX/Dockerfile"
 
-# Copy source code separately
-COPY src/ ./src
-COPY agent/ ./agent
-
-# Bring in the built frontend, then work from src (imports like main:app)
-COPY --from=frontend-build /app/frontend/build ./frontend/build
-WORKDIR /app/src
-
+    cat >> "$CTX/Dockerfile" <<EOF
+WORKDIR ${WORKDIR_IN_IMAGE}
 EXPOSE ${APP_PORT}
-
 CMD ["uvicorn", "${APP_MODULE}", "--host", "0.0.0.0", "--port", "${APP_PORT}"]
 EOF
   fi
 
-  log "Building app image '${APP_IMAGE}' ..."
-  DOCKER build -t "$APP_IMAGE" "$CTX"
+  log "building ${APP_IMAGE} ..."
+  docker build -t "$APP_IMAGE" "$CTX"
 
-  recreate "$APP_CONTAINER"
-  ENV_ARGS=()
-  if [ -f "$CTX/.env" ]; then ENV_ARGS=(--env-file "$CTX/.env"); log "Using bundled .env"; fi
+  if [ -f "$CTX/.env" ]; then
+    log "using bundled .env"
+    ENV_ARGS=(--env-file "$CTX/.env")
+  else
+    warn "no .env in the archive — injecting default DB/MQTT settings"
+    ENV_ARGS=(-e "DATABASE_URL=postgresql+asyncpg://${PG_USER}:${PG_PASS}@sentineldb:5432/${PG_DB}"
+              -e MQTT_HOST=sentinel-mqtt -e MQTT_PORT=1883
+              -e MQTT_USERNAME="$MQ_USER" -e MQTT_PASSWORD="$MQ_PASS")
+  fi
 
-  log "Starting app container '${APP_CONTAINER}' ..."
-  DOCKER run -d \
-    --name "$APP_CONTAINER" \
-    --restart unless-stopped \
-    --network "$NETWORK" \
-    -p "${APP_PORT}:${APP_PORT}" \
-    "${ENV_ARGS[@]}" \
-    "$APP_IMAGE" >/dev/null
-  log "App container '${APP_CONTAINER}' started."
-}
+  docker rm -f sentinel-api >/dev/null 2>&1 || true
+  docker run -d --name sentinel-api --restart unless-stopped --network "$NET" \
+    -p "${APP_PORT}:${APP_PORT}" ${ENV_ARGS[@]+"${ENV_ARGS[@]}"} "$APP_IMAGE" >/dev/null
+  sleep 3
+  if [ "$(docker inspect -f '{{.State.Running}}' sentinel-api)" = true ]; then
+    log "app started"
+  else
+    docker logs --tail 30 sentinel-api
+    warn "app container exited — see the logs above"
+  fi
+fi
 
-# --------------------------------- Summary -----------------------------------
-summary() {
-  cat <<EOF
+# -------------------------------- summary ------------------------------------
+cat <<EOF
 
-============================================================
-  STACK IS UP  (network: ${NETWORK})
-============================================================
-PostgreSQL   container ${PG_CONTAINER}
-  external : postgresql+asyncpg://${PG_USER}:${PG_PASS}@localhost:${PG_PORT}/${PG_DB}
-  in-app   : postgresql+asyncpg://${PG_USER}:${PG_PASS}@${PG_CONTAINER}:5432/${PG_DB}
-
-MQTT         container ${MQTT_CONTAINER}
-  external : localhost:${MQTT_PORT}   (ws: ${MQTT_WS_PORT})   ${MQTT_USER}/${MQTT_PASS}
-  in-app   : ${MQTT_CONTAINER}:1883
-
-Application  container ${APP_CONTAINER}
-  URL      : http://localhost:${APP_PORT}
-  logs     : docker logs -f ${APP_CONTAINER}
-
-Your app should reach the DB/broker by CONTAINER NAME (in-app URLs above),
-not localhost. All containers use --restart unless-stopped.
-============================================================
+postgres  localhost:5432   user=$PG_USER  db=$PG_DB
+mqtt      localhost:1883   ws:9001   user=$MQ_USER
+grafana   http://localhost:3000   user=$GF_USER
 EOF
-}
-
-main() {
-  install_docker
-  wait_and_pick_docker
-  ensure_network
-  run_postgres
-  setup_mosquitto
-  run_mosquitto
-  wait_postgres
-  deploy_app
-  summary
-}
-main "$@"
+[ -n "$ZIP_URL" ] && printf 'app       http://localhost:%s\n' "$APP_PORT"
+cat <<'EOF'
+in-app hosts: sentineldb:5432, sentinel-mqtt:1883
+(passwords are the values in this script / your environment)
+EOF

@@ -1,75 +1,267 @@
-import React, { useState } from 'react';
-import './Sidebar.css';
+import React, { useState } from "react";
+import "./Sidebar.css";
+
+import {
+  LuLayoutDashboard,
+  LuUsers,
+  LuFolderTree,
+  LuMonitor,
+  LuBell,
+  LuShieldCheck,
+  LuChartNoAxesColumn,
+  LuClipboardList,
+  LuPlug,
+  LuSettings,
+  LuRocket,
+  LuUserRound,
+  LuChevronDown,
+  LuChevronsLeft,
+} from "react-icons/lu";
 
 const Sidebar = ({ isOpen, onClose }) => {
-  const [activeMenu, setActiveMenu] = useState('dashboard');
+  const [activeMenu, setActiveMenu] = useState("dashboard");
 
   const menuItems = [
-    { id: 'dashboard', label: 'Dashboard', icon: '📊', href: '/dashboard' },
-    { id: 'endpoints', label: 'Endpoints', icon: '🖥️', href: '/endpoints' },
-    { id: 'assets', label: 'Assets', icon: '📦', href: '/assets' },
-    { id: 'monitoring', label: 'Monitoring', icon: '👁️', href: '/monitoring' },
-    { id: 'reports', label: 'Reports', icon: '📈', href: '/reports' },
-    { id: 'messages', label: 'Messages', icon: '📨', href: '/messages' },
-    { id: 'channels', label: 'Channels', icon: '📡', href: '/channels' },
-    { id: 'users', label: 'Users', icon: '👥', href: '/access' },
+    {
+      id: "dashboard",
+      label: "Dashboard",
+      icon: LuLayoutDashboard,
+      href: "/dashboard",
+    },
+    {
+      id: "agents",
+      label: "Agents",
+      icon: LuUsers,
+      href: "/agents",
+    },
+    {
+      id: "groups",
+      label: "Groups",
+      icon: LuFolderTree,
+      href: "/groups",
+    },
+    {
+      id: "endpoints",
+      label: "Endpoints",
+      icon: LuMonitor,
+      href: "/endpoints",
+    },
+    {
+      id: "alerts",
+      label: "Alerts",
+      icon: LuBell,
+      href: "/alerts",
+      badge: 3,
+    },
+    {
+      id: "policies",
+      label: "Policies",
+      icon: LuShieldCheck,
+      href: "/policies",
+    },
+    {
+      id: "reports",
+      label: "Reports",
+      icon: LuChartNoAxesColumn,
+      href: "/reports",
+    },
+    {
+      id: "activity",
+      label: "Activity Logs",
+      icon: LuClipboardList,
+      href: "/activity-logs",
+    },
+    {
+      id: "integrations",
+      label: "Integrations",
+      icon: LuPlug,
+      href: "/integrations",
+    },
+    {
+      id: "users",
+      label: "Users",
+      icon: LuUsers,
+      href: "/access",
+    },
+    {
+      id: "settings",
+      label: "Settings",
+      icon: LuSettings,
+      href: "/settings",
+    },
   ];
 
-  const settingsItems = [
-    { id: 'settings', label: 'Settings', icon: '⚙️', href: '/settings' },
-    { id: 'help', label: 'Help & Support', icon: '❓', href: '/help' },
-  ];
+  const handleMenuClick = (id) => {
+    setActiveMenu(id);
+
+    // Mobile par menu click ke baad sidebar close hoga
+    if (window.innerWidth <= 768 && onClose) {
+      onClose();
+    }
+  };
 
   return (
     <>
-      <div className={`sidebar-overlay ${isOpen ? 'visible' : ''}`} onClick={onClose}></div>
-      <aside className={`sidebar ${isOpen ? 'open' : ''}`}>
+      {/* Mobile overlay */}
+      <div
+        className={`sidebar-overlay ${isOpen ? "visible" : ""}`}
+        onClick={onClose}
+      ></div>
+
+      <aside className={`sidebar ${isOpen ? "open" : ""}`}>
+
+        {/* =================================
+            SIDEBAR HEADER
+            ================================= */}
         <div className="sidebar-header">
-          <h2 className="sidebar-logo">G</h2>
-          <button className="close-btn" onClick={onClose}>✕</button>
-        </div>
 
+  <div className="sidebar-brand">
+
+    <div className="sidebar-brand-icon">
+      G
+    </div>
+
+    <span className="sidebar-brand-name">
+      GuardLynx
+    </span>
+
+  </div>
+
+  <button
+    className="sidebar-menu-toggle"
+    onClick={onClose}
+    aria-label="Close sidebar"
+  >
+    ☰
+  </button>
+
+</div>
+
+
+        {/* =================================
+            NAVIGATION
+            ================================= */}
         <nav className="sidebar-nav">
-          <div className="nav-section">
-            <h3 className="nav-section-title">Main</h3>
-            <ul className="nav-menu">
-              {menuItems.map((item) => (
-                <li key={item.id}>
-                  <a
-                    href={`/app${item.href}`}
-                    className={`nav-item ${activeMenu === item.id ? 'active' : ''}`}
-                    onClick={() => setActiveMenu(item.id)}
-                  >
-                    <span className="nav-icon">{item.icon}</span>
-                    <span className="nav-label">{item.label}</span>
-                  </a>
-                </li>
-              ))}
-            </ul>
-          </div>
 
-          <div className="nav-section">
-            <h3 className="nav-section-title">Other</h3>
-            <ul className="nav-menu">
-              {settingsItems.map((item) => (
+          <ul className="nav-menu">
+
+            {menuItems.map((item) => {
+              const Icon = item.icon;
+
+              return (
                 <li key={item.id}>
+
                   <a
                     href={`/app${item.href}`}
-                    className={`nav-item ${activeMenu === item.id ? 'active' : ''}`}
-                    onClick={() => setActiveMenu(item.id)}
+                    className={`nav-item ${
+                      activeMenu === item.id ? "active" : ""
+                    }`}
+                    onClick={() => handleMenuClick(item.id)}
                   >
-                    <span className="nav-icon">{item.icon}</span>
-                    <span className="nav-label">{item.label}</span>
+
+                    <span className="nav-icon">
+                      <Icon />
+                    </span>
+
+                    <span className="nav-label">
+                      {item.label}
+                    </span>
+
+                    {item.badge && (
+                      <span className="nav-badge">
+                        {item.badge}
+                      </span>
+                    )}
+
                   </a>
+
                 </li>
-              ))}
-            </ul>
-          </div>
+              );
+            })}
+
+          </ul>
+
         </nav>
 
-        <div className="sidebar-footer">
-          <div className="version-info">v1.0.0</div>
+
+        {/* =================================
+            BOTTOM AREA
+            ================================= */}
+        <div className="sidebar-bottom">
+
+          {/* =================================
+              UPGRADE CARD
+              ================================= */}
+          <div className="sidebar-upgrade-card">
+
+            <div className="upgrade-icon">
+              <LuRocket />
+            </div>
+
+            <h4>
+              Upgrade to Pro
+            </h4>
+
+            <p>
+              Unlock advanced features,
+              custom alerts, insights and more.
+            </p>
+
+            <button className="upgrade-button">
+              Upgrade Now →
+            </button>
+
+          </div>
+
+
+          {/* =================================
+              USER CARD
+              ================================= */}
+          <div className="sidebar-user-card">
+
+            <div className="sidebar-user-avatar">
+              <LuUserRound />
+            </div>
+
+            <div className="sidebar-user-info">
+
+              <span className="sidebar-user-name">
+                Admin
+              </span>
+
+              <span className="sidebar-user-role">
+                Super Administrator
+              </span>
+
+            </div>
+
+            <span className="sidebar-user-arrow">
+              <LuChevronDown />
+            </span>
+
+          </div>
+
+
+          {/* =================================
+              COLLAPSE
+              ================================= */}
+          <button
+            className="sidebar-collapse"
+            onClick={onClose}
+          >
+
+            <span className="collapse-icon">
+              <LuChevronsLeft />
+            </span>
+
+            <span>
+              Collapse
+            </span>
+
+          </button>
+
         </div>
+
       </aside>
     </>
   );
