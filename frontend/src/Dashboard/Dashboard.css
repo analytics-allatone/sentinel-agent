@@ -1224,3 +1224,170 @@
     padding: 12px;
   }
 }
+
+/* ── "Create SOC2 report": toolbar button, then the window form ──────────── */
+.table-tools {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.btn-soc2 {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border: 1px solid #d7dae3;
+  border-radius: 6px;
+  background: #fff;
+  color: #33415c;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.18s ease;
+}
+
+.btn-soc2:hover {
+  border-color: #185fa5;
+  color: #185fa5;
+  background: #f3f8ff;
+}
+
+.btn-soc2.active {
+  background: #185fa5;
+  border-color: #185fa5;
+  color: #fff;
+}
+
+.soc2-form {
+  padding: 14px 20px 16px;
+  border-bottom: 1px solid #eee;
+  background: linear-gradient(180deg, #f4f7fc 0%, #fafbfe 100%);
+  animation: soc2FormSlide 0.2s ease-out;
+}
+
+@keyframes soc2FormSlide {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.soc2-form-row {
+  display: flex;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 14px;
+}
+
+.soc2-form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.soc2-form-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: #6b7280;
+}
+
+.soc2-form-select,
+.soc2-form-input {
+  padding: 7px 10px;
+  border: 1px solid #d9d9d9;
+  border-radius: 6px;
+  background: #fff;
+  font-size: 13px;
+  color: #333;
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+
+.soc2-form-select:focus,
+.soc2-form-input:focus {
+  border-color: #185fa5;
+  box-shadow: 0 0 0 2px rgba(24, 95, 165, 0.15);
+}
+
+.soc2-form-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-left: auto;
+}
+
+.soc2-form-count {
+  font-size: 12px;
+  color: #6b7280;
+  white-space: nowrap;
+}
+
+.btn-soc2-generate {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 6px;
+  background: #185fa5;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.18s ease;
+}
+
+.btn-soc2-generate:hover:not(:disabled) {
+  background: #12508d;
+}
+
+.btn-soc2-generate:disabled {
+  background: #b9c4d4;
+  cursor: not-allowed;
+}
+
+.soc2-form-hint,
+.soc2-form-error {
+  margin-top: 8px;
+  font-size: 12px;
+}
+
+.soc2-form-hint {
+  color: #6b7280;
+}
+
+.soc2-form-error {
+  color: #c41e3a;
+  font-weight: 600;
+}
+
+.btn-soc2-selectall {
+  padding: 7px 12px;
+  border: 1px solid #c3cddb;
+  border-radius: 6px;
+  background: #fff;
+  color: #33415c;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.18s ease;
+}
+
+.btn-soc2-selectall:hover:not(:disabled) {
+  border-color: #185fa5;
+  color: #185fa5;
+  background: #f3f8ff;
+}
+
+.btn-soc2-selectall:disabled {
+  color: #9aa5b5;
+  border-color: #e2e6ee;
+  cursor: not-allowed;
+}
