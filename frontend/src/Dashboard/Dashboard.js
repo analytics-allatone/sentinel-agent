@@ -1952,6 +1952,22 @@ function Dashboard() {
           </div>
 
           <div className="table-actions">
+            {/* Selection mode: the "+" column becomes checkboxes and the
+                report form appears under the header. */}
+            <button
+              type="button"
+              className={`btn-soc2 ${soc2Mode ? "active" : ""}`}
+              onClick={toggleSoc2Mode}
+              aria-pressed={soc2Mode}
+              title={
+                soc2Mode
+                  ? "Leave selection mode"
+                  : "Pick agents and a time window, then generate their SOC2 reports"
+              }
+            >
+              {soc2Mode ? "✕ Cancel" : "🛡 Create SOC2 report"}
+            </button>
+
             <div className="table-search">
               <span className="search-icon">⌕</span>
 
@@ -2103,7 +2119,28 @@ function Dashboard() {
               <th>Architecture</th>
               <th>Status</th>
               <th>Actions</th> */}
-              <th className="col-expand" aria-label="Show available services" />
+              <th className="col-expand">
+                {soc2Mode && (
+                  <input
+                    type="checkbox"
+                    className="soc2-check"
+                    checked={allFilteredSelected}
+                    // some but not all: the box shows a dash, not a tick
+                    ref={(el) => {
+                      if (el)
+                        el.indeterminate =
+                          !allFilteredSelected && selectedAgents.size > 0;
+                    }}
+                    onChange={toggleSelectAllAgents}
+                    title={
+                      allFilteredSelected
+                        ? "Clear the selection"
+                        : `Select all ${filteredAgents.length} agents${searchTerm ? " matching the search" : ""}`
+                    }
+                    aria-label="Select all agents"
+                  />
+                )}
+              </th>
               <th>ID</th>
               <th>Agent Name</th>
               <th>IP Address</th>
@@ -2129,19 +2166,29 @@ function Dashboard() {
                 <Fragment key={agent.id}>
                   <tr>
                     <td className="col-expand">
-                      <button
-                        type="button"
-                        className={`btn-expand ${expandedAgent === agent.name ? "open" : ""}`}
-                        onClick={() => handleToggleServices(agent.name)}
-                        title={
-                          expandedAgent === agent.name
-                            ? "Hide available services"
-                            : "Show available services"
-                        }
-                        aria-expanded={expandedAgent === agent.name}
-                      >
-                        {expandedAgent === agent.name ? "−" : "+"}
-                      </button>
+                      {soc2Mode ? (
+                        <input
+                          type="checkbox"
+                          className="soc2-check"
+                          checked={selectedAgents.has(agent.id)}
+                          onChange={() => handleSelectAgent(agent.id)}
+                          aria-label={`Select ${agent.name}`}
+                        />
+                      ) : (
+                        <button
+                          type="button"
+                          className={`btn-expand ${expandedAgent === agent.name ? "open" : ""}`}
+                          onClick={() => handleToggleServices(agent.name)}
+                          title={
+                            expandedAgent === agent.name
+                              ? "Hide available services"
+                              : "Show available services"
+                          }
+                          aria-expanded={expandedAgent === agent.name}
+                        >
+                          {expandedAgent === agent.name ? "−" : "+"}
+                        </button>
+                      )}
                     </td>
                     {/* <td>
                     <input
@@ -2152,18 +2199,6 @@ function Dashboard() {
                   </td> */}
                     <td>{agent.id}</td>
                     {/* <td> */}
-                    {/* `agent` scopes the capacity report to this agent — it
-                        becomes agent_name on the /capacity-monitoring/overview
-                        request the report loads with. */}
-                    {/* <a
-                      href={`/app/reports/capacity?agent=${encodeURIComponent(agent.name)}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="agent-name-link"
-                      title={`Open the capacity report for ${agent.name}`}
-                    >
-                      {agent.name}
-                    </a> */}
                     {/* </td>
                   <td>{agent.macAddress}</td>
                   <td>{agent.hostName}</td>
@@ -2178,12 +2213,15 @@ function Dashboard() {
                     {/* <td>{agent.id}</td> */}
 
                     <td>
+                      {/* `agent` scopes the capacity report to this agent — it
+                          becomes agent_name on the /capacity-monitoring/overview
+                          request the report loads with. */}
                       <a
-                        href={`/app/reports/soc2?agent=${encodeURIComponent(agent.name)}`}
+                        href={`/app/reports/capacity?agent=${encodeURIComponent(agent.name)}`}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="agent-name-link"
-                        title={`Open the SOC2 report for ${agent.name}`}
+                        title={`Open the capacity report for ${agent.name}`}
                       >
                         <span className="agent-name-status-dot"></span>
                         {agent.name}
