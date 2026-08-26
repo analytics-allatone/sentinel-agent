@@ -50,7 +50,14 @@ const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
 function Dashboard() {
   const [agents, setAgents] = useState([]);
   const [selectedAgents, setSelectedAgents] = useState(new Set());
-
+  // "Create SOC2 report" mode: the row checkboxes and the report form only
+  // exist while it is on. From/To are "YYYY-MM-DDTHH:mm" (IST wall clock, what
+  // the datetime-local inputs speak); toggleSoc2Mode seeds them on the way in.
+  const [soc2Mode, setSoc2Mode] = useState(false);
+  const [soc2From, setSoc2From] = useState("");
+  const [soc2To, setSoc2To] = useState("");
+  const [soc2Preset, setSoc2Preset] = useState("12");
+  const [soc2Error, setSoc2Error] = useState("");
   // Chart data — kept as the API's own aggregate counts, not recomputed
   // from the (possibly filtered/paginated) agents table, since these
   // represent the full account-wide picture regardless of what's on screen.
