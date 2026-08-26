@@ -14,6 +14,14 @@ import { fetchSoc2Report, fetchAgents, SOC2_SECTIONS } from "./soc2Api";
 import { buildSoc2View, fmtInt, fmtIst } from "./soc2Transform";
 import { lastHoursInputs, istInputToApi } from "./timeRange";
 
+import {
+  LuShieldCheck,
+  LuUserRound,
+  LuClock3,
+  LuPlay,
+  LuFileDown,
+} from "react-icons/lu";
+
 // ─── controls ──────────────────────────────────────────────────
 
 // Quick ranges, in hours. Anything past two days is bucketed by day by default,
@@ -461,9 +469,14 @@ export default function SOC2Report() {
           )}
 
           <div className="soc2-actions">
-            <button className="soc2-btn soc2-btn-primary" type="submit" disabled={loading}>
-              {loading ? "Generating…" : "Generate"}
-            </button>
+            <button
+  className="soc2-btn soc2-btn-primary"
+  type="submit"
+  disabled={loading}
+>
+  <LuPlay />
+  {loading ? "Generating…" : "Generate"}
+</button>
             <button
               className="soc2-btn"
               type="button"
@@ -1629,7 +1642,7 @@ function SectionView({ view, expanded = false }) {
 
       {charts.map((c) => (
         <Section key={c.title} title={c.title} wide>
-          <TimeSeriesChart series={c.series} yMax={c.yMax} unit={c.unit} height={300}  minimap={false}/>
+          <TimeSeriesChart series={c.series} yMax={c.yMax} unit={c.unit} height={200}  minimap={false}/>
         </Section>
       ))}
 
