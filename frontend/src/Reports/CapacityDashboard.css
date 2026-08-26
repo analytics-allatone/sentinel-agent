@@ -676,19 +676,19 @@
 /* ── print / PDF ─────────────────────────────────────────────
    One chart per page. Export forces the light theme first, so the charts are
    already drawn in the light steps by the time this applies. */
-@media print {
+/* @media print { */
   /* AgentDetails.css ships an unscoped `body { background: var(--bg-primary) }`
      with --bg-primary #111217, which CRA bundles globally. A body background
      propagates to the page canvas, so it paints EVERY sheet dark — visible
      wherever this report's own white box does not reach (i.e. the tail of the
      last page). Neutralise the canvas for the duration of the print. */
-  html,
+  /* html,
   body {
     background: #fff;
-  }
+  } */
 
   /* hide the live app without unmounting it — visibility keeps layout cheap */
-  body * {
+  /* body * {
     visibility: hidden;
   }
   .capacity-dash__print,
@@ -713,33 +713,33 @@
   }
 
   /* the actual "different chart on a different page" rule */
-  .capacity-dash__print-page {
+  /* .capacity-dash__print-page {
     break-after: page;
     page-break-after: always;
     break-inside: avoid;
     page-break-inside: avoid;
     padding-top: 2mm;
-  }
+  } */
   /* the cover carries prose rather than a fixed-size chart, so it is allowed to
      run on if the summary table wraps */
-  .capacity-dash__print-cover {
+  /* .capacity-dash__print-cover {
     break-inside: auto;
     page-break-inside: auto;
   }
   .capacity-dash__print-page:last-child {
     break-after: auto;
     page-break-after: auto;
-  }
+  } */
 
   /* A printed report is read at arm's length and often photocopied, so the type
      is set well above the screen's. Each chart already owns a page, so the extra
      size costs nothing but white space. */
-  .capacity-dash__print {
+  /* .capacity-dash__print {
     font-size: 15px;
     line-height: 1.5;
-  }
+  } */
 
-  .capacity-dash__print-head {
+  /* .capacity-dash__print-head {
     display: flex;
     justify-content: space-between;
     align-items: baseline;
@@ -769,21 +769,21 @@
   .capacity-dash__print-h2 span {
     color: #6b7280;
     font-weight: 400;
-  }
+  } */
 
   /* the plain-English note that opens the cover and every chart page */
-  .capacity-dash__print-lead {
+  /* .capacity-dash__print-lead {
     font-size: 15.5px;
     line-height: 1.65;
     color: #313947;
     margin: 0 0 16px;
-    max-width: 62em;
+    max-width: 62em; */
     /* a heading must not be left stranded from the text it introduces */
-    break-before: avoid;
+    /* break-before: avoid;
     page-break-before: avoid;
-  }
+  } */
 
-  .capacity-dash__print-table {
+  /* .capacity-dash__print-table {
     border-collapse: collapse;
     width: 100%;
     margin-bottom: 14px;
@@ -806,7 +806,7 @@
   }
 
   /* cover contents list */
-  .capacity-dash__print-toc {
+  /* .capacity-dash__print-toc {
     margin-top: 4px;
   }
   .capacity-dash__print-toc-head {
@@ -839,9 +839,9 @@
     font-size: 12px;
     color: #98a0ad;
     text-align: right;
-  }
+  } */ 
   /* the pane header is reused for the legend; drop its interactive affordances */
-  .capacity-dash__print .capacity-dash__pane-title {
+  /* .capacity-dash__print .capacity-dash__pane-title {
     color: #0f141c;
     font-size: 16px;
   }
@@ -853,10 +853,10 @@
   }
   .capacity-dash__print .capacity-dash__pane-unit {
     display: none;
-  }
+  } */
 
   /* keep the series colours — a chart printed in greyscale states nothing */
-  .capacity-dash__print * {
+  /* .capacity-dash__print * {
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }
@@ -864,5 +864,849 @@
   @page {
     size: A4 portrait;
     margin: 12mm;
+  } */
+/* } */
+
+.capacity-dash__print {
+  display: none;
+}
+
+/* ============================================================
+   CAPACITY REPORT — PRINT / PDF
+   ============================================================ */
+
+@media print {
+
+  html,
+  body {
+    background: #ffffff !important;
   }
+
+
+  /* Hide the interactive application */
+  body * {
+    visibility: hidden;
+  }
+
+
+  /* Show only the dedicated printable report */
+  .capacity-dash__print,
+  .capacity-dash__print * {
+    visibility: visible;
+  }
+
+
+  .capacity-dash {
+    display: block;
+    min-height: 0;
+    padding: 0;
+    background: #ffffff !important;
+  }
+
+
+  .capacity-dash__print {
+    display: block;
+
+    position: absolute;
+    left: 0;
+    top: 0;
+
+    width: 100%;
+
+    background: #ffffff;
+    color: #172033;
+
+    font-family:
+      Inter,
+      -apple-system,
+      BlinkMacSystemFont,
+      "Segoe UI",
+      Arial,
+      sans-serif;
+
+    font-size: 11px;
+    line-height: 1.45;
+  }
+
+
+  .capacity-dash__print,
+  .capacity-dash__print * {
+    box-sizing: border-box;
+
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+
+  /* ==========================================================
+     PAGE
+     ========================================================== */
+
+  .capacity-dash__print-page {
+    position: relative;
+
+    min-height: 260mm;
+
+    padding: 7mm 6mm 9mm;
+
+    background: #ffffff;
+
+    break-after: page;
+    page-break-after: always;
+  }
+
+
+  .capacity-dash__print-page:last-child {
+    break-after: auto;
+    page-break-after: auto;
+  }
+
+
+  /* ==========================================================
+     COVER
+     ========================================================== */
+
+  .capacity-dash__print-cover {
+    display: flex;
+    flex-direction: column;
+
+    min-height: 260mm;
+
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+
+  .capacity-dash__print-cover-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+  }
+
+
+  .capacity-dash__print-logo {
+    font-size: 17px;
+    line-height: 1;
+
+    font-weight: 800;
+
+    letter-spacing: 0.08em;
+
+    color: #173f6b;
+  }
+
+
+  .capacity-dash__print-logo-sub {
+    margin-top: 4px;
+
+    font-size: 8px;
+    font-weight: 600;
+
+    color: #66758a;
+  }
+
+
+  .capacity-dash__print-confidential {
+    padding: 4px 9px;
+
+    border: 1px solid #cfd8e3;
+    border-radius: 4px;
+
+    font-size: 7px;
+    font-weight: 800;
+
+    letter-spacing: 0.08em;
+
+    color: #536274;
+  }
+
+
+  .capacity-dash__print-cover-rule {
+    height: 3px;
+
+    margin-top: 7mm;
+
+    border-radius: 3px;
+
+    background: #173f6b;
+  }
+
+
+  .capacity-dash__print-cover-content {
+    padding-top: 24mm;
+  }
+
+
+  .capacity-dash__print-eyebrow {
+    margin-bottom: 5px;
+
+    font-size: 8px;
+    font-weight: 800;
+
+    letter-spacing: 0.15em;
+
+    color: #64748b;
+  }
+
+
+  .capacity-dash__print-cover-title {
+  margin: 0;
+
+  font-size: 38px;
+  line-height: 1.12;
+
+  font-weight: 750;
+
+  letter-spacing: -0.02em;
+
+  color: #1d2939;
+}
+
+
+  .capacity-dash__print-cover-lead {
+  max-width: 145mm;
+
+  margin: 8mm 0 0;
+
+  font-size: 15px;
+  line-height: 1.6;
+
+  color: #64748b;
+}
+
+
+  /* ==========================================================
+     COVER METADATA
+     ========================================================== */
+
+  .capacity-dash__print-meta-grid {
+    display: grid;
+
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+
+    gap: 9px;
+  margin-top: 11mm;
+  }
+
+
+  .capacity-dash__print-meta-card {
+    min-height: 18mm;
+
+    padding: 8px 10px;
+
+    border: 1px solid #dfe5ec;
+    border-radius: 6px;
+
+    background: #f8fafc;
+
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+
+  .capacity-dash__print-meta-label {
+  margin-bottom: 5px;
+
+  font-size: 8px;
+  font-weight: 800;
+
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+
+  color: #7b8797;
+}
+
+
+ .capacity-dash__print-meta-value {
+  font-size: 15px;
+  line-height: 1.3;
+
+  font-weight: 700;
+
+  color: #1d2939;
+}
+
+
+ .capacity-dash__print-meta-value--small {
+  font-size: 11px;
+}
+
+
+  /* ==========================================================
+     SECTION LABEL
+     ========================================================== */
+
+  .capacity-dash__print-section-label {
+  margin-top: 9mm;
+  margin-bottom: 4mm;
+
+  font-size: 9px;
+  font-weight: 800;
+
+  letter-spacing: 0.12em;
+
+  color: #526173;
+
+  break-after: avoid;
+  page-break-after: avoid;
+}
+
+
+  /* ==========================================================
+     KPI CARDS
+     ========================================================== */
+
+  .capacity-dash__print-kpis {
+    display: grid;
+
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+
+    gap: 7px;
+  }
+
+
+  .capacity-dash__print-kpi {
+  min-height: 23mm;
+  padding: 11px 12px;
+
+  border: 1px solid #dfe5ec;
+  border-radius: 6px;
+
+  background: #ffffff;
+
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+
+  .capacity-dash__print-kpi-label {
+ font-size: 9px;
+  margin-bottom: 7px;
+  font-weight: 700;
+
+  color: #738195;
+}
+
+
+  .capacity-dash__print-kpi-value {
+  font-size: 26px;
+  line-height: 1.15;
+
+  font-weight: 750;
+
+  color: #1d2939;
+
+  font-variant-numeric: tabular-nums;
+}
+
+
+  .capacity-dash__print-kpi-unit {
+  margin-left: 4px;
+
+  font-size: 9px;
+  font-weight: 700;
+
+  color: #7b8797;
+}
+
+
+  /* ==========================================================
+     SUMMARY NOTE
+     ========================================================== */
+
+  .capacity-dash__print-summary-note {
+  margin-top: 7mm;
+
+  padding: 11px 13px;
+
+  border-left: 3px solid #173f6b;
+
+  background: #f6f8fb;
+
+  font-size: 10px;
+  line-height: 1.55;
+
+  color: #526173;
+
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+
+  .capacity-dash__print-summary-note strong {
+    color: #24364b;
+  }
+
+
+  /* ==========================================================
+     CONTENTS
+     ========================================================== */
+
+  .capacity-dash__print-contents {
+    border-top: 1px solid #dfe5ec;
+  }
+
+
+  .capacity-dash__print-content-row {
+  display: grid;
+
+  grid-template-columns: 13mm 1fr auto;
+
+  align-items: center;
+
+  min-height: 14mm;
+
+  border-bottom: 1px solid #edf1f5;
+}
+
+
+  .capacity-dash__print-content-number {
+  font-size: 11px;
+  font-weight: 800;
+
+  color: #173f6b;
+}
+
+
+  .capacity-dash__print-content-title {
+  font-size: 14px;
+  font-weight: 650;
+
+  color: #25364b;
+}
+
+
+  .capacity-dash__print-content-unit {
+  font-size: 11px;
+  font-weight: 700;
+
+  color: #7b8797;
+}
+
+
+  /* ==========================================================
+     COVER FOOTER
+     ========================================================== */
+
+  .capacity-dash__print-cover-bottom {
+  display: flex;
+
+  justify-content: space-between;
+  align-items: center;
+
+  margin-top: auto;
+
+  padding-top: 4mm;
+
+  border-top: 1px solid #dfe5ec;
+
+  font-size: 8px;
+
+  color: #8a96a6;
+}
+
+
+  /* ==========================================================
+     EVIDENCE PAGE
+     ========================================================== */
+
+  .capacity-dash__print-evidence-page {
+    min-height: 260mm;
+  }
+
+
+  .capacity-dash__print-page-number {
+    position: absolute;
+
+    top: 6mm;
+    right: 6mm;
+
+    font-size: 36px;
+    line-height: 1;
+
+    font-weight: 800;
+
+    color: #e7ebf0;
+  }
+
+
+  .capacity-dash__print-page-heading {
+    padding-right: 20mm;
+
+    margin-bottom: 5mm;
+
+    break-after: avoid;
+    page-break-after: avoid;
+  }
+
+
+  .capacity-dash__print-evidence-title {
+  margin: 0;
+
+  font-size: 30px;
+  line-height: 1.15;
+
+  font-weight: 750;
+
+  color: #1d2939;
+}
+
+
+  .capacity-dash__print-evidence-unit {
+  margin-top: 5px;
+
+  font-size: 9px;
+  font-weight: 700;
+
+  color: #7a8798;
+}
+
+
+  .capacity-dash__print-evidence-lead {
+  max-width: 180mm;
+  margin: 0 0 7mm;
+  font-size: 15px;
+  line-height: 1.6;
+  color: #526173;
+  break-after: avoid;
+  page-break-after: avoid;
+}
+
+
+  /* ==========================================================
+     CHART
+     ========================================================== */
+
+  .capacity-dash__print-chart-card {
+    width: 100%;
+
+    padding: 5mm 4mm 4mm;
+
+    border: 1px solid #dfe5ec;
+    border-radius: 7px;
+
+    background: #ffffff;
+
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+
+  .capacity-dash__print-chart-card .capacity-dash__pane-head {
+    margin-bottom: 5px;
+  }
+
+
+  .capacity-dash__print .capacity-dash__pane-title {
+  font-size: 12px;
+  line-height: 1.3;
+  font-weight: 700;
+
+  color: #27384d;
+}
+
+
+  .capacity-dash__print .capacity-dash__legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+
+  padding: 2px 0;
+  margin-right: 12px;
+
+  border: 0;
+
+  font-size: 11px;
+  line-height: 1.3;
+  font-weight: 600;
+
+  color: #526173;
+
+  cursor: default;
+}
+
+
+  .capacity-dash__print .capacity-dash__pane-unit {
+    display: none;
+  }
+
+
+  .capacity-dash__print .capacity-dash__plot {
+    cursor: default;
+  }
+
+
+  .capacity-dash__print .recharts-wrapper {
+    margin: 0 auto;
+  }
+
+
+  /* ==========================================================
+     EVIDENCE METADATA
+     ========================================================== */
+
+  .capacity-dash__print-evidence-note {
+    display: grid;
+
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+
+    gap: 7px;
+
+    margin-top: 5mm;
+  }
+
+
+  .capacity-dash__print-evidence-note > div {
+  padding: 10px 12px;
+
+  border: 1px solid #e1e7ee;
+  border-radius: 5px;
+
+  font-size: 11px;
+  font-weight: 700;
+
+  color: #26384c;
+
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+
+  .capacity-dash__print-evidence-note-label {
+    display: block;
+
+    margin-bottom: 3px;
+
+    font-size: 8px;
+    font-weight: 800;
+
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+
+    color: #8390a0;
+  }
+
+
+  .capacity-dash__print-gap-note {
+    margin: 4mm 0 0;
+
+    padding: 7px 9px;
+
+    border-left: 3px solid #d7a94d;
+
+    background: #fffaf0;
+
+    font-size: 8px;
+    line-height: 1.5;
+
+    color: #65552e;
+
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+
+  /* ==========================================================
+     PAGE FOOTER
+     ========================================================== */
+
+  .capacity-dash__print-page-footer {
+  position: absolute;
+
+  left: 6mm;
+  right: 6mm;
+  bottom: 4mm;
+
+  display: flex;
+
+  justify-content: space-between;
+  align-items: center;
+
+  padding-top: 3mm;
+
+  border-top: 1px solid #dfe5ec;
+
+  font-size: 8px;
+  font-weight: 700;
+
+  letter-spacing: 0.04em;
+
+  color: #8995a5;
+}
+
+
+  /* Existing generic print classes are no longer used by the
+     redesigned report, but keep them harmless if referenced. */
+
+  .capacity-dash__print-head,
+  .capacity-dash__print-h1,
+  .capacity-dash__print-h2,
+  .capacity-dash__print-lead,
+  .capacity-dash__print-table,
+  .capacity-dash__print-toc,
+  .capacity-dash__print-note,
+  .capacity-dash__print-foot {
+    box-sizing: border-box;
+  }
+
+
+  @page {
+    size: A4 portrait;
+    margin: 12mm;
+  }
+
+
+  /* ==========================================================
+   EXECUTIVE SUMMARY
+   ========================================================== */
+
+.capacity-dash__print-summary-page {
+  display: flex;
+  flex-direction: column;
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+.capacity-dash__print-summary-title {
+  margin: 0;
+
+  font-size: 32px;
+  line-height: 1.15;
+  font-weight: 750;
+
+  letter-spacing: -0.02em;
+
+  color: #1d2939;
+}
+
+.capacity-dash__print-summary-subtitle {
+  margin-top: 5px;
+
+  font-size: 12px;
+  line-height: 1.5;
+
+  color: #64748b;
+}
+
+
+/* ----------------------------------------------------------
+   Summary metadata
+   ---------------------------------------------------------- */
+
+.capacity-dash__print-summary-meta {
+  display: grid;
+
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+
+  gap: 9px;
+
+  margin-top: 6mm;
+}
+
+.capacity-dash__print-summary-meta-card {
+  min-height: 20mm;
+
+  padding: 9px 11px;
+
+  border: 1px solid #dfe5ec;
+  border-radius: 6px;
+
+  background: #f8fafc;
+
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+.capacity-dash__print-summary-meta-card span {
+  font-size: 8px;
+
+  font-weight: 800;
+
+  letter-spacing: 0.09em;
+
+  text-transform: uppercase;
+
+  color: #7b8797;
+}
+
+.capacity-dash__print-summary-meta-card strong {
+  margin-top: 6px;
+
+  font-size: 12px;
+
+  line-height: 1.35;
+
+  font-weight: 700;
+
+  color: #1d2939;
+
+  font-variant-numeric: tabular-nums;
+}
+
+
+/* ----------------------------------------------------------
+   Monitoring coverage
+   ---------------------------------------------------------- */
+
+.capacity-dash__print-coverage {
+  border: 1px solid #dfe5ec;
+
+  border-radius: 6px;
+
+  overflow: hidden;
+
+  background: #ffffff;
+}
+
+.capacity-dash__print-coverage-row {
+  display: grid;
+
+  grid-template-columns: 1fr 80px 90px;
+
+  align-items: center;
+
+  gap: 10px;
+
+  min-height: 13mm;
+  padding: 9px 12px;
+
+
+  border-bottom: 1px solid #edf0f4;
+}
+
+.capacity-dash__print-coverage-row:last-child {
+  border-bottom: 0;
+}
+
+.capacity-dash__print-coverage-name {
+  font-size: 13px;
+
+  font-weight: 700;
+
+  color: #27364a;
+}
+
+.capacity-dash__print-coverage-unit {
+  font-size: 11px;
+
+  color: #7b8797;
+}
+
+.capacity-dash__print-coverage-status {
+  justify-self: end;
+
+  font-size: 10px;
+
+  font-weight: 800;
+
+  letter-spacing: 0.06em;
+
+  text-transform: uppercase;
+
+  color: #176b4d;
+}
 }

@@ -192,7 +192,8 @@ function paintLines(lines, theme) {
 // ResponsiveContainer measures the DOM through a ResizeObserver, which does not
 // re-measure for the print box, so it would print the charts at screen size.
 const PRINT_W = 700;
-const PRINT_H = 430;
+// const PRINT_H = 430;
+const PRINT_H = 520;
 
 const STATS = [
   { key: "avg_cpu_percent", label: "Avg CPU", unit: "%", modifier: "cpu" },
@@ -440,15 +441,26 @@ function ChartBody({ lines, data, rows, gaps, start, end, theme, height, width, 
         domain={[start, end]}
         allowDataOverflow
         tickFormatter={(i) => (rows[i] ? formatClock(rows[i].ms) : "")}
-        minTickGap={40}
+        // minTickGap={40}
+        minTickGap={50}
         stroke={chrome.axis}
-        tick={{ fill: chrome.tick, fontSize: 10 }}
+        // tick={{ fill: chrome.tick, fontSize: 10 }}
+        tick={{
+  fill: chrome.tick,
+  fontSize: print ? 13 : 10,
+  fontWeight: print ? 600 : 400,
+}}
       />
       <YAxis
         width={Y_AXIS_WIDTH}
         domain={["auto", "auto"]}
         stroke={chrome.axis}
-        tick={{ fill: chrome.tick, fontSize: 10 }}
+        // tick={{ fill: chrome.tick, fontSize: 10 }}
+        tick={{
+  fill: chrome.tick,
+  fontSize: print ? 13 : 10,
+  fontWeight: print ? 600 : 400,
+}}
         tickFormatter={formatTick}
       />
       {!print && (
@@ -652,121 +664,657 @@ function ChartPane({ pane, rows, masterRange, gaps, lastIndex, hidden, onToggle,
 // ════════════════════════════════════════════════════════════════
 //  Printable report — one chart per page, screen-hidden
 // ════════════════════════════════════════════════════════════════
+// function PrintReport({ payload, rows, gaps, stats, periodText, theme }) {
+//   const summary = (payload && payload.summary) || {};
+//   const lastIndex = Math.max(0, rows.length - 1);
+//   // the cover is page 1, so the charts start at 2
+//   const pageCount = PANES.length + 1;
+
+//   return (
+//     <div className="capacity-dash__print" aria-hidden="true">
+//       {/* ── cover: what this is, what it covers, and what is in it ── */}
+//       <section className="capacity-dash__print-page capacity-dash__print-cover">
+//         <header className="capacity-dash__print-head">
+//           <span className="capacity-dash__print-brand">Capacity report</span>
+//           <span className="capacity-dash__print-meta">
+//             {payload ? payload.agent_name : "—"} · {periodText} · IST
+//           </span>
+//         </header>
+
+//         <h1 className="capacity-dash__print-h1">Guardlynx — capacity report</h1>
+
+//         <p className="capacity-dash__print-lead">
+//           This report shows how much of the machine's capacity the monitored host and the
+//           Guardlynx agent used over the period above. Every figure is sampled by the agent
+//           itself — nothing here is entered by hand. Each chart that follows covers the whole
+//           window at once and starts on its own page, and opens with a note on what the metric
+//           means and how to read it. All times are India Standard Time (UTC+5:30).
+//         </p>
+
+//         <table className="capacity-dash__print-table">
+//           <tbody>
+//             <tr>
+//               {stats.map((stat) => (
+//                 <th key={stat.key}>{stat.label}</th>
+//               ))}
+//               <th>Samples</th>
+//             </tr>
+//             <tr>
+//               {stats.map((stat) => (
+//                 <td key={stat.key}>
+//                   {summary[stat.key] == null ? "—" : Number(summary[stat.key]).toFixed(2)}{" "}
+//                   {stat.unit}
+//                 </td>
+//               ))}
+//               <td>{payload && payload.sample_count != null ? payload.sample_count : "—"}</td>
+//             </tr>
+//           </tbody>
+//         </table>
+
+//         <p className="capacity-dash__print-note">
+//           Every figure in that row is the mean across the whole window, so a short spike barely
+//           moves it — read the averages with the charts, not instead of them.
+//           {gaps.length
+//             ? ` The agent stopped reporting ${gaps.length} time${gaps.length > 1 ? "s" : ""} during
+//                this window; each break is marked on the charts, and nothing was measured while it
+//                lasted.`
+//             : " The agent reported without interruption for the whole window."}
+//         </p>
+
+//         <div className="capacity-dash__print-toc">
+//           <div className="capacity-dash__print-toc-head">Contents</div>
+//           <ol className="capacity-dash__print-toc-list">
+//             {PANES.map((pane) => (
+//               <li key={pane.id}>
+//                 {pane.title} <span>({pane.unit})</span>
+//               </li>
+//             ))}
+//           </ol>
+//         </div>
+
+//         <footer className="capacity-dash__print-foot">Page 1 of {pageCount}</footer>
+//       </section>
+
+//       {PANES.map((pane, index) => {
+//         const lines = paintLines(pane.lines, theme);
+//         return (
+//           <section className="capacity-dash__print-page" key={pane.id}>
+//             <header className="capacity-dash__print-head">
+//               <span className="capacity-dash__print-brand">Capacity report</span>
+//               <span className="capacity-dash__print-meta">
+//                 {payload ? payload.agent_name : "—"} · {periodText} · IST
+//               </span>
+//             </header>
+
+//             <h2 className="capacity-dash__print-h2">
+//               {index + 1}. {pane.title} <span>({pane.unit})</span>
+//             </h2>
+
+//             {pane.lead && <p className="capacity-dash__print-lead">{pane.lead}</p>}
+
+//             <PaneHeader pane={pane} lines={lines} />
+//             <ChartBody
+//               lines={lines}
+//               data={rows}
+//               rows={rows}
+//               gaps={gaps}
+//               start={0}
+//               end={lastIndex}
+//               theme={theme}
+//               unit={pane.unit}
+//               width={PRINT_W}
+//               height={PRINT_H}
+//             />
+
+//             <p className="capacity-dash__print-note">
+//               Full range, {rows.length} samples.
+//               {gaps.length
+//                 ? ` ${gaps.length} reporting gap${gaps.length > 1 ? "s" : ""} marked on the chart —
+//                    the agent was not reporting, so nothing was measured there.`
+//                 : " No reporting gaps."}
+//             </p>
+//             <footer className="capacity-dash__print-foot">
+//               Page {index + 2} of {pageCount}
+//             </footer>
+//           </section>
+//         );
+//       })}
+//     </div>
+//   );
+// }
+
 function PrintReport({ payload, rows, gaps, stats, periodText, theme }) {
   const summary = (payload && payload.summary) || {};
   const lastIndex = Math.max(0, rows.length - 1);
-  // the cover is page 1, so the charts start at 2
-  const pageCount = PANES.length + 1;
+
+  // Cover = page 1, each metric gets its own page after that.
+  const pageCount = PANES.length + 2;
+
+  const sampleCount =
+    payload && payload.sample_count != null
+      ? payload.sample_count
+      : rows.length;
+
+  const generatedAt = new Date().toLocaleString("en-IN", {
+    timeZone: "Asia/Kolkata",
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 
   return (
     <div className="capacity-dash__print" aria-hidden="true">
-      {/* ── cover: what this is, what it covers, and what is in it ── */}
+
+      {/* =======================================================
+          PAGE 01 — COVER / EXECUTIVE OVERVIEW
+          ======================================================= */}
       <section className="capacity-dash__print-page capacity-dash__print-cover">
-        <header className="capacity-dash__print-head">
-          <span className="capacity-dash__print-brand">Capacity report</span>
-          <span className="capacity-dash__print-meta">
-            {payload ? payload.agent_name : "—"} · {periodText} · IST
-          </span>
-        </header>
 
-        <h1 className="capacity-dash__print-h1">Guardlynx — capacity report</h1>
+        <div className="capacity-dash__print-cover-top">
+          <div>
+            <div className="capacity-dash__print-logo">
+              GUARDLYNX
+            </div>
 
-        <p className="capacity-dash__print-lead">
-          This report shows how much of the machine's capacity the monitored host and the
-          Guardlynx agent used over the period above. Every figure is sampled by the agent
-          itself — nothing here is entered by hand. Each chart that follows covers the whole
-          window at once and starts on its own page, and opens with a note on what the metric
-          means and how to read it. All times are India Standard Time (UTC+5:30).
-        </p>
+            <div className="capacity-dash__print-logo-sub">
+              Security &amp; Compliance Monitoring
+            </div>
+          </div>
 
-        <table className="capacity-dash__print-table">
-          <tbody>
-            <tr>
-              {stats.map((stat) => (
-                <th key={stat.key}>{stat.label}</th>
-              ))}
-              <th>Samples</th>
-            </tr>
-            <tr>
-              {stats.map((stat) => (
-                <td key={stat.key}>
-                  {summary[stat.key] == null ? "—" : Number(summary[stat.key]).toFixed(2)}{" "}
-                  {stat.unit}
-                </td>
-              ))}
-              <td>{payload && payload.sample_count != null ? payload.sample_count : "—"}</td>
-            </tr>
-          </tbody>
-        </table>
-
-        <p className="capacity-dash__print-note">
-          Every figure in that row is the mean across the whole window, so a short spike barely
-          moves it — read the averages with the charts, not instead of them.
-          {gaps.length
-            ? ` The agent stopped reporting ${gaps.length} time${gaps.length > 1 ? "s" : ""} during
-               this window; each break is marked on the charts, and nothing was measured while it
-               lasted.`
-            : " The agent reported without interruption for the whole window."}
-        </p>
-
-        <div className="capacity-dash__print-toc">
-          <div className="capacity-dash__print-toc-head">Contents</div>
-          <ol className="capacity-dash__print-toc-list">
-            {PANES.map((pane) => (
-              <li key={pane.id}>
-                {pane.title} <span>({pane.unit})</span>
-              </li>
-            ))}
-          </ol>
+          <div className="capacity-dash__print-confidential">
+            CONFIDENTIAL
+          </div>
         </div>
 
-        <footer className="capacity-dash__print-foot">Page 1 of {pageCount}</footer>
+
+        <div className="capacity-dash__print-cover-rule" />
+
+
+        <div className="capacity-dash__print-cover-content">
+
+          <div className="capacity-dash__print-eyebrow">
+            CAPACITY MONITORING
+          </div>
+
+          <h1 className="capacity-dash__print-cover-title">
+            Capacity &amp; Resource
+            <br />
+            Utilization Report
+          </h1>
+
+          <p className="capacity-dash__print-cover-lead">
+            A consolidated view of host and Guardlynx agent resource
+            utilization across the selected reporting window.
+          </p>
+
+
+          <div className="capacity-dash__print-meta-grid">
+
+            <div className="capacity-dash__print-meta-card">
+              <div className="capacity-dash__print-meta-label">
+                Agent
+              </div>
+
+              <div className="capacity-dash__print-meta-value">
+                {payload ? payload.agent_name : "—"}
+              </div>
+            </div>
+
+
+            <div className="capacity-dash__print-meta-card">
+              <div className="capacity-dash__print-meta-label">
+                Reporting Period
+              </div>
+
+              <div className="capacity-dash__print-meta-value capacity-dash__print-meta-value--small">
+                {periodText}
+              </div>
+            </div>
+
+
+            <div className="capacity-dash__print-meta-card">
+              <div className="capacity-dash__print-meta-label">
+                Generated
+              </div>
+
+              <div className="capacity-dash__print-meta-value capacity-dash__print-meta-value--small">
+                {generatedAt} IST
+              </div>
+            </div>
+
+
+            <div className="capacity-dash__print-meta-card">
+              <div className="capacity-dash__print-meta-label">
+                Samples
+              </div>
+
+              <div className="capacity-dash__print-meta-value">
+                {sampleCount}
+              </div>
+            </div>
+
+          </div>
+
+
+          {/* <div className="capacity-dash__print-section-label">
+            KEY METRICS
+          </div> */}
+
+
+          {/* <div className="capacity-dash__print-kpis">
+
+            {stats.map((stat) => (
+              <div
+                className="capacity-dash__print-kpi"
+                key={stat.key}
+              >
+                <div className="capacity-dash__print-kpi-label">
+                  {stat.label}
+                </div>
+
+                <div className="capacity-dash__print-kpi-value">
+                  {summary[stat.key] == null
+                    ? "—"
+                    : Number(summary[stat.key]).toFixed(2)}
+
+                  {summary[stat.key] != null && (
+                    <span className="capacity-dash__print-kpi-unit">
+                      {stat.unit}
+                    </span>
+                  )}
+                </div>
+              </div>
+            ))}
+
+          </div> */}
+
+
+          {/* <div className="capacity-dash__print-summary-note">
+            <strong>How to read this report.</strong>{" "}
+            These values are averages across the complete reporting
+            window. Short-lived spikes may have little effect on an
+            average, so the summary metrics should always be reviewed
+            together with the evidence charts that follow.
+
+            {gaps.length
+              ? ` The agent stopped reporting ${gaps.length} ${
+                  gaps.length === 1 ? "time" : "times"
+                } during this window. Reporting gaps are marked in the charts.`
+              : " The agent reported without interruption throughout the selected window."}
+          </div> */}
+
+
+          {/* <div className="capacity-dash__print-section-label">
+            REPORT CONTENTS
+          </div>
+
+
+          <div className="capacity-dash__print-contents">
+
+            {PANES.map((pane, index) => (
+              <div
+                className="capacity-dash__print-content-row"
+                key={pane.id}
+              >
+                <span className="capacity-dash__print-content-number">
+                  {String(index + 2).padStart(2, "0")}
+                </span>
+
+                <span className="capacity-dash__print-content-title">
+                  {pane.title}
+                </span>
+
+                <span className="capacity-dash__print-content-unit">
+                  {pane.unit}
+                </span>
+              </div>
+            ))}
+
+          </div> */}
+
+          <div className="capacity-dash__print-section-label">
+  REPORT CONTENTS
+</div>
+
+<div className="capacity-dash__print-contents">
+
+  <div className="capacity-dash__print-content-row">
+    <span className="capacity-dash__print-content-number">
+      02
+    </span>
+
+    <span className="capacity-dash__print-content-title">
+      Executive Summary
+    </span>
+
+    <span className="capacity-dash__print-content-unit">
+      Overview
+    </span>
+  </div>
+
+  {PANES.map((pane, index) => (
+    <div
+      className="capacity-dash__print-content-row"
+      key={pane.id}
+    >
+      <span className="capacity-dash__print-content-number">
+        {String(index + 3).padStart(2, "0")}
+      </span>
+
+      <span className="capacity-dash__print-content-title">
+        {pane.title}
+      </span>
+
+      <span className="capacity-dash__print-content-unit">
+        {pane.unit}
+      </span>
+    </div>
+  ))}
+
+</div>
+
+        </div>
+
+
+        <div className="capacity-dash__print-cover-bottom">
+          <span>
+            Generated from Guardlynx agent telemetry.
+          </span>
+
+          <span>
+            Capacity Monitoring Report · Page 1 of {pageCount}
+          </span>
+        </div>
+
       </section>
 
+      {/* =======================================================
+    PAGE 02 — EXECUTIVE SUMMARY
+    ======================================================= */}
+
+<section className="capacity-dash__print-page capacity-dash__print-summary-page">
+
+  <div className="capacity-dash__print-page-number">
+    02
+  </div>
+
+  <div className="capacity-dash__print-page-heading">
+
+    <div className="capacity-dash__print-eyebrow">
+      CAPACITY OVERVIEW
+    </div>
+
+    <h2 className="capacity-dash__print-summary-title">
+      Executive Summary
+    </h2>
+
+    <div className="capacity-dash__print-summary-subtitle">
+      Consolidated resource utilization overview for the selected
+      monitoring window.
+    </div>
+
+  </div>
+
+
+  {/* REPORT INFORMATION */}
+
+  <div className="capacity-dash__print-section-label">
+    REPORT INFORMATION
+  </div>
+
+  <div className="capacity-dash__print-summary-meta">
+
+    <div className="capacity-dash__print-summary-meta-card">
+      <span>Monitoring Agent</span>
+      <strong>
+        {payload ? payload.agent_name : "—"}
+      </strong>
+    </div>
+
+    <div className="capacity-dash__print-summary-meta-card">
+      <span>Reporting Period</span>
+      <strong>
+        {periodText}
+      </strong>
+    </div>
+
+    <div className="capacity-dash__print-summary-meta-card">
+      <span>Total Samples</span>
+      <strong>
+        {sampleCount}
+      </strong>
+    </div>
+
+  </div>
+
+
+  {/* AVERAGE UTILIZATION */}
+
+  <div className="capacity-dash__print-section-label">
+    AVERAGE UTILIZATION
+  </div>
+
+  <div className="capacity-dash__print-kpis">
+
+    {stats.map((stat) => (
+      <div
+        className="capacity-dash__print-kpi"
+        key={stat.key}
+      >
+
+        <div className="capacity-dash__print-kpi-label">
+          {stat.label}
+        </div>
+
+        <div className="capacity-dash__print-kpi-value">
+
+          {summary[stat.key] == null
+            ? "—"
+            : Number(summary[stat.key]).toFixed(2)}
+
+          {summary[stat.key] != null && (
+            <span className="capacity-dash__print-kpi-unit">
+              {stat.unit}
+            </span>
+          )}
+
+        </div>
+
+      </div>
+    ))}
+
+  </div>
+
+
+  {/* MONITORING COVERAGE */}
+
+  <div className="capacity-dash__print-section-label">
+    MONITORING COVERAGE
+  </div>
+
+  <div className="capacity-dash__print-coverage">
+
+    {PANES.map((pane) => (
+      <div
+        className="capacity-dash__print-coverage-row"
+        key={pane.id}
+      >
+
+        <span className="capacity-dash__print-coverage-name">
+          {pane.title}
+        </span>
+
+        <span className="capacity-dash__print-coverage-unit">
+          {pane.unit}
+        </span>
+
+        <span className="capacity-dash__print-coverage-status">
+          Available
+        </span>
+
+      </div>
+    ))}
+
+  </div>
+
+
+  {/* INTERPRETATION NOTE */}
+
+  <div className="capacity-dash__print-summary-note">
+
+    <strong>How to read this summary.</strong>{" "}
+    The values above are averages across the complete reporting
+    window. Short-lived spikes may have limited effect on an
+    average, so the summary should be reviewed together with the
+    detailed evidence charts on the following pages.
+
+    {gaps.length
+      ? ` The agent stopped reporting ${gaps.length} ${
+          gaps.length === 1 ? "time" : "times"
+        } during this window. Reporting gaps are identified on the
+        corresponding evidence pages.`
+      : " The agent reported without interruption throughout the selected window."}
+
+  </div>
+
+
+  <div className="capacity-dash__print-page-footer">
+
+    <span>
+      GUARDLYNX · CAPACITY MONITORING
+    </span>
+
+    <span>
+      CONFIDENTIAL · Page 2 of {pageCount}
+    </span>
+
+  </div>
+
+</section>
+
+
+      {/* =======================================================
+          EVIDENCE PAGES
+          ======================================================= */}
       {PANES.map((pane, index) => {
         const lines = paintLines(pane.lines, theme);
+
         return (
-          <section className="capacity-dash__print-page" key={pane.id}>
-            <header className="capacity-dash__print-head">
-              <span className="capacity-dash__print-brand">Capacity report</span>
-              <span className="capacity-dash__print-meta">
-                {payload ? payload.agent_name : "—"} · {periodText} · IST
+          <section
+            className="capacity-dash__print-page capacity-dash__print-evidence-page"
+            key={pane.id}
+          >
+
+            <div className="capacity-dash__print-page-number">
+              {String(index + 3).padStart(2, "0")}
+            </div>
+
+
+            <div className="capacity-dash__print-page-heading">
+
+              <div className="capacity-dash__print-eyebrow">
+                CAPACITY EVIDENCE
+              </div>
+
+              <h2 className="capacity-dash__print-evidence-title">
+                {pane.title}
+              </h2>
+
+              <div className="capacity-dash__print-evidence-unit">
+                Measurement unit: {pane.unit}
+              </div>
+
+            </div>
+
+
+            {pane.lead && (
+              <p className="capacity-dash__print-evidence-lead">
+                {pane.lead}
+              </p>
+            )}
+
+
+            <div className="capacity-dash__print-section-label">
+              EVIDENCE
+            </div>
+
+
+            <div className="capacity-dash__print-chart-card">
+
+              <PaneHeader
+                pane={pane}
+                lines={lines}
+              />
+
+              <ChartBody
+                lines={lines}
+                data={rows}
+                rows={rows}
+                gaps={gaps}
+                start={0}
+                end={lastIndex}
+                theme={theme}
+                unit={pane.unit}
+                width={PRINT_W}
+                height={PRINT_H}
+              />
+
+            </div>
+
+
+            <div className="capacity-dash__print-evidence-note">
+              <div>
+                <span className="capacity-dash__print-evidence-note-label">
+                  Window
+                </span>
+
+                Full reporting range
+              </div>
+
+              <div>
+                <span className="capacity-dash__print-evidence-note-label">
+                  Samples
+                </span>
+
+                {rows.length}
+              </div>
+
+              <div>
+                <span className="capacity-dash__print-evidence-note-label">
+                  Reporting gaps
+                </span>
+
+                {gaps.length}
+              </div>
+            </div>
+
+
+            {gaps.length > 0 && (
+              <p className="capacity-dash__print-gap-note">
+                {gaps.length} reporting{" "}
+                {gaps.length === 1 ? "gap was" : "gaps were"} detected.
+                During these intervals the agent was not reporting, so no
+                measurements were available.
+              </p>
+            )}
+
+
+            <div className="capacity-dash__print-page-footer">
+              <span>
+                GUARDLYNX · CAPACITY MONITORING
               </span>
-            </header>
 
-            <h2 className="capacity-dash__print-h2">
-              {index + 1}. {pane.title} <span>({pane.unit})</span>
-            </h2>
+              <span>
+                CONFIDENTIAL · Page {index + 3} of {pageCount}
+              </span>
+            </div>
 
-            {pane.lead && <p className="capacity-dash__print-lead">{pane.lead}</p>}
-
-            <PaneHeader pane={pane} lines={lines} />
-            <ChartBody
-              lines={lines}
-              data={rows}
-              rows={rows}
-              gaps={gaps}
-              start={0}
-              end={lastIndex}
-              theme={theme}
-              unit={pane.unit}
-              width={PRINT_W}
-              height={PRINT_H}
-            />
-
-            <p className="capacity-dash__print-note">
-              Full range, {rows.length} samples.
-              {gaps.length
-                ? ` ${gaps.length} reporting gap${gaps.length > 1 ? "s" : ""} marked on the chart —
-                   the agent was not reporting, so nothing was measured there.`
-                : " No reporting gaps."}
-            </p>
-            <footer className="capacity-dash__print-foot">
-              Page {index + 2} of {pageCount}
-            </footer>
           </section>
         );
       })}
+
     </div>
   );
 }

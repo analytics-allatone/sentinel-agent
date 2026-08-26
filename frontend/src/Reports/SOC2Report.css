@@ -24,6 +24,7 @@
   /* App.css ships CRA's boilerplate `.App { text-align: center }`, which
      otherwise centres every label, card title and table cell on this page */
   text-align: left;
+  margin-top:10px;
 }
 
 /* ── top bar ───────────────────────────────────────────── */
@@ -1039,7 +1040,7 @@
 
 /* ── printable report ──────────────────────────────────── */
 /* Hidden on screen; revealed only when printing / saving to PDF. */
-.soc2-print-root {
+/* .soc2-print-root {
   display: none;
 }
 
@@ -1074,19 +1075,19 @@
   margin: 0 0 8px;
   padding-bottom: 4px;
   border-bottom: 0.5px solid #e0e0e0;
-}
+} */
 
 /* the plain-English explanation that opens the cover and every section */
-.soc2-print-lead {
+/* .soc2-print-lead {
   font-size: 11.5px;
   line-height: 1.55;
   color: #444;
   margin: 0 0 14px;
   max-width: 62em;
-}
+} */
 
 /* ── cover page ── */
-.soc2-print-cover {
+/* .soc2-print-cover {
   display: flex;
   flex-direction: column;
 }
@@ -1125,18 +1126,18 @@
   font-size: 12.5px;
   line-height: 1.9;
   color: #333;
-}
+} */
 
-@media print {
+/* @media print { */
   /* hide everything, then reveal only the printable report */
-  body * {
+  /* body * {
     visibility: hidden;
   }
   .soc2-print-root,
   .soc2-print-root * {
     visibility: visible;
-  }
-  .soc2-print-root {
+  } */
+  /* .soc2-print-root {
     display: block;
     position: absolute;
     left: 0;
@@ -1144,74 +1145,74 @@
     width: 100%;
     padding: 8px;
     background: #fff;
-  }
+  } */
 
   /* open up the grid layouts so nothing is clipped on paper */
-  .soc2-print-root .soc2-two-col {
+  /* .soc2-print-root .soc2-two-col {
     grid-template-columns: 1fr 1fr;
   }
   .soc2-print-root .soc2-statrow,
   .soc2-print-root .soc2-card-grid {
     grid-template-columns: repeat(4, 1fr);
-  }
+  } */
 
   /* tables print in full: no inner scroll box, no sticky header */
-  .soc2-print-root .inc-table-wrap,
+  /* .soc2-print-root .inc-table-wrap,
   .soc2-print-root .soc2-card .inc-table-wrap {
     max-height: none;
     overflow: visible;
   }
   .soc2-print-root .inc-table th {
     position: static;
-  }
+  } */
 
   /* every section opens a new sheet, so one can be pulled out on its own */
-  .soc2-print-section {
+  /* .soc2-print-section {
     break-before: page;
     page-break-before: always;
     break-inside: auto;
     page-break-inside: auto;
     margin-bottom: 0;
-  }
+  } */
 
   /* keep a heading and its explanation with the content they introduce */
-  .soc2-print-h2,
+  /* .soc2-print-h2,
   .soc2-print-lead {
     break-after: avoid;
     page-break-after: avoid;
-  }
+  } */
 
   /* avoid awkward breaks inside a card, a table or a recommendation */
-  .soc2-print-root .soc2-card,
+  /* .soc2-print-root .soc2-card,
   .soc2-print-root .soc2-fold,
   .soc2-print-root .inc-table-wrap,
   .soc2-print-root .soc2-rec {
     break-inside: avoid;
     page-break-inside: avoid;
-  }
+  } */
 
   /* the cover fills the first sheet on its own */
-  .soc2-print-cover {
+  /* .soc2-print-cover {
     min-height: 90vh;
-  }
+  } */
 
   /* loaders and on-screen instructions are not part of the printed evidence */
-  .soc2-print-root .soc2-note-loading,
+  /* .soc2-print-root .soc2-note-loading,
   .soc2-print-root .soc2-spinner,
   .soc2-print-root .soc2-screen-only {
     display: none;
-  }
+  } */
 
   /* A printed report is read at arm's length and often photocopied, so the type
      is set larger than the screen's. Each section starts on its own sheet, so
      the extra length costs pages rather than legibility. */
-  .soc2-print-root {
+  /* .soc2-print-root {
     font-size: 16px;
     line-height: 1.55;
-  }
+  } */
 
   /* headings and the explanation that opens each section */
-  .soc2-print-title {
+  /* .soc2-print-title {
     font-size: 26px;
   }
   .soc2-print-period {
@@ -1236,10 +1237,10 @@
   .soc2-print-toc-list {
     font-size: 16.5px;
     line-height: 2;
-  }
+  } */
 
   /* headline figures */
-  .soc2-print-root .stat-card {
+  /* .soc2-print-root .stat-card {
     padding: 12px 14px;
   }
   .soc2-print-root .stat-label {
@@ -1250,10 +1251,10 @@
   }
   .soc2-print-root .stat-sub {
     font-size: 13.5px;
-  }
+  } */
 
   /* card and section labels */
-  .soc2-print-root .soc2-card-title,
+  /* .soc2-print-root .soc2-card-title,
   .soc2-print-root .soc2-fold-title {
     font-size: 16.5px;
   }
@@ -1264,10 +1265,10 @@
   .soc2-print-root .soc2-hint,
   .soc2-print-root .soc2-note {
     font-size: 14px;
-  }
+  } */
 
   /* evidence tables — the densest thing on paper, so they get the most care */
-  .soc2-print-root .inc-table {
+  /* .soc2-print-root .inc-table {
     font-size: 14px;
   }
   .soc2-print-root .inc-table th {
@@ -1276,10 +1277,10 @@
   .soc2-print-root .inc-table th,
   .soc2-print-root .inc-table td {
     padding: 9px 11px;
-  }
+  } */
 
   /* lists: breakdowns, events, agents, recommendations */
-  .soc2-print-root .soc2-bd-row,
+  /* .soc2-print-root .soc2-bd-row,
   .soc2-print-root .pbar-label,
   .soc2-print-root .pbar-count,
   .soc2-print-root .criteria-label,
@@ -1299,16 +1300,16 @@
   .soc2-print-root .sev-badge,
   .soc2-print-root .agent-badge {
     font-size: 13px;
-  }
+  } */
   /* the chart's own axis labels live in the SVG, scaled with the chart */
-  .soc2-print-root .tsc-ylabel,
+  /* .soc2-print-root .tsc-ylabel,
   .soc2-print-root .tsc-xlabel {
     font-size: 17px;
-  }
+  } */
 
   /* folds print flat: the printed report renders them open, and the chevron and
      hover affordance mean nothing on paper */
-  .soc2-print-root .soc2-fold {
+  /* .soc2-print-root .soc2-fold {
     border: 0;
     box-shadow: none;
   }
@@ -1320,37 +1321,1273 @@
   }
   .soc2-print-root .soc2-fold-body {
     padding: 0;
-  }
+  } */
 
   /* chart controls are interactive-only — they mean nothing on paper */
-  .soc2-print-root .tsc-tools,
+  /* .soc2-print-root .tsc-tools,
   .soc2-print-root .tsc-hint {
     display: none;
-  }
+  } */
 
   /* evidence tables: let the cells wrap instead of clipping to an ellipsis */
-  .soc2-print-root .soc2-tbl td {
+  /* .soc2-print-root .soc2-tbl td {
     max-width: none;
     white-space: normal;
     overflow: visible;
-  }
+  } */
 
   /* let every event/agent row show — no ellipsis truncation on paper */
-  .soc2-print-root .evt-msg,
+  /* .soc2-print-root .evt-msg,
   .soc2-print-root .agent-meta {
     overflow: visible;
     white-space: normal;
-  }
+  } */
 
   /* ensure colours (badges, bars) render in print */
-  .soc2-print-root * {
+  /* .soc2-print-root * {
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }
 
   @page {
     margin: 12mm;
+  } */
+/* } */
+
+/* ============================================================
+   PRINT / PDF REPORT
+   ============================================================ */
+
+.soc2-print-root {
+  display: none;
+}
+
+
+/* ------------------------------------------------------------
+   Base print report
+   ------------------------------------------------------------ */
+
+.soc2-print-root {
+  font-family:
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    Roboto,
+    Helvetica,
+    Arial,
+    sans-serif;
+
+  color: #172033;
+  background: #ffffff;
+  line-height: 1.5;
+}
+
+
+/* ------------------------------------------------------------
+   Cover
+   ------------------------------------------------------------ */
+
+.soc2-print-cover {
+  min-height: 255mm;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+
+  padding: 8mm 5mm 6mm;
+
+  border-top: 5px solid #185fa5;
+  box-sizing: border-box;
+}
+
+
+.soc2-print-cover-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+
+  padding-bottom: 7mm;
+
+  border-bottom: 1px solid #dfe5ec;
+}
+
+
+.soc2-print-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+
+.soc2-print-logo {
+  width: 42px;
+  height: 42px;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 10px;
+
+  background: #eaf3fb;
+}
+
+
+.soc2-print-logo svg {
+  width: 24px;
+  height: 24px;
+}
+
+
+.soc2-print-brand-name {
+  font-size: 20px;
+  font-weight: 750;
+  letter-spacing: 0.02em;
+  color: #14213d;
+}
+
+
+.soc2-print-brand-subtitle {
+  margin-top: 2px;
+
+  font-size: 10px;
+  color: #687386;
+  letter-spacing: 0.04em;
+}
+
+
+.soc2-print-classification {
+  padding: 5px 9px;
+
+  border: 1px solid #d7dee8;
+  border-radius: 4px;
+
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+
+  color: #657084;
+}
+
+
+.soc2-print-cover-main {
+  max-width: 175mm;
+  width: 100%;
+  margin: auto 0;
+}
+
+
+.soc2-print-eyebrow,
+.soc2-print-page-eyebrow {
+  font-size: 9px;
+  font-weight: 750;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+
+  color: #185fa5;
+}
+
+
+.soc2-print-cover-title {
+  margin: 8px 0 10px;
+
+  font-size: 34px;
+  line-height: 1.1;
+  letter-spacing: -0.025em;
+
+  color: #14213d;
+}
+
+
+.soc2-print-cover-description {
+  max-width: 145mm;
+
+  margin: 0 0 22px;
+
+  font-size: 13px;
+  line-height: 1.65;
+
+  color: #586579;
+}
+
+
+.soc2-print-period-card {
+  padding: 13px 15px;
+
+  border-left: 4px solid #185fa5;
+  background: #f5f8fb;
+}
+
+
+.soc2-print-period-label {
+  margin-bottom: 5px;
+
+  font-size: 9px;
+  font-weight: 750;
+  letter-spacing: 0.1em;
+
+  color: #778396;
+}
+
+
+.soc2-print-period-value {
+  font-size: 15px;
+  font-weight: 650;
+  color: #1c2a3d;
+}
+
+
+.soc2-print-meta-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+
+  gap: 0;
+
+  margin-top: 18px;
+
+  border-top: 1px solid #dfe5ec;
+  border-left: 1px solid #dfe5ec;
+}
+
+
+.soc2-print-meta-box {
+  min-height: 58px;
+
+  padding: 11px 13px;
+
+  border-right: 1px solid #dfe5ec;
+  border-bottom: 1px solid #dfe5ec;
+}
+
+
+.soc2-print-meta-key {
+  display: block;
+
+  margin-bottom: 4px;
+
+  font-size: 8.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+
+  color: #7b8798;
+}
+
+
+.soc2-print-meta-val {
+  display: block;
+
+  font-size: 12px;
+  font-weight: 650;
+
+  color: #1c2a3d;
+}
+
+
+.soc2-print-cover-bottom {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+
+  padding-top: 5mm;
+
+  border-top: 1px solid #dfe5ec;
+
+  font-size: 9px;
+  color: #7a8594;
+}
+
+
+/* ------------------------------------------------------------
+   Executive Summary
+   ------------------------------------------------------------ */
+
+.soc2-print-executive {
+  min-height: 255mm;
+  padding: 5mm 5mm 8mm;
+
+  break-before: page;
+  page-break-before: always;
+}
+
+
+.soc2-print-executive-title {
+  margin: 5px 0 7px;
+
+  font-size: 27px;
+  line-height: 1.15;
+
+  color: #14213d;
+}
+
+
+.soc2-print-executive-lead {
+  max-width: 165mm;
+
+  margin: 0 0 18px;
+
+  font-size: 12px;
+  line-height: 1.65;
+
+  color: #596577;
+}
+
+
+/* KPI */
+
+.soc2-print-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+
+  gap: 9px;
+
+  margin-bottom: 14px;
+}
+
+
+.soc2-print-kpi {
+  min-height: 74px;
+
+  padding: 11px 12px;
+
+  border: 1px solid #dfe5ec;
+  border-radius: 7px;
+
+  background: #ffffff;
+}
+
+
+.soc2-print-kpi-score {
+  background: #f5f9fd;
+  border-color: #cbddec;
+}
+
+
+.soc2-print-kpi-label {
+  display: block;
+
+  margin-bottom: 6px;
+
+  font-size: 8.5px;
+  font-weight: 750;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+
+  color: #778396;
+}
+
+
+.soc2-print-kpi-value {
+  display: block;
+
+  font-size: 22px;
+  line-height: 1;
+
+  color: #172033;
+}
+
+
+.soc2-print-kpi-score-value {
+  display: block;
+
+  font-size: 25px;
+  line-height: 1;
+
+  color: #185fa5;
+}
+
+
+.soc2-print-kpi-sub {
+  display: block;
+
+  margin-top: 6px;
+
+  font-size: 9px;
+  color: #7a8594;
+}
+
+
+.soc2-print-kpi-sub.success {
+  color: #28733f;
+}
+
+
+.soc2-print-kpi-sub.warning {
+  color: #986914;
+}
+
+
+.soc2-print-kpi-sub.danger {
+  color: #ad3434;
+}
+
+
+/* Summary cards */
+
+.soc2-print-summary-grid {
+  display: grid;
+  grid-template-columns: 1.25fr 0.75fr;
+
+  gap: 12px;
+
+  margin-bottom: 14px;
+}
+
+
+.soc2-print-summary-card {
+  padding: 13px;
+
+  border: 1px solid #dfe5ec;
+  border-radius: 7px;
+
+  background: #ffffff;
+}
+
+
+.soc2-print-card-eyebrow {
+  margin-bottom: 8px;
+
+  font-size: 8.5px;
+  font-weight: 750;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+
+  color: #778396;
+}
+
+
+.soc2-print-compliance {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+
+.soc2-print-compliance-score {
+  font-size: 34px;
+  font-weight: 750;
+  line-height: 1;
+
+  color: #185fa5;
+}
+
+
+.soc2-print-compliance-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+
+.soc2-print-compliance-copy strong {
+  font-size: 11px;
+  color: #25344a;
+}
+
+
+.soc2-print-compliance-copy span {
+  font-size: 9px;
+  line-height: 1.45;
+  color: #748093;
+}
+
+
+.soc2-print-compliance-track {
+  height: 7px;
+
+  margin-top: 13px;
+
+  overflow: hidden;
+
+  border-radius: 999px;
+
+  background: #e8edf3;
+}
+
+
+.soc2-print-compliance-fill {
+  height: 100%;
+
+  border-radius: inherit;
+
+  background: #185fa5;
+}
+
+
+.soc2-print-scope-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+
+  gap: 12px;
+
+  padding: 7px 0;
+
+  border-bottom: 1px solid #edf0f4;
+}
+
+
+.soc2-print-scope-row:last-child {
+  border-bottom: 0;
+}
+
+
+.soc2-print-scope-row span {
+  font-size: 9px;
+  color: #7b8798;
+}
+
+
+.soc2-print-scope-row strong {
+  max-width: 65%;
+
+  font-size: 10px;
+  text-align: right;
+
+  color: #26364b;
+}
+
+
+/* Criteria */
+
+.soc2-print-summary-section {
+  padding: 13px;
+
+  border: 1px solid #dfe5ec;
+  border-radius: 7px;
+
+  background: #ffffff;
+}
+
+
+.soc2-print-summary-heading {
+  margin: 0 0 10px;
+
+  font-size: 14px;
+  color: #25344a;
+}
+
+
+.soc2-print-criteria {
+  width: 100%;
+}
+
+
+.soc2-print-empty {
+  padding: 12px;
+
+  font-size: 10px;
+
+  color: #7b8798;
+  background: #f7f9fb;
+}
+
+
+.soc2-print-summary-note {
+  margin-top: 10px;
+
+  padding: 9px 11px;
+
+  border-left: 3px solid #d59b2d;
+
+  background: #fff9ed;
+
+  font-size: 9.5px;
+  line-height: 1.5;
+
+  color: #765b20;
+}
+
+
+/* ------------------------------------------------------------
+   Table of Contents
+   ------------------------------------------------------------ */
+
+.soc2-print-toc-page {
+  min-height: 255mm;
+
+  padding: 7mm 5mm;
+
+  break-before: page;
+  page-break-before: always;
+}
+
+
+.soc2-print-toc-title {
+  margin: 5px 0 4px;
+
+  font-size: 28px;
+  color: #14213d;
+}
+
+
+.soc2-print-toc-description {
+  margin: 0 0 18px;
+
+  font-size: 11px;
+  color: #687386;
+}
+
+
+.soc2-print-toc-list {
+  list-style: none;
+
+  margin: 0;
+  padding: 0;
+
+  border-top: 1px solid #dfe5ec;
+}
+
+
+.soc2-print-toc-list li {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+
+  padding: 11px 3px;
+
+  border-bottom: 1px solid #e8edf2;
+}
+
+
+.soc2-toc-number {
+  width: 30px;
+
+  font-size: 10px;
+  font-weight: 750;
+
+  color: #185fa5;
+}
+
+
+.soc2-toc-label {
+  font-size: 12px;
+  font-weight: 600;
+
+  color: #26364b;
+}
+
+
+/* ------------------------------------------------------------
+   Report sections
+   ------------------------------------------------------------ */
+
+.soc2-print-section {
+  position: relative;
+
+  padding: 6mm 5mm 8mm;
+
+  break-before: page;
+  page-break-before: always;
+}
+
+
+.soc2-print-section-number {
+  margin-bottom: 2px;
+
+  font-size: 34px;
+  line-height: 1;
+
+  font-weight: 800;
+
+  color: #d9e6f2;
+}
+
+
+.soc2-print-section-heading {
+  margin-bottom: 16px;
+}
+
+
+.soc2-print-h2 {
+  margin: 3px 0 8px;
+
+  font-size: 25px;
+  line-height: 1.15;
+
+  color: #14213d;
+}
+
+
+.soc2-print-lead {
+  max-width: 170mm;
+
+  margin: 0;
+
+  font-size: 11px;
+  line-height: 1.65;
+
+  color: #5e6b7c;
+}
+
+
+.soc2-print-section-body {
+  width: 100%;
+}
+
+
+/* ------------------------------------------------------------
+   Print cards
+   ------------------------------------------------------------ */
+
+.soc2-print-root .soc2-card,
+.soc2-print-root .soc2-fold {
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+
+.soc2-print-root .soc2-card {
+  box-shadow: none;
+}
+
+
+/* ------------------------------------------------------------
+   Tables
+   ------------------------------------------------------------ */
+
+.soc2-print-root .inc-table-wrap,
+.soc2-print-root .soc2-card .inc-table-wrap {
+  max-height: none;
+  overflow: visible;
+}
+
+
+.soc2-print-root .inc-table {
+  width: 100%;
+
+  border-collapse: collapse;
+
+  font-size: 9px;
+}
+
+
+.soc2-print-root .inc-table th {
+  position: static;
+
+  padding: 8px 9px;
+
+  text-align: left;
+
+  font-size: 8px;
+  font-weight: 750;
+
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+
+  color: #ffffff;
+  background: #263b54;
+
+  border: 1px solid #263b54;
+}
+
+
+.soc2-print-root .inc-table td {
+  padding: 7px 9px;
+
+  vertical-align: top;
+
+  color: #26364b;
+
+  border: 1px solid #e0e6ed;
+}
+
+
+.soc2-print-root .inc-table tbody tr:nth-child(even) {
+  background: #f8fafc;
+}
+
+
+.soc2-print-root .inc-table th,
+.soc2-print-root .inc-table td {
+  white-space: normal;
+  overflow: visible;
+  max-width: none;
+}
+
+
+/* ------------------------------------------------------------
+   Lists / events
+   ------------------------------------------------------------ */
+
+.soc2-print-root .evt-msg,
+.soc2-print-root .agent-meta {
+  overflow: visible;
+  white-space: normal;
+}
+
+
+.soc2-print-root .soc2-rec {
+  break-inside: avoid;
+  page-break-inside: avoid;
+
+  font-size: 10.5px;
+  line-height: 1.55;
+}
+
+
+/* ------------------------------------------------------------
+   Folded sections become flat in PDF
+   ------------------------------------------------------------ */
+
+.soc2-print-root .soc2-fold {
+  border: 1px solid #dfe5ec;
+  box-shadow: none;
+}
+
+
+.soc2-print-root .soc2-fold-head {
+  padding: 9px 11px;
+}
+
+
+.soc2-print-root .soc2-fold-chevron {
+  display: none;
+}
+
+
+.soc2-print-root .soc2-fold-body {
+  padding: 0 11px 11px;
+}
+
+
+/* ------------------------------------------------------------
+   Hide interactive-only controls
+   ------------------------------------------------------------ */
+
+.soc2-print-root .tsc-tools,
+.soc2-print-root .tsc-hint,
+.soc2-print-root .soc2-note-loading,
+.soc2-print-root .soc2-spinner,
+.soc2-print-root .soc2-screen-only {
+  display: none;
+}
+
+/* ============================================================
+   PHASE 2 — EVIDENCE TABLE POLISH
+   ============================================================ */
+
+.soc2-table-severity-cell,
+.soc2-table-category-cell {
+  white-space: nowrap !important;
+  vertical-align: middle !important;
+}
+
+
+.soc2-print-root .sev-badge,
+.soc2-print-root .cat-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  min-width: 54px;
+
+  padding: 3px 7px;
+
+  border-radius: 999px;
+
+  font-size: 8px;
+  font-weight: 750;
+
+  line-height: 1.2;
+
+  letter-spacing: 0.04em;
+
+  white-space: nowrap;
+}
+
+
+/* Critical */
+
+.soc2-print-root .sev-critical {
+  background: #fcebeb;
+  color: #a32d2d;
+
+  border: 1px solid #efc7c7;
+}
+
+
+/* High */
+
+.soc2-print-root .sev-high {
+  background: #faeeda;
+  color: #854f0b;
+
+  border: 1px solid #ecd7a9;
+}
+
+
+/* Medium */
+
+.soc2-print-root .sev-medium {
+  background: #e6f1fb;
+  color: #185fa5;
+
+  border: 1px solid #c7dcec;
+}
+
+
+/* Low */
+
+.soc2-print-root .sev-low {
+  background: #eaf3de;
+  color: #27500a;
+
+  border: 1px solid #cfe2bc;
+}
+
+
+/* Category */
+
+.soc2-print-root .cat-badge {
+  padding: 3px 7px;
+
+  font-size: 8px;
+  font-weight: 650;
+
+  border-radius: 999px;
+}
+
+
+/* Table row */
+
+.soc2-print-root .inc-table tbody tr {
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+
+/* Better text hierarchy */
+
+.soc2-print-root .inc-table td {
+  font-size: 9px;
+  line-height: 1.45;
+}
+
+
+/* Long evidence/message columns */
+
+.soc2-print-root .inc-table td {
+  overflow-wrap: anywhere;
+  word-break: normal;
+}
+
+
+/* First column generally contains the primary evidence identifier */
+
+.soc2-print-root .inc-table td:first-child {
+  color: #24364d;
+  font-weight: 550;
+}
+
+
+/* MITRE technique */
+
+.soc2-print-root .mitre-cell {
+  color: #185fa5;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* ============================================================
+   INCIDENT TABLE — PDF OPTIMIZATION
+   ============================================================ */
+
+.soc2-print-root .inc-table {
+  width: 100%;
+  table-layout: fixed;
+  font-size: 10px;
+}
+
+.soc2-print-root .inc-table th {
+  font-size: 9px;
+  padding: 8px 7px;
+  white-space: nowrap;
+}
+
+.soc2-print-root .inc-table td {
+  font-size: 9.5px;
+  padding: 7px 7px;
+  line-height: 1.35;
+  vertical-align: middle;
+}
+
+
+/* DATE */
+.soc2-print-root .inc-table th:nth-child(1),
+.soc2-print-root .inc-table td:nth-child(1) {
+  width: 10%;
+}
+
+
+/* SEVERITY */
+.soc2-print-root .inc-table th:nth-child(2),
+.soc2-print-root .inc-table td:nth-child(2) {
+  width: 11%;
+  text-align: center;
+}
+
+
+/* CATEGORY */
+.soc2-print-root .inc-table th:nth-child(3),
+.soc2-print-root .inc-table td:nth-child(3) {
+  width: 11%;
+}
+
+
+/* DESCRIPTION */
+.soc2-print-root .inc-table th:nth-child(4),
+.soc2-print-root .inc-table td:nth-child(4) {
+  width: 48%;
+}
+
+
+/* AGENT */
+.soc2-print-root .inc-table th:nth-child(5),
+.soc2-print-root .inc-table td:nth-child(5) {
+  width: 14%;
+}
+
+
+/* MITRE */
+.soc2-print-root .inc-table th:nth-child(6),
+.soc2-print-root .inc-table td:nth-child(6) {
+  width: 6%;
+  text-align: center;
+}
+
+
+/* Keep agent name together as much as possible */
+.soc2-print-root .inc-table td:nth-child(5) {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+
+/* Description can wrap */
+.soc2-print-root .inc-table td:nth-child(4) {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+
+/* Severity badges */
+.soc2-print-root .sev-badge {
+  min-width: 45px;
+  padding: 3px 7px;
+  font-size: 8px;
+}
+
+
+/* MITRE dash */
+.soc2-print-root .inc-table td:nth-child(6) {
+  color: #6b7280;
+}
+
+
+/* ------------------------------------------------------------
+   PRINT
+   ------------------------------------------------------------ */
+
+@media print {
+
+  
+
+  body * {
+    visibility: hidden;
   }
+
+
+  .soc2-print-root,
+  .soc2-print-root * {
+    visibility: visible;
+  }
+
+
+  .soc2-print-root {
+    display: block;
+
+    position: absolute;
+
+    left: 0;
+    top: 0;
+
+    width: 100%;
+
+    padding: 0;
+
+    background: #ffffff;
+
+    font-size: 10px;
+    line-height: 1.5;
+  }
+
+
+  /* A4 */
+
+  @page {
+    size: A4 portrait;
+    margin: 13mm 12mm 16mm 12mm;
+  }
+
+
+  /* Prevent ugly content splits */
+
+  .soc2-print-root .soc2-card,
+  .soc2-print-root .soc2-fold,
+  .soc2-print-root .soc2-rec,
+  .soc2-print-root .soc2-print-kpi,
+  .soc2-print-root .soc2-print-summary-card {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+
+  /* Keep headings with content */
+
+  .soc2-print-h2,
+  .soc2-print-lead,
+  .soc2-print-section-heading {
+    break-after: avoid;
+    page-break-after: avoid;
+  }
+
+
+  /* Repeat table headers */
+
+  .soc2-print-root table thead {
+    display: table-header-group;
+  }
+
+
+  .soc2-print-root table tfoot {
+    display: table-footer-group;
+  }
+
+
+  /* Preserve colors */
+
+  .soc2-print-root * {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* =========================================================
+   PRINT — TIME SERIES CHARTS
+   ========================================================= */
+
+/* .soc2-print-root .tsc {
+  width: 100%;
+  break-inside: avoid;
+  page-break-inside: avoid;
+} */
+
+.soc2-print-root .tsc {
+  width: 100%;
+  break-inside: auto;
+  page-break-inside: auto;
+}
+
+.soc2-print-root .tsc-head {
+  margin-bottom: 10px;
+  break-after: avoid;
+  page-break-after: avoid;
+}
+
+.soc2-print-root .tsc-tools {
+  display: none !important;
+}
+
+.soc2-print-root .tsc-hint {
+  display: none !important;
+}
+
+.soc2-print-root .tsc-legend {
+  gap: 18px;
+}
+
+.soc2-print-root .tsc-leg {
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.soc2-print-root .tsc-leg i {
+  width: 10px;
+  height: 10px;
+}
+
+.soc2-print-root .tsc-plot-wrap {
+  width: 100%;
+  margin-top: 4px;
+}
+
+.soc2-print-root .tsc-ylabel {
+  font-size: 12px;
+}
+
+.soc2-print-root .tsc-xlabel {
+  font-size: 11px;
+}
+
+.soc2-print-root .soc2-recommendation-list {
+  gap: 10px;
+}
+
+.soc2-print-root .soc2-recommendation-card {
+  padding: 12px 14px;
+  border-radius: 7px;
+  box-shadow: none !important;
+
+  break-inside: avoid !important;
+  page-break-inside: avoid !important;
+}
+
+.soc2-print-root .soc2-recommendation-finding {
+  font-size: 8.5px;
+}
+
+.soc2-print-root .soc2-recommendation-category {
+  margin-top: 3px;
+  font-size: 9.5px;
+}
+
+.soc2-print-root .soc2-recommendation-priority {
+  min-width: 58px;
+  padding: 4px 7px;
+  font-size: 8px;
+}
+
+.soc2-print-root .soc2-recommendation-divider {
+  margin: 8px 0 10px;
+}
+
+.soc2-print-root .soc2-recommendation-block {
+  margin-bottom: 9px;
+}
+
+.soc2-print-root .soc2-recommendation-label {
+  margin-bottom: 3px;
+  font-size: 7.5px;
+}
+
+.soc2-print-root .soc2-recommendation-text {
+  font-size: 9.5px;
+  line-height: 1.4;
+}
+
+.soc2-print-root .soc2-recommendation-evidence {
+  padding: 6px 8px;
+  font-size: 9px;
+  line-height: 1.4;
+}
+
+.soc2-print-root .soc2-recommendation-action {
+  font-size: 9px;
+  line-height: 1.4;
+}
+
+
+
 }
 
 /* ── responsive ────────────────────────────────────────── */
@@ -1393,4 +2630,439 @@
   .agent-row {
     grid-template-columns: 10px 1fr auto;
   }
+}
+
+/* ============================================================
+   PHASE 2 — RECOMMENDATION CARDS
+   ============================================================ */
+
+.soc2-print-root .soc2-recs {
+  margin: 0;
+  padding: 0;
+
+  list-style: none;
+
+  display: flex;
+  flex-direction: column;
+
+  gap: 9px;
+}
+
+
+.soc2-print-root .soc2-rec {
+  position: relative;
+
+  display: grid;
+  grid-template-columns: 32px 1fr;
+
+  gap: 11px;
+
+  padding: 11px 12px;
+
+  border: 1px solid #dfe5ec;
+  border-radius: 7px;
+
+  background: #ffffff;
+
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+
+.soc2-print-root .soc2-rec-num {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 27px;
+  height: 27px;
+
+  border-radius: 6px;
+
+  background: #f1f5f9;
+
+  font-size: 8px;
+  font-weight: 750;
+
+  color: #5f6d7e;
+}
+
+
+.soc2-print-root .soc2-rec-text {
+  align-self: center;
+
+  font-size: 10px;
+  line-height: 1.55;
+
+  color: #344256;
+}
+
+
+/* High priority */
+
+.soc2-print-root .soc2-rec-high {
+  border-left: 4px solid #c98518;
+}
+
+
+/* Critical */
+
+.soc2-print-root .soc2-rec-critical {
+  border-left: 4px solid #c33b3b;
+}
+
+
+/* Medium / warning */
+
+.soc2-print-root .soc2-rec-medium,
+.soc2-print-root .soc2-rec-warning {
+  border-left: 4px solid #185fa5;
+}
+
+
+/* Informational */
+
+.soc2-print-root .soc2-rec-info {
+  border-left: 4px solid #9aa6b5;
+}
+
+
+/* ============================================================
+   SYSTEM OPERATIONS + CHANGE MANAGEMENT
+   PDF TABLE FIX
+   Only these two sections are affected
+   ============================================================ */
+
+
+/* ------------------------------------------------------------
+   TABLE CONTAINER
+   ------------------------------------------------------------ */
+
+.soc2-print-section-process .inc-table-wrap,
+.soc2-print-section-change .inc-table-wrap,
+.soc2-print-section-process .soc2-card .inc-table-wrap,
+.soc2-print-section-change .soc2-card .inc-table-wrap {
+  max-height: none !important;
+  overflow: visible !important;
+}
+
+
+/* ------------------------------------------------------------
+   TABLE
+   ------------------------------------------------------------ */
+
+.soc2-print-section-process .inc-table,
+.soc2-print-section-change .inc-table {
+  width: 100% !important;
+  table-layout: auto !important;
+  border-collapse: collapse !important;
+}
+
+
+/* ------------------------------------------------------------
+   HEADER
+   Repeat header when table continues on next PDF page
+   ------------------------------------------------------------ */
+
+.soc2-print-section-process .inc-table thead,
+.soc2-print-section-change .inc-table thead {
+  display: table-header-group !important;
+}
+
+
+/* ------------------------------------------------------------
+   HEADER CELLS
+   ------------------------------------------------------------ */
+
+.soc2-print-section-process .inc-table th,
+.soc2-print-section-change .inc-table th {
+  position: static !important;
+
+  padding: 7px 8px !important;
+
+  font-size: 9px !important;
+  line-height: 1.25 !important;
+
+  white-space: normal !important;
+
+  vertical-align: middle !important;
+}
+
+
+/* ------------------------------------------------------------
+   BODY CELLS
+   ------------------------------------------------------------ */
+
+.soc2-print-section-process .inc-table td,
+.soc2-print-section-change .inc-table td {
+  padding: 7px 8px !important;
+
+  font-size: 9.5px !important;
+  line-height: 1.35 !important;
+
+  vertical-align: top !important;
+
+  max-width: none !important;
+
+  white-space: normal !important;
+
+  overflow: visible !important;
+
+  overflow-wrap: anywhere !important;
+  word-break: normal !important;
+}
+
+
+/* ------------------------------------------------------------
+   NEVER SPLIT AN INDIVIDUAL ROW
+   ------------------------------------------------------------ */
+
+.soc2-print-section-process .inc-table tbody tr,
+.soc2-print-section-change .inc-table tbody tr {
+  break-inside: avoid !important;
+  page-break-inside: avoid !important;
+}
+
+
+/* ------------------------------------------------------------
+   KEEP TABLE WITHIN PRINT SECTION
+   ------------------------------------------------------------ */
+
+.soc2-print-section-process .inc-table-wrap,
+.soc2-print-section-change .inc-table-wrap {
+  break-inside: auto !important;
+  page-break-inside: auto !important;
+}
+
+/* ============================================================
+   CHANGE MANAGEMENT COLUMN WIDTHS
+   ============================================================ */
+
+.soc2-print-section-change .inc-table th:nth-child(1),
+.soc2-print-section-change .inc-table td:nth-child(1) {
+  width: 10%;
+}
+
+
+/* File */
+.soc2-print-section-change .inc-table th:nth-child(2),
+.soc2-print-section-change .inc-table td:nth-child(2) {
+  width: 24%;
+}
+
+
+/* Previous path */
+.soc2-print-section-change .inc-table th:nth-child(3),
+.soc2-print-section-change .inc-table td:nth-child(3) {
+  width: 24%;
+}
+
+
+/* SHA-256 */
+.soc2-print-section-change .inc-table th:nth-child(4),
+.soc2-print-section-change .inc-table td:nth-child(4) {
+  width: 16%;
+}
+
+
+/* Previous SHA-256 */
+.soc2-print-section-change .inc-table th:nth-child(5),
+.soc2-print-section-change .inc-table td:nth-child(5) {
+  width: 16%;
+}
+
+
+/* User */
+.soc2-print-section-change .inc-table th:nth-child(6),
+.soc2-print-section-change .inc-table td:nth-child(6) {
+  width: 10%;
+}
+
+
+
+/* ============================================================
+   RECOMMENDATION FINDING CARDS
+   ============================================================ */
+
+.soc2-recommendation-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.soc2-recommendation-card {
+  background: #ffffff;
+  border: 1px solid #dfe5eb;
+  border-radius: 10px;
+  padding: 18px 20px;
+  box-shadow: 0 2px 8px rgba(20, 40, 60, 0.06);
+
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+.soc2-recommendation-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.soc2-recommendation-finding {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: #64748b;
+}
+
+.soc2-recommendation-category {
+  margin-top: 4px;
+
+  font-size: 12px;
+  font-weight: 700;
+  color: #334155;
+}
+
+.soc2-recommendation-priority {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  min-width: 72px;
+  padding: 5px 10px;
+
+  border-radius: 999px;
+
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+}
+
+.soc2-priority-critical {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.soc2-priority-warning {
+  background: #ffedd5;
+  color: #9a3412;
+}
+
+.soc2-priority-info {
+  background: #e0f2fe;
+  color: #075985;
+}
+
+.soc2-recommendation-divider {
+  height: 1px;
+  background: #e8edf2;
+  margin: 13px 0 16px;
+}
+
+.soc2-recommendation-block {
+  margin-bottom: 16px;
+}
+
+.soc2-recommendation-block:last-child {
+  margin-bottom: 0;
+}
+
+.soc2-recommendation-label {
+  margin-bottom: 6px;
+
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+
+  color: #64748b;
+}
+
+.soc2-recommendation-text {
+  font-size: 13px;
+  line-height: 1.55;
+  color: #263442;
+}
+
+.soc2-recommendation-evidence {
+  font-size: 12px;
+  line-height: 1.5;
+  color: #475569;
+
+  background: #f8fafc;
+  border-left: 3px solid #cbd5e1;
+
+  padding: 8px 10px;
+  border-radius: 4px;
+}
+
+.soc2-recommendation-action {
+  font-size: 12px;
+  line-height: 1.55;
+  color: #334155;
+}
+
+.soc2-recommendation-empty {
+  padding: 20px;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  background: #f8fafc;
+  font-size: 13px;
+  color: #64748b;
+}
+
+/* ============================================================
+   DOMAIN SECTION — PDF STRUCTURE
+   ============================================================ */
+
+.soc2-print-root .soc2-domain-section {
+  width: 100%;
+}
+
+.soc2-print-root .soc2-domain-heading {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+
+  margin-bottom: 14px;
+
+  border-bottom: 1px solid #dfe5eb;
+  padding-bottom: 10px;
+}
+
+.soc2-print-root .soc2-domain-eyebrow {
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  color: #64748b;
+}
+
+.soc2-print-root .soc2-domain-title {
+  font-size: 19px;
+  font-weight: 750;
+  line-height: 1.2;
+  color: #1f2937;
+}
+
+.soc2-print-root .soc2-print-domain-label {
+  margin-top: 16px;
+  margin-bottom: 8px;
+
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+
+  color: #64748b;
+
+  break-after: avoid;
+  page-break-after: avoid;
+}
+
+.soc2-print-root .soc2-print-domain-label + .soc2-two-col,
+.soc2-print-root .soc2-print-domain-label + .soc2-card-grid,
+.soc2-print-root .soc2-print-domain-label + .soc2-fold {
+  break-before: avoid;
+  page-break-before: avoid;
 }
