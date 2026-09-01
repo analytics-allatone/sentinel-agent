@@ -1,5 +1,5 @@
 from datetime import datetime, timezone
-from typing import Optional
+from typing import Optional , List
 
 from fastapi import APIRouter, Query, HTTPException, Depends
 from sqlalchemy import select, func, case, distinct
@@ -29,7 +29,7 @@ def validate_window(from_dt: datetime, to_dt: datetime) -> None:
         raise HTTPException(status_code=400, detail="from_dt must be before to_dt")
 
 
-def build_meta(agent_name: Optional[str], from_dt: datetime, to_dt: datetime, total: int) -> dict:
+def build_meta(agent_name: Optional[str | List]|None, from_dt: datetime, to_dt: datetime, total: int) -> dict:
     """Uniform meta block so every report is self-describing / auditable."""
     return {
         "agent_name": agent_name,
@@ -102,7 +102,7 @@ async def bucketed(db: AsyncSession, timestamp_col, base_filters: list, bucket: 
 async def soc2_file_report(
     from_dt: datetime = Query(..., description="Window start (ISO-8601)"),
     to_dt: datetime = Query(..., description="Window end (ISO-8601)"),
-    agent_name: Optional[str] = Query(None, description="Filter to one agent; omit for all"),
+    agent_name: Optional[List[str]] = Query(None, description="Filter to one agent; omit for all"),
     bucket: str = Query("hour", pattern="^(hour|day)$", description="Timeseries resolution"),
     db: AsyncSession = Depends(get_async_db),
     _claims: dict = Depends(verify_token),
@@ -113,7 +113,7 @@ async def soc2_file_report(
 
     filt = [F.timestamp >= from_dt, F.timestamp <= to_dt]
     if agent_name:
-        filt.append(F.agent_name == agent_name)
+        filt.append(F.agent_name.in_(agent_name))
 
     is_success = case((F.outcome == OUTCOME_SUCCESS, 1), else_=0)
     is_failure = case((F.outcome == OUTCOME_FAILURE, 1), else_=0)
@@ -242,7 +242,7 @@ async def soc2_file_report(
 async def soc2_network_report(
     from_dt: datetime = Query(..., description="Window start (ISO-8601)"),
     to_dt: datetime = Query(..., description="Window end (ISO-8601)"),
-    agent_name: Optional[str] = Query(None, description="Filter to one agent; omit for all"),
+    agent_name: Optional[List[str]] = Query(None, description="Filter to one agent; omit for all"),
     bucket: str = Query("hour", pattern="^(hour|day)$", description="Timeseries resolution"),
     db: AsyncSession = Depends(get_async_db),
     _claims: dict = Depends(verify_token),
@@ -253,7 +253,7 @@ async def soc2_network_report(
 
     filt = [N.timestamp >= from_dt, N.timestamp <= to_dt]
     if agent_name:
-        filt.append(N.agent_name == agent_name)
+        filt.append(N.agent_name.in_(agent_name))
 
     is_success = case((N.outcome == OUTCOME_SUCCESS, 1), else_=0)
     is_failure = case((N.outcome == OUTCOME_FAILURE, 1), else_=0)
@@ -400,7 +400,7 @@ async def soc2_network_report(
 async def soc2_process_report(
     from_dt: datetime = Query(..., description="Window start (ISO-8601)"),
     to_dt: datetime = Query(..., description="Window end (ISO-8601)"),
-    agent_name: Optional[str] = Query(None, description="Filter to one agent; omit for all"),
+    agent_name: Optional[List[str]] = Query(None, description="Filter to one agent; omit for all"),
     bucket: str = Query("hour", pattern="^(hour|day)$", description="Timeseries resolution"),
     db: AsyncSession = Depends(get_async_db),
     _claims: dict = Depends(verify_token),
@@ -411,7 +411,7 @@ async def soc2_process_report(
 
     filt = [P.timestamp >= from_dt, P.timestamp <= to_dt]
     if agent_name:
-        filt.append(P.agent_name == agent_name)
+        filt.append(P.agent_name.in_(agent_name))
 
     is_success = case((P.outcome == OUTCOME_SUCCESS, 1), else_=0)
     is_failure = case((P.outcome == OUTCOME_FAILURE, 1), else_=0)
@@ -559,7 +559,7 @@ async def soc2_process_report(
 async def soc2_auth_report(
     from_dt: datetime = Query(..., description="Window start (ISO-8601)"),
     to_dt: datetime = Query(..., description="Window end (ISO-8601)"),
-    agent_name: Optional[str] = Query(None, description="Filter to one agent; omit for all"),
+    agent_name: Optional[List[str]] = Query(None, description="Filter to one agent; omit for all"),
     bucket: str = Query("hour", pattern="^(hour|day)$", description="Timeseries resolution"),
     db: AsyncSession = Depends(get_async_db),
     _claims: dict = Depends(verify_token),
@@ -570,7 +570,7 @@ async def soc2_auth_report(
 
     filt = [A.timestamp >= from_dt, A.timestamp <= to_dt]
     if agent_name:
-        filt.append(A.agent_name == agent_name)
+        filt.append(A.agent_name.in_(agent_name))
 
     is_success = case((A.outcome == OUTCOME_SUCCESS, 1), else_=0)
     is_failure = case((A.outcome == OUTCOME_FAILURE, 1), else_=0)
@@ -672,7 +672,7 @@ async def soc2_auth_report(
 async def soc2_usb_report(
     from_dt: datetime = Query(..., description="Window start (ISO-8601)"),
     to_dt: datetime = Query(..., description="Window end (ISO-8601)"),
-    agent_name: Optional[str] = Query(None, description="Filter to one agent; omit for all"),
+    agent_name: Optional[List[str]] = Query(None, description="Filter to one agent; omit for all"),
     bucket: str = Query("hour", pattern="^(hour|day)$", description="Timeseries resolution"),
     db: AsyncSession = Depends(get_async_db),
     _claims: dict = Depends(verify_token),
@@ -683,7 +683,7 @@ async def soc2_usb_report(
 
     filt = [U.timestamp >= from_dt, U.timestamp <= to_dt]
     if agent_name:
-        filt.append(U.agent_name == agent_name)
+        filt.append(U.agent_name.in_(agent_name))
 
     is_success = case((U.outcome == OUTCOME_SUCCESS, 1), else_=0)
     is_failure = case((U.outcome == OUTCOME_FAILURE, 1), else_=0)
