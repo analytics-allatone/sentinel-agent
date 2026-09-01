@@ -118,11 +118,11 @@ async def send(req: SendRequest, db: AsyncSession = Depends(get_async_db)):
                 await notifier.send_slack(ch.value, text)
             elif kind == "discord":
                 await notifier.send_discord(ch.value, text)
-            # elif kind == "teams":
-            #     await notifier.send_teams(ch.value, text)
-            
             elif kind == "teams":
-                await notifier.send_teams_graph(ch.value, text)
+                await notifier.send_teams(ch.value, text)
+            
+            # elif kind == "teams":
+            #     await notifier.send_teams_graph(ch.value, text)
             elif kind == "telegram":
                 await notifier.send_telegram(ch.value, text)
             else:
