@@ -104,9 +104,21 @@
   background: #eff6ff;
 }
 
+/* The icons are <img> now, not emoji, so font-size did nothing: size the box
+   and let the image fill it, which also makes the mobile rule below work. */
 .os-icon {
-  font-size: 2em;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 40px;
   margin-bottom: 6px;
+}
+
+.os-icon img {
+  display: block;
+  height: 100%;
+  width: auto;
+  object-fit: contain;
 }
 
 .os-name {
@@ -547,7 +559,7 @@
   }
 
   .os-icon {
-    font-size: 1.8em;
+    height: 32px;
     margin-bottom: 4px;
   }
 

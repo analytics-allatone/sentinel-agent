@@ -41,8 +41,19 @@
    MAIN
    ========================================= */
 
-.layout-main {
+/* .layout-main {
   padding-top: 56px;
+  min-height: 100vh;
+
+  transition:
+    margin-left 0.25s ease,
+    width 0.25s ease;
+
+  box-sizing: border-box;
+} */
+
+.layout-main {
+  padding-top: 76px;
   min-height: 100vh;
 
   transition:

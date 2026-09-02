@@ -1362,12 +1362,37 @@
 }
 
 
-  .capacity-dash__print-evidence-lead {
+  /* .capacity-dash__print-evidence-lead {
   max-width: 180mm;
   margin: 0 0 7mm;
   font-size: 15px;
   line-height: 1.6;
   color: #526173;
+  break-after: avoid;
+  page-break-after: avoid;
+} */
+
+.capacity-dash__print-evidence-lead {
+  max-width: 180mm;
+
+  margin: 0 0 5mm;
+
+  padding: 8px 11px;
+
+  border-left: 3px solid #6045e8;
+  border-radius: 4px;
+
+  background: #f7f5ff;
+
+  color: #526173;
+
+  font-size: 10.5px;
+  line-height: 1.55;
+  font-weight: 400;
+
+  break-inside: avoid;
+  page-break-inside: avoid;
+
   break-after: avoid;
   page-break-after: avoid;
 }

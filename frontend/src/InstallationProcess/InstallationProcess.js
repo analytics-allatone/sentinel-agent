@@ -409,7 +409,7 @@ const InstallationProcess = () => {
                     <span className="os-icon">
                       {os === "windows" && (
                         <img
-                          src="./windows.png"
+                          src="/windows.png"
                           height={40}
                           width={40}
                           alt="Windows"
@@ -417,7 +417,7 @@ const InstallationProcess = () => {
                       )}
                       {os === "linux" && (
                         <img
-                          src="./linux.png"
+                          src="/linux.png"
                           height={40}
                           width={40}
                           alt="Linux"
@@ -425,7 +425,7 @@ const InstallationProcess = () => {
                       )}
                       {os === "mac" && (
                         <img
-                          src="./mac-os-logo.png"
+                          src="/mac-os-logo.png"
                           height={40}
                           width={40}
                           alt="macOS"
