@@ -30,6 +30,7 @@ jobs:
           host: ${{ secrets.OCI_HOST }}
           username: ${{ secrets.OCI_USER }}
           key: ${{ secrets.OCI_SSH_KEY }}
+          script_stop: true
           script: |
             cd /home/opc/sentinel-application
 
