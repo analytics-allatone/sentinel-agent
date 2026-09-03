@@ -47,6 +47,7 @@ jobs:
             docker run -d \
               --name sentinel \
               --restart always \
+              --network sentinel-network \
               -p 8000:8000 \
               -e JWT_SECRET_KEY=${{ secrets.JWT_SECRET_KEY }} \
               -e JWT_ALGORITHM=${{ secrets.JWT_ALGORITHM }} \
@@ -59,5 +60,3 @@ jobs:
             echo "Cleaning unused Docker images..."
 
             docker image prune -f
-
-            docker network connect sentinel-network sentinel
