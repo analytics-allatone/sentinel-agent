@@ -884,14 +884,16 @@
 }
 
 /* generic card / section */
-/* .soc2-card {
-  background: var(--card);
-  border: 0.5px solid var(--border);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow-sm);
-  padding: 14px;
-  min-width: 0; /* a grid child must be allowed to shrink, or wide tables push out */
-/* } */ */
+/* superseded by the .soc2-card rule below
+  .soc2-card {
+    background: var(--card);
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-sm);
+    padding: 14px;
+    min-width: 0;   -- a grid child must be allowed to shrink, or wide tables push out
+  }
+*/
 
 .soc2-card {
   position: relative;
