@@ -270,7 +270,7 @@
 } */
 
 .dashboard-container {
-  padding: 24px 28px 30px;
+  padding: 10px 28px 30px;
   background: #f7f9fc;
   flex: 1;
   overflow-y: auto;
@@ -295,7 +295,8 @@
   align-items: center;
   justify-content: space-between;
   gap: 20px;
-  margin-bottom: 20px;
+  margin-bottom:10px;
+  
 }
 
 /* .dashboard-kpi-section {

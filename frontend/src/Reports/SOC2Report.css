@@ -1,41 +1,69 @@
-.soc2-page {
-  /* theme tokens — blue accent, mirroring the capacity report's structure so
-     the two reports read as one family */
-  --surface-0: #f7f7f5;
-  --card: #ffffff;
-  --border: rgba(11, 11, 11, 0.09);
-  --border-strong: rgba(11, 11, 11, 0.16);
-  --text-primary: #0b0b0b;
-  --text-secondary: #52514e;
-  --text-muted: #898781;
-  --accent: #185fa5;
-  --accent-wash: rgba(24, 95, 165, 0.08);
-  --radius: 10px;
-  --shadow-sm: 0 1px 2px rgba(11, 11, 11, 0.04);
 
-  background: var(--surface-0);
-  min-height: 100vh;
-  padding: 20px 20px 16px;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica,
-    Arial, sans-serif;
-  color: var(--text-primary);
+.soc2-page {
+  --surface-0: #f7f9fc;
+  --card: #ffffff;
+  --border: #e7eaf0;
+  --border-strong: #dfe4ec;
+
+  --text-primary: #172033;
+  --text-secondary: #475467;
+  --text-muted: #667085;
+
+  --accent: #6045e8;
+  --accent-wash: #f1efff;
+
+  --radius: 10px;
+  --shadow-sm: 0 2px 8px rgba(16, 24, 40, 0.035);
+
+  background: #f7f9fc;
+
+  min-height: calc(100vh - 56px);
+
+  /* SAME AS DASHBOARD */
+  padding: 0px 28px 30px;
+
+  box-sizing: border-box;
+  width: 100%;
+
+  font-family:
+    Inter,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    Roboto,
+    sans-serif;
+
+  color: #172033;
+
   display: flex;
   flex-direction: column;
-  /* App.css ships CRA's boilerplate `.App { text-align: center }`, which
-     otherwise centres every label, card title and table cell on this page */
+
   text-align: left;
-  margin-top:10px;
+
+  /* REMOVE THIS */
+  margin-top: 0;
 }
 
 /* ── top bar ───────────────────────────────────────────── */
-.soc2-topbar {
+/* .soc2-topbar {
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
   gap: 16px;
   flex-wrap: wrap;
   margin-bottom: 14px;
+} */
+
+.soc2-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  flex-wrap: wrap;
+  margin-top:10px;
+  margin-bottom:10px;
 }
+
 
 .soc2-title {
   display: flex;
@@ -43,7 +71,7 @@
   gap: 11px;
   min-width: 0;
 }
-.soc2-title-icon {
+/* .soc2-title-icon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -52,6 +80,27 @@
   border-radius: 9px;
   background: var(--accent-wash);
   flex-shrink: 0;
+} */
+
+.soc2-title-icon {
+  width: 38px;
+  height: 38px;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 10px;
+
+  background: #f1efff;
+  color: #6045e8;
+
+  flex-shrink: 0;
+}
+
+.soc2-title-icon svg {
+  width: 19px;
+  height: 19px;
 }
 .soc2-title-text {
   display: flex;
@@ -59,28 +108,64 @@
   gap: 2px;
   min-width: 0;
 }
-.soc2-title-main {
+/* .soc2-title-main {
   font-size: 17px;
   font-weight: 650;
   letter-spacing: -0.01em;
   line-height: 1.2;
+} */
+
+.soc2-title-main {
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -0.4px;
+  color: #172033;
 }
+
 .soc2-title-sub {
-  font-size: 12px;
-  color: var(--text-muted);
+  margin-top: 4px;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.4;
+  color: #667085;
 }
 
 /* the controls read as a form: one labelled field per input */
-.soc2-controls {
-  display: flex;
+/* .soc2-controls {
+  display: flex; */
   /* explicit: Login.css, Register.css and forgot-page.css each ship an
      unscoped `form { display: flex; flex-direction: column }`, and CRA bundles
      every stylesheet globally — without this the fields stack in a column and
      `align-items: flex-end` below turns that into a ragged right-hand list */
-  flex-direction: row;
+  /* flex-direction: row;
   align-items: flex-end;
   gap: 10px;
   flex-wrap: wrap;
+} */
+
+.soc2-controls {
+  display: flex;
+
+  flex-direction: row;
+  align-items: flex-end;
+
+  gap: 10px;
+
+  flex-wrap: wrap;
+
+  padding: 10px;
+
+  background: #ffffff;
+
+  border: 1px solid #e8ebf0;
+
+  margin-left: auto;
+
+  border-radius: 10px;
+
+  box-shadow:
+    0 1px 2px rgba(16, 24, 40, 0.03);
 }
 .soc2-field {
   display: flex;
@@ -88,11 +173,25 @@
   gap: 4px;
   min-width: 0;
 }
-.soc2-field-label {
+/* .soc2-field-label {
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.04em;
   color: var(--text-muted);
+  white-space: nowrap;
+} */
+
+.soc2-field-label {
+  font-size: 9px;
+
+  font-weight: 700;
+
+  text-transform: uppercase;
+
+  letter-spacing: 0.05em;
+
+  color: #667085;
+
   white-space: nowrap;
 }
 .soc2-actions {
@@ -104,7 +203,7 @@
   margin-left: 2px;
 }
 
-.soc2-select,
+/* .soc2-select,
 .soc2-date,
 .soc2-input {
   height: 34px;
@@ -117,14 +216,56 @@
   font-family: inherit;
   cursor: pointer;
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
+} */
+
+.soc2-select,
+.soc2-date,
+.soc2-input {
+  height: 38px;
+
+  border: 1px solid #e0e5ec;
+
+  border-radius: 8px;
+
+  background: #ffffff;
+
+  padding: 0 11px;
+
+  font-size: 10px;
+
+  color: #344054;
+
+  font-family: inherit;
+
+  outline: none;
+
+  cursor: pointer;
+
+  box-sizing: border-box;
+
+  transition:
+    border-color 0.18s ease,
+    box-shadow 0.18s ease,
+    background 0.18s ease;
 }
-.soc2-select:focus-visible,
+
+.soc2-select:focus,
+.soc2-date:focus,
+.soc2-input:focus {
+  border-color: #6045e8;
+
+  box-shadow:
+    0 0 0 3px rgba(96, 69, 232, 0.07);
+
+  outline: none;
+}
+/* .soc2-select:focus-visible,
 .soc2-date:focus-visible,
 .soc2-input:focus-visible {
   outline: none;
   border-color: var(--accent);
   box-shadow: 0 0 0 3px var(--accent-wash);
-}
+} */
 .soc2-date,
 .soc2-input {
   cursor: text;
@@ -134,7 +275,7 @@
 }
 
 /* the agent / window the report on screen was built from */
-.soc2-scope {
+/* .soc2-scope {
   display: flex;
   align-items: baseline;
   flex-wrap: wrap;
@@ -142,26 +283,71 @@
   font-size: 12px;
   color: #777;
   margin: -4px 0 10px;
+} */
+
+.soc2-scope {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 9px;
+
+  margin: 0 0 16px;
+  padding: 10px 14px;
+
+  background: #ffffff;
+  border: 1px solid #e8ebf0;
+  border-radius: 9px;
+
+  box-shadow: 0 1px 3px rgba(16, 24, 40, 0.025);
+
+  font-size: 10px;
+  color: #667085;
 }
-.soc2-scope-label {
+/* .soc2-scope-label {
   text-transform: uppercase;
   letter-spacing: 0.04em;
   color: #999;
+} */
+
+.soc2-scope-label {
+  color: #667085;
+
+  font-size: 9px;
+
+  font-weight: 700;
+
+  text-transform: uppercase;
+
+  letter-spacing: 0.04em;
 }
-.soc2-scope-agent {
+/* .soc2-scope-agent {
   font-size: 13px;
   font-weight: 600;
   color: #185fa5;
   background: #e6f1fb;
   border-radius: 9999px;
   padding: 2px 10px;
+} */
+
+.soc2-scope-agent {
+  padding: 4px 9px;
+
+  border-radius: 999px;
+
+  background: #f0edff;
+
+  color: #5944d8;
+
+  font-size: 10px;
+
+  font-weight: 700;
 }
 .soc2-scope-rest {
   color: #777;
 }
 
 /* one line per section that failed while the others loaded */
-.soc2-warnbar {
+/* .soc2-warnbar {
   border: 0.5px solid #e6c98a;
   background: #fdf6e6;
   border-radius: 6px;
@@ -174,10 +360,34 @@
 .soc2-warnbar-row {
   font-size: 12px;
   color: #7a5b12;
+} */
+
+.soc2-warnbar {
+  border: 1px solid #fedf89;
+
+  background: #fffaeb;
+
+  border-radius: 8px;
+
+  padding: 10px 12px;
+
+  margin-bottom: 12px;
+
+  display: flex;
+
+  flex-direction: column;
+
+  gap: 4px;
+}
+
+.soc2-warnbar-row {
+  font-size: 10px;
+
+  color: #b54708;
 }
 
 /* the whole refresh failed, but an earlier window is still on screen */
-.soc2-errorbar {
+/* .soc2-errorbar {
   border: 0.5px solid #e3b0b0;
   background: #fcebeb;
   border-radius: 6px;
@@ -189,6 +399,30 @@
   gap: 10px;
   font-size: 12px;
   color: #a32d2d;
+} */
+
+.soc2-errorbar {
+  border: 1px solid #fecdca;
+
+  background: #fef3f2;
+
+  border-radius: 8px;
+
+  padding: 10px 12px;
+
+  margin-bottom: 12px;
+
+  display: flex;
+
+  align-items: center;
+
+  justify-content: space-between;
+
+  gap: 10px;
+
+  font-size: 10px;
+
+  color: #b42318;
 }
 
 .soc2-note {
@@ -276,6 +510,7 @@
   outline: 2px solid var(--accent);
   outline-offset: -2px;
 }
+
 .soc2-domain-name {
   font-weight: 500;
   color: var(--text-primary);
@@ -336,7 +571,7 @@
   vertical-align: middle;
 }
 
-.soc2-btn {
+/* .soc2-btn {
   height: 34px;
   border: 0.5px solid var(--border-strong);
   border-radius: 8px;
@@ -348,10 +583,57 @@
   font-family: inherit;
   white-space: nowrap;
   transition: background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+} */
+
+.soc2-btn {
+  height: 38px;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  border: 1px solid #dfe4ec;
+
+  border-radius: 8px;
+
+  background: #ffffff;
+
+  padding: 0 14px;
+
+  font-size: 10px;
+  font-weight: 600;
+
+  color: #344054;
+
+  cursor: pointer;
+
+  font-family: inherit;
+
+  white-space: nowrap;
+
+  transition:
+    background 0.18s ease,
+    border-color 0.18s ease,
+    box-shadow 0.18s ease,
+    transform 0.18s ease;
 }
-.soc2-btn:hover:not(:disabled) {
+
+.soc2-btn svg {
+  width: 14px;
+  height: 14px;
+  margin-right: 6px;
+}
+/* .soc2-btn:hover:not(:disabled) {
   background: #f2f2ef;
   border-color: var(--border-strong);
+} */
+
+.soc2-btn:hover:not(:disabled) {
+  background: #faf9ff;
+
+  border-color: #d7d0f7;
+
+  color: #5944d8;
 }
 .soc2-btn:focus-visible {
   outline: none;
@@ -362,15 +644,38 @@
   opacity: 0.55;
   cursor: default;
 }
-.soc2-btn-primary {
+/* .soc2-btn-primary {
   background: var(--accent);
   border-color: var(--accent);
   color: #fff;
   font-weight: 550;
+} */
+
+.soc2-btn-primary {
+  background: #6045e8;
+
+  border-color: #6045e8;
+
+  min-width:92px;
+
+  color: #ffffff;
+
+  font-weight: 600;
+
+  box-shadow:
+    0 3px 8px rgba(96, 69, 232, 0.16);
 }
-.soc2-btn-primary:hover:not(:disabled) {
+/* .soc2-btn-primary:hover:not(:disabled) {
   background: #14508c;
   border-color: #14508c;
+} */
+
+.soc2-btn-primary:hover:not(:disabled) {
+  background: #5039d1;
+
+  border-color: #5039d1;
+
+  color: #ffffff;
 }
 .soc2-btn-sm {
   height: 30px;
@@ -378,24 +683,54 @@
 }
 
 /* ── tab bar ───────────────────────────────────────────── */
-.soc2-tabbar {
+/* .soc2-tabbar {
   display: flex;
   gap: 2px;
   border-bottom: 0.5px solid var(--border);
   overflow-x: auto;
-  margin-bottom: 14px;
+  margin-bottom: 14px; */
   /* a domain page is long; the tabs stay reachable without scrolling back up */
-  position: sticky;
+  /* position: sticky;
   top: 0;
   z-index: 5;
-  background: var(--surface-0);
+  background: var(--surface-0); */
   /* nine tabs scroll on narrow screens; the scrollbar itself is noise */
+  /* scrollbar-width: none;
+} */
+
+.soc2-tabbar {
+  display: flex;
+
+  gap: 4px;
+
+  padding: 4px;
+
+  margin-bottom: 16px;
+
+  background: #ffffff;
+
+  border: 1px solid #e8ebf0;
+
+  border-radius: 9px;
+
+  overflow-x: auto;
+
+  position: sticky;
+
+  top: 0;
+
+  z-index: 5;
+
+  box-shadow:
+    0 2px 6px rgba(16, 24, 40, 0.03);
+
   scrollbar-width: none;
 }
+
 .soc2-tabbar::-webkit-scrollbar {
   display: none;
 }
-.soc2-tab {
+/* .soc2-tab {
   border: none;
   background: none;
   padding: 9px 12px;
@@ -406,19 +741,71 @@
   border-bottom: 2px solid transparent;
   white-space: nowrap;
   transition: color 0.15s ease, background 0.15s ease;
+} */
+
+.soc2-tab {
+  min-height: 34px;
+
+  border: none;
+
+  border-radius: 7px;
+
+  background: transparent;
+
+  padding: 0 13px;
+
+  display: inline-flex;
+
+  align-items: center;
+  justify-content: center;
+
+  font-size: 12px;
+
+  font-weight: 600;
+
+  color: #667085;
+
+  cursor: pointer;
+
+  font-family: inherit;
+
+  white-space: nowrap;
+
+  transition:
+    background 0.18s ease,
+    color 0.18s ease;
 }
-.soc2-tab:hover {
+/* .soc2-tab:hover {
   color: var(--text-primary);
   background: rgba(11, 11, 11, 0.03);
+} */
+
+.soc2-tab:hover {
+  color: #5944d8;
+
+  background: #f7f5ff;
 }
 .soc2-tab:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: -2px;
 }
-.soc2-tab.active {
+/* .soc2-tab.active {
   color: var(--accent);
   font-weight: 600;
   border-bottom-color: var(--accent);
+} */
+
+.soc2-tab.active {
+  color: #ffffff;
+
+  background: #6045e8;
+
+  font-weight: 600;
+
+  border-bottom: none;
+
+  box-shadow:
+    0 3px 8px rgba(96, 69, 232, 0.15);
 }
 
 /* ── content ───────────────────────────────────────────── */
@@ -434,26 +821,58 @@
   gap: 14px;
 }
 
-.soc2-section-head {
+/* .soc2-section-head {
   font-size: 12px;
   letter-spacing: 0.04em;
   text-transform: uppercase;
   color: #888;
   font-weight: 500;
+} */
+
+.soc2-section-head {
+  color: #172033;
+
+  font-size: 13px;
+
+  font-weight: 700;
+
+  letter-spacing: -0.1px;
+
+  text-transform: none;
+
+  line-height: 1.3;
 }
 
 /* stat card row — four across when there is room, never cramped below that */
-.soc2-statrow {
+/* .soc2-statrow {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 12px;
+} */
+
+.soc2-statrow {
+  display: grid;
+
+  grid-template-columns:
+    repeat(4, minmax(0, 1fr));
+
   gap: 12px;
 }
 
 /* two-column card layout */
-.soc2-two-col {
+/* .soc2-two-col {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
   gap: 12px;
+} */
+
+.soc2-two-col {
+  display: grid;
+
+  grid-template-columns:
+    repeat(2, minmax(0, 1fr));
+
+  gap: 14px;
 }
 
 /* the top-N breakdowns: as many columns as fit, so a domain with eleven of
@@ -465,19 +884,61 @@
 }
 
 /* generic card / section */
-.soc2-card {
+/* .soc2-card {
   background: var(--card);
   border: 0.5px solid var(--border);
   border-radius: var(--radius);
   box-shadow: var(--shadow-sm);
   padding: 14px;
   min-width: 0; /* a grid child must be allowed to shrink, or wide tables push out */
+/* } */ */
+
+.soc2-card {
+  position: relative;
+
+  background: #ffffff;
+  border: 1px solid #e8ebf0;
+  border-radius: 10px;
+
+  box-shadow:
+    0 1px 2px rgba(16, 24, 40, 0.025),
+    0 5px 14px rgba(16, 24, 40, 0.025);
+
+  padding: 16px;
+
+  min-width: 0;
+
+  transition:
+    border-color 0.18s ease,
+    box-shadow 0.18s ease,
+    transform 0.18s ease;
 }
-.soc2-card-title {
+
+.soc2-card:hover {
+  border-color: #ddd8f8;
+
+  box-shadow:
+    0 4px 14px rgba(16, 24, 40, 0.055);
+
+  transform: translateY(-1px);
+}
+/* .soc2-card-title {
   font-size: 13.5px;
   font-weight: 600;
   margin-bottom: 12px;
   color: var(--text-primary);
+} */
+
+.soc2-card-title {
+  margin: 0 0 12px;
+
+  color: #172033;
+
+  font-size: 12px;
+
+  font-weight: 700;
+
+  line-height: 1.3;
 }
 /* a card that owns the full width (charts, evidence tables) */
 .soc2-card-wide {
@@ -574,7 +1035,7 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.soc2-bd-track {
+/* .soc2-bd-track {
   height: 6px;
   border-radius: 3px;
   background: rgba(43, 127, 208, 0.1);
@@ -585,6 +1046,31 @@
   height: 100%;
   border-radius: 3px;
   background: #2b7fd0;
+} */
+
+.soc2-bd-track {
+  height: 6px;
+
+  border-radius: 999px;
+
+  background: #eeeaff;
+
+  overflow: hidden;
+}
+
+.soc2-bd-fill {
+  display: block;
+
+  height: 100%;
+
+  border-radius: 999px;
+
+  background:
+    linear-gradient(
+      90deg,
+      #6045e8,
+      #7b61ff
+    );
 }
 .soc2-bd-count {
   text-align: right;
@@ -603,6 +1089,62 @@
   font-size: 12px;
   color: #888;
   padding: 8px 2px 0;
+}
+
+.soc2-tbl {
+  width: 100%;
+
+  border-collapse: separate;
+
+  border-spacing: 0;
+
+  font-size: 10px;
+
+  color: #344054;
+
+  overflow: hidden;
+}
+
+.soc2-tbl thead th {
+  padding: 10px 12px;
+
+  background: #f8f9fc;
+
+  border-bottom: 1px solid #e8ebf0;
+
+  color: #667085;
+
+  font-size: 9px;
+
+  font-weight: 700;
+
+  text-align: left;
+
+  text-transform: uppercase;
+
+  letter-spacing: 0.04em;
+
+  white-space: nowrap;
+}
+
+.soc2-tbl tbody td {
+  padding: 10px 12px;
+
+  border-bottom: 1px solid #eef0f3;
+
+  color: #344054;
+
+  font-size: 10px;
+
+  background: #ffffff;
+}
+
+.soc2-tbl tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.soc2-tbl tbody tr:hover td {
+  background: #faf9ff;
 }
 
 /* ── progress bars ─────────────────────────────────────── */
@@ -725,7 +1267,7 @@
 }
 
 /* ── severity / category badges ────────────────────────── */
-.sev-badge {
+/* .sev-badge {
   display: inline-block;
   padding: 2px 8px;
   border-radius: 9999px;
@@ -748,6 +1290,45 @@
 .sev-low {
   background: #eaf3de;
   color: #27500a;
+} */
+
+.sev-badge {
+  display: inline-flex;
+
+  align-items: center;
+  justify-content: center;
+
+  min-width: 54px;
+
+  padding: 4px 7px;
+
+  border-radius: 999px;
+
+  font-size: 8px;
+
+  font-weight: 700;
+
+  letter-spacing: 0.03em;
+}
+
+.sev-critical {
+  background: #fef3f2;
+  color: #b42318;
+}
+
+.sev-high {
+  background: #fff4ed;
+  color: #c4320a;
+}
+
+.sev-medium {
+  background: #fffaeb;
+  color: #b54708;
+}
+
+.sev-low {
+  background: #ecfdf3;
+  color: #027a48;
 }
 
 /* category badge — colour-coded by category, falls back to neutral */
@@ -991,13 +1572,31 @@
 }
 
 /* ── page footer — one line of provenance ───────────────── */
-.soc2-exportbar {
+/* .soc2-exportbar {
   display: flex;
   align-items: center;
   gap: 10px;
   padding-top: 12px;
   border-top: 0.5px solid var(--border);
   flex-wrap: wrap;
+} */
+
+.soc2-exportbar {
+  display: flex;
+
+  align-items: center;
+
+  justify-content: flex-end;
+
+  margin-top: 4px;
+
+  padding-top: 12px;
+
+  border-top: 1px solid #e8ebf0;
+
+  color: #98a2b3;
+
+  font-size: 9px;
 }
 .soc2-period {
   font-size: 12px;
@@ -1038,321 +1637,7 @@
   padding: 4px 0;
 }
 
-/* ── printable report ──────────────────────────────────── */
-/* Hidden on screen; revealed only when printing / saving to PDF. */
-/* .soc2-print-root {
-  display: none;
-}
 
-.soc2-print-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  border-bottom: 1.5px solid #185fa5;
-  padding-bottom: 10px;
-  margin-bottom: 18px;
-}
-.soc2-print-brand {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.soc2-print-title {
-  font-size: 18px;
-  font-weight: 700;
-}
-.soc2-print-period {
-  font-size: 13px;
-  color: #555;
-}
-.soc2-print-section {
-  margin-bottom: 22px;
-}
-.soc2-print-h2 {
-  font-size: 15px;
-  font-weight: 700;
-  color: #185fa5;
-  margin: 0 0 8px;
-  padding-bottom: 4px;
-  border-bottom: 0.5px solid #e0e0e0;
-} */
-
-/* the plain-English explanation that opens the cover and every section */
-/* .soc2-print-lead {
-  font-size: 11.5px;
-  line-height: 1.55;
-  color: #444;
-  margin: 0 0 14px;
-  max-width: 62em;
-} */
-
-/* ── cover page ── */
-/* .soc2-print-cover {
-  display: flex;
-  flex-direction: column;
-}
-.soc2-print-meta {
-  display: flex;
-  gap: 28px;
-  flex-wrap: wrap;
-  margin-bottom: 18px;
-  padding: 10px 0;
-  border-top: 0.5px solid #e0e0e0;
-  border-bottom: 0.5px solid #e0e0e0;
-}
-.soc2-print-meta-key {
-  display: block;
-  font-size: 10px;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: #888;
-}
-.soc2-print-meta-val {
-  display: block;
-  font-size: 13px;
-  font-weight: 600;
-  color: #1a1a1a;
-}
-.soc2-print-toc-head {
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: #888;
-  margin-bottom: 6px;
-}
-.soc2-print-toc-list {
-  margin: 0;
-  padding-left: 18px;
-  font-size: 12.5px;
-  line-height: 1.9;
-  color: #333;
-} */
-
-/* @media print { */
-  /* hide everything, then reveal only the printable report */
-  /* body * {
-    visibility: hidden;
-  }
-  .soc2-print-root,
-  .soc2-print-root * {
-    visibility: visible;
-  } */
-  /* .soc2-print-root {
-    display: block;
-    position: absolute;
-    left: 0;
-    top: 0;
-    width: 100%;
-    padding: 8px;
-    background: #fff;
-  } */
-
-  /* open up the grid layouts so nothing is clipped on paper */
-  /* .soc2-print-root .soc2-two-col {
-    grid-template-columns: 1fr 1fr;
-  }
-  .soc2-print-root .soc2-statrow,
-  .soc2-print-root .soc2-card-grid {
-    grid-template-columns: repeat(4, 1fr);
-  } */
-
-  /* tables print in full: no inner scroll box, no sticky header */
-  /* .soc2-print-root .inc-table-wrap,
-  .soc2-print-root .soc2-card .inc-table-wrap {
-    max-height: none;
-    overflow: visible;
-  }
-  .soc2-print-root .inc-table th {
-    position: static;
-  } */
-
-  /* every section opens a new sheet, so one can be pulled out on its own */
-  /* .soc2-print-section {
-    break-before: page;
-    page-break-before: always;
-    break-inside: auto;
-    page-break-inside: auto;
-    margin-bottom: 0;
-  } */
-
-  /* keep a heading and its explanation with the content they introduce */
-  /* .soc2-print-h2,
-  .soc2-print-lead {
-    break-after: avoid;
-    page-break-after: avoid;
-  } */
-
-  /* avoid awkward breaks inside a card, a table or a recommendation */
-  /* .soc2-print-root .soc2-card,
-  .soc2-print-root .soc2-fold,
-  .soc2-print-root .inc-table-wrap,
-  .soc2-print-root .soc2-rec {
-    break-inside: avoid;
-    page-break-inside: avoid;
-  } */
-
-  /* the cover fills the first sheet on its own */
-  /* .soc2-print-cover {
-    min-height: 90vh;
-  } */
-
-  /* loaders and on-screen instructions are not part of the printed evidence */
-  /* .soc2-print-root .soc2-note-loading,
-  .soc2-print-root .soc2-spinner,
-  .soc2-print-root .soc2-screen-only {
-    display: none;
-  } */
-
-  /* A printed report is read at arm's length and often photocopied, so the type
-     is set larger than the screen's. Each section starts on its own sheet, so
-     the extra length costs pages rather than legibility. */
-  /* .soc2-print-root {
-    font-size: 16px;
-    line-height: 1.55;
-  } */
-
-  /* headings and the explanation that opens each section */
-  /* .soc2-print-title {
-    font-size: 26px;
-  }
-  .soc2-print-period {
-    font-size: 15px;
-  }
-  .soc2-print-h2 {
-    font-size: 21px;
-  }
-  .soc2-print-lead {
-    font-size: 15.5px;
-    line-height: 1.65;
-  }
-  .soc2-print-meta-key {
-    font-size: 13px;
-  }
-  .soc2-print-meta-val {
-    font-size: 18px;
-  }
-  .soc2-print-toc-head {
-    font-size: 14px;
-  }
-  .soc2-print-toc-list {
-    font-size: 16.5px;
-    line-height: 2;
-  } */
-
-  /* headline figures */
-  /* .soc2-print-root .stat-card {
-    padding: 12px 14px;
-  }
-  .soc2-print-root .stat-label {
-    font-size: 13px;
-  }
-  .soc2-print-root .stat-value {
-    font-size: 29px;
-  }
-  .soc2-print-root .stat-sub {
-    font-size: 13.5px;
-  } */
-
-  /* card and section labels */
-  /* .soc2-print-root .soc2-card-title,
-  .soc2-print-root .soc2-fold-title {
-    font-size: 16.5px;
-  }
-  .soc2-print-root .soc2-section-head {
-    font-size: 14px;
-  }
-  .soc2-print-root .soc2-fold-hint,
-  .soc2-print-root .soc2-hint,
-  .soc2-print-root .soc2-note {
-    font-size: 14px;
-  } */
-
-  /* evidence tables — the densest thing on paper, so they get the most care */
-  /* .soc2-print-root .inc-table {
-    font-size: 14px;
-  }
-  .soc2-print-root .inc-table th {
-    font-size: 13px;
-  }
-  .soc2-print-root .inc-table th,
-  .soc2-print-root .inc-table td {
-    padding: 9px 11px;
-  } */
-
-  /* lists: breakdowns, events, agents, recommendations */
-  /* .soc2-print-root .soc2-bd-row,
-  .soc2-print-root .pbar-label,
-  .soc2-print-root .pbar-count,
-  .soc2-print-root .criteria-label,
-  .soc2-print-root .criteria-pct,
-  .soc2-print-root .agent-row,
-  .soc2-print-root .evt-item {
-    font-size: 14.5px;
-  }
-  .soc2-print-root .evt-time,
-  .soc2-print-root .agent-meta {
-    font-size: 13.5px;
-  }
-  .soc2-print-root .soc2-rec {
-    font-size: 15px;
-    line-height: 1.55;
-  }
-  .soc2-print-root .sev-badge,
-  .soc2-print-root .agent-badge {
-    font-size: 13px;
-  } */
-  /* the chart's own axis labels live in the SVG, scaled with the chart */
-  /* .soc2-print-root .tsc-ylabel,
-  .soc2-print-root .tsc-xlabel {
-    font-size: 17px;
-  } */
-
-  /* folds print flat: the printed report renders them open, and the chevron and
-     hover affordance mean nothing on paper */
-  /* .soc2-print-root .soc2-fold {
-    border: 0;
-    box-shadow: none;
-  }
-  .soc2-print-root .soc2-fold-head {
-    padding: 0 0 8px;
-  }
-  .soc2-print-root .soc2-fold-chevron {
-    display: none;
-  }
-  .soc2-print-root .soc2-fold-body {
-    padding: 0;
-  } */
-
-  /* chart controls are interactive-only — they mean nothing on paper */
-  /* .soc2-print-root .tsc-tools,
-  .soc2-print-root .tsc-hint {
-    display: none;
-  } */
-
-  /* evidence tables: let the cells wrap instead of clipping to an ellipsis */
-  /* .soc2-print-root .soc2-tbl td {
-    max-width: none;
-    white-space: normal;
-    overflow: visible;
-  } */
-
-  /* let every event/agent row show — no ellipsis truncation on paper */
-  /* .soc2-print-root .evt-msg,
-  .soc2-print-root .agent-meta {
-    overflow: visible;
-    white-space: normal;
-  } */
-
-  /* ensure colours (badges, bars) render in print */
-  /* .soc2-print-root * {
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
-  }
-
-  @page {
-    margin: 12mm;
-  } */
-/* } */
 
 /* ============================================================
    PRINT / PDF REPORT
@@ -2890,7 +3175,7 @@
   gap: 16px;
 }
 
-.soc2-recommendation-card {
+/* .soc2-recommendation-card {
   background: #ffffff;
   border: 1px solid #dfe5eb;
   border-radius: 10px;
@@ -2899,6 +3184,33 @@
 
   break-inside: avoid;
   page-break-inside: avoid;
+} */
+
+.soc2-recommendation-card {
+  background: #ffffff;
+
+  border: 1px solid #e8ebf0;
+
+  border-radius: 9px;
+
+  padding: 16px;
+
+  box-shadow:
+    0 1px 2px rgba(16, 24, 40, 0.03);
+
+  transition:
+    border-color 0.18s ease,
+    box-shadow 0.18s ease,
+    transform 0.18s ease;
+}
+
+.soc2-recommendation-card:hover {
+  border-color: #ddd6fe;
+
+  box-shadow:
+    0 6px 18px rgba(16, 24, 40, 0.06);
+
+  transform: translateY(-1px);
 }
 
 .soc2-recommendation-top {
@@ -2938,7 +3250,7 @@
   letter-spacing: 0.05em;
 }
 
-.soc2-priority-critical {
+/* .soc2-priority-critical {
   background: #fee2e2;
   color: #991b1b;
 }
@@ -2951,6 +3263,21 @@
 .soc2-priority-info {
   background: #e0f2fe;
   color: #075985;
+} */
+
+.soc2-priority-critical {
+  background: #fef3f2;
+  color: #b42318;
+}
+
+.soc2-priority-warning {
+  background: #fffaeb;
+  color: #b54708;
+}
+
+.soc2-priority-info {
+  background: #f0edff;
+  color: #5944d8;
 }
 
 .soc2-recommendation-divider {
