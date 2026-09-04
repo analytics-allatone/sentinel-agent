@@ -14,6 +14,14 @@ import { fetchSoc2Report, fetchAgents, SOC2_SECTIONS } from "./soc2Api";
 import { buildSoc2View, fmtInt, fmtIst } from "./soc2Transform";
 import { lastHoursInputs, istInputToApi } from "./timeRange";
 
+import {
+  LuShieldCheck,
+  LuUserRound,
+  LuClock3,
+  LuPlay,
+  LuFileDown,
+} from "react-icons/lu";
+
 // ─── controls ──────────────────────────────────────────────────
 
 // Quick ranges, in hours. Anything past two days is bucketed by day by default,
@@ -28,6 +36,14 @@ function presetLabel(hours) {
 
 function defaultBucket(hours) {
   return hours > 48 ? "day" : "hour";
+}
+
+/** Length in hours of a window given as two IST datetime-local values. */
+function spanHours(fromLocal, toLocal) {
+  const from = Date.parse(`${fromLocal}:00Z`);
+  const to = Date.parse(`${toLocal}:00Z`);
+  if (Number.isNaN(from) || Number.isNaN(to) || to <= from) return 12;
+  return (to - from) / (60 * 60 * 1000);
 }
 
 const TABS = [
@@ -78,11 +94,27 @@ export default function SOC2Report() {
     []
   );
 
+  // `?from=`/`?to=` (IST datetime-local values, "YYYY-MM-DDTHH:mm") arrive with
+  // the agent when the dashboard's "Create SOC2 report" form hands a window over.
+  // Anything malformed falls back to the default last-12-hours window.
+  const initialRange = useMemo(() => {
+    const from = (searchParams.get("from") || "").trim();
+    const to = (searchParams.get("to") || "").trim();
+    const shape = /^d{4}-d{2}-d{2}Td{2}:d{2}$/;
+    if (shape.test(from) && shape.test(to) && from < to) return { from, to, custom: true };
+    return { from: initialWindow.from, to: initialWindow.to, custom: false };
+    // read once, on arrival: later edits come from the controls, not the URL
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const [agentName, setAgentName] = useState(initialAgent);
-  const [preset, setPreset] = useState("12");
-  const [fromLocal, setFromLocal] = useState(initialWindow.from);
-  const [toLocal, setToLocal] = useState(initialWindow.to);
-  const [bucket, setBucket] = useState("hour");
+  // a window that came in on the URL is by definition not one of the presets
+  const [preset, setPreset] = useState(initialRange.custom ? "custom" : "12");
+  const [fromLocal, setFromLocal] = useState(initialRange.from);
+  const [toLocal, setToLocal] = useState(initialRange.to);
+  const [bucket, setBucket] = useState(() =>
+    defaultBucket(spanHours(initialRange.from, initialRange.to))
+  );
 
   const [agents, setAgents] = useState([]);
   const [agentsLoading, setAgentsLoading] = useState(true);
@@ -189,9 +221,9 @@ export default function SOC2Report() {
   useEffect(() => {
     load({
       agentName: initialAgent,
-      fromDt: istInputToApi(initialWindow.from, "00"),
-      toDt: istInputToApi(initialWindow.to, "59"),
-      bucket: "hour",
+      fromDt: istInputToApi(initialRange.from, "00"),
+      toDt: istInputToApi(initialRange.to, "59"),
+      bucket: defaultBucket(spanHours(initialRange.from, initialRange.to)),
     });
     return () => {
       if (abortRef.current) abortRef.current.abort();
@@ -225,13 +257,21 @@ export default function SOC2Report() {
     setBucket(defaultBucket(hours));
   };
 
-  /** Mirror the scope into the URL, so a refresh or a shared link keeps it. */
+  /**
+   * Mirror the scope — agent and window — into the URL, so a refresh or a shared
+   * link keeps it, and so a window that arrived on the URL cannot go stale once
+   * the controls move on.
+   */
   const syncUrl = useCallback(
-    (name) => {
+    (name, from, to) => {
       const next = new URLSearchParams(searchParams);
       next.delete("agent_name"); // normalise the alias away
       if (name) next.set("agent", name);
       else next.delete("agent");
+      if (from && to) {
+        next.set("from", from);
+        next.set("to", to);
+      }
       setSearchParams(next, { replace: true });
     },
     [searchParams, setSearchParams]
@@ -240,7 +280,7 @@ export default function SOC2Report() {
   const onSubmit = (e) => {
     e.preventDefault();
     const params = toParams();
-    syncUrl(params.agentName);
+    syncUrl(params.agentName, fromLocal, toLocal);
     load(params);
   };
 
@@ -252,7 +292,7 @@ export default function SOC2Report() {
   const selectAgent = (agent) => {
     const next = agentName.trim() === agent.name ? "" : agent.name;
     setAgentName(next);
-    syncUrl(next);
+    syncUrl(next, fromLocal, toLocal);
     load({ ...toParams(), agentName: next });
   };
 
@@ -461,9 +501,14 @@ export default function SOC2Report() {
           )}
 
           <div className="soc2-actions">
-            <button className="soc2-btn soc2-btn-primary" type="submit" disabled={loading}>
-              {loading ? "Generating…" : "Generate"}
-            </button>
+            <button
+  className="soc2-btn soc2-btn-primary"
+  type="submit"
+  disabled={loading}
+>
+  <LuPlay />
+  {loading ? "Generating…" : "Generate"}
+</button>
             <button
               className="soc2-btn"
               type="button"
@@ -1629,7 +1674,7 @@ function SectionView({ view, expanded = false }) {
 
       {charts.map((c) => (
         <Section key={c.title} title={c.title} wide>
-          <TimeSeriesChart series={c.series} yMax={c.yMax} unit={c.unit} height={300}  minimap={false}/>
+          <TimeSeriesChart series={c.series} yMax={c.yMax} unit={c.unit} height={200}  minimap={false}/>
         </Section>
       ))}
 
