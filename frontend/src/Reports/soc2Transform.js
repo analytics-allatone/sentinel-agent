@@ -904,6 +904,17 @@ const CRITERIA_LABELS = {
  * IncidentsTable rows. `sortTs` keeps the table's date sort on the real instant
  * rather than the formatted label.
  */
+/**
+ * The scope as a single label: one agent by name, several as a count, none
+ * (every agent) as an empty string so callers can fall back to "All agents".
+ */
+function scopeName(names) {
+  const list = Array.isArray(names) ? names.filter(Boolean) : names ? [names] : [];
+  if (list.length === 0) return "";
+  if (list.length === 1) return list[0];
+  return `${list.length} agents`;
+}
+
 function buildIncidents(sections, agentName) {
   const rows = [];
   const push = (section, e, description, severity, mitre) => {
@@ -1279,7 +1290,7 @@ function placeholderView(key, state) {
  * @param {Object<string, Object|null>} sections the five raw payloads, keyed by
  *   section; a `null` slot yields a placeholder view rather than a hole in the
  *   report — pending or failed, per `options.pending`.
- * @param {{agentName?: string, fromDt?: string, toDt?: string, bucket?: string}} params
+ * @param {{agentNames?: string[], fromDt?: string, toDt?: string, bucket?: string}} params
  * @param {{pending?: string[]}} [options] sections whose request is still open
  */
 export function buildSoc2View(sections, params = {}, options = {}) {
@@ -1327,7 +1338,7 @@ export function buildSoc2View(sections, params = {}, options = {}) {
     ? Math.round(scored.reduce((sum, key) => sum + views[key].score, 0) / scored.length)
     : null;
 
-  const incidents = buildIncidents(raw, params.agentName);
+  const incidents = buildIncidents(raw, scopeName(params.agentNames));
 
   // The overview's event feed: the same merged incident stream, newest first, in
   // the shape EventList reads.
@@ -1342,7 +1353,7 @@ export function buildSoc2View(sections, params = {}, options = {}) {
 
   return {
     meta: {
-      agentName: params.agentName || meta.agent_name || "",
+      agentName: scopeName(params.agentNames) || scopeName(meta.agent_name),
       fromDt: params.fromDt || meta.from_dt || "",
       toDt: params.toDt || meta.to_dt || "",
       bucket: params.bucket || "hour",

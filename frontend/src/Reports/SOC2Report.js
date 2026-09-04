@@ -80,15 +80,34 @@ function isCanceled(err) {
   return Boolean(err) && (err.code === "ERR_CANCELED" || err.name === "CanceledError");
 }
 
+/**
+ * What a selection covers, in words. Naming one agent is worth doing; naming
+ * nine is not, so past a single agent it is a count.
+ */
+function agentScopeLabel(names, total) {
+  const list = (names || []).filter(Boolean);
+  if (list.length === 0) return "All agents";
+  if (total > 0 && list.length === total) return `All agents (${total})`;
+  if (list.length === 1) return list[0];
+  return `${list.length} agents`;
+}
+
 export default function SOC2Report() {
   const initialWindow = useMemo(() => lastHoursInputs(12), []);
 
   // `?agent=<name>` scopes the report on arrival — that is how the dashboard's
-  // agent table hands an agent over. `agent_name` is accepted too, for URLs
-  // written by hand against the API's own parameter name.
+  // agent table hands an agent over. The parameter may repeat, one per agent,
+  // and `agent_name` is accepted too, for URLs written by hand against the
+  // API's own parameter name. Naming none means every agent.
   const [searchParams, setSearchParams] = useSearchParams();
-  const initialAgent = useMemo(
-    () => (searchParams.get("agent") || searchParams.get("agent_name") || "").trim(),
+  const initialAgents = useMemo(
+    () =>
+      [
+        ...searchParams.getAll("agent"),
+        ...searchParams.getAll("agent_name"),
+      ]
+        .map((n) => n.trim())
+        .filter(Boolean),
     // read once, on arrival: later edits come from the controls, not the URL
     // eslint-disable-next-line react-hooks/exhaustive-deps
     []
@@ -107,7 +126,10 @@ export default function SOC2Report() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const [agentName, setAgentName] = useState(initialAgent);
+  // The agents the report covers, by name. Every agent is ticked once the
+  // list arrives (see below), unless the URL named specific ones.
+  const [selectedNames, setSelectedNames] = useState(() => new Set(initialAgents));
+  const [agentPickerOpen, setAgentPickerOpen] = useState(false);
   // a window that came in on the URL is by definition not one of the presets
   const [preset, setPreset] = useState(initialRange.custom ? "custom" : "12");
   const [fromLocal, setFromLocal] = useState(initialRange.from);
@@ -133,16 +155,51 @@ export default function SOC2Report() {
 
   const abortRef = useRef(null);
   const runRef = useRef(0);
+  const pickerRef = useRef(null);
+
+  const allSelected = agents.length > 0 && selectedNames.size === agents.length;
+
+  // A dropdown that stays open once the pointer has moved on is a nuisance,
+  // and Escape is what people try first.
+  useEffect(() => {
+    if (!agentPickerOpen) return undefined;
+    const onDown = (e) => {
+      if (pickerRef.current && !pickerRef.current.contains(e.target)) {
+        setAgentPickerOpen(false);
+      }
+    };
+    const onKey = (e) => {
+      if (e.key === "Escape") setAgentPickerOpen(false);
+    };
+    document.addEventListener("mousedown", onDown);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDown);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [agentPickerOpen]);
+
+  /**
+   * The agents to actually name in the request.
+   *
+   * Every agent ticked is the default scope, and the API reads a missing
+   * `agent_name` as every agent — so nothing is sent rather than listing the
+   * whole estate back at it. Untick any agent and the rest are sent as a list.
+   */
+  const scopeNames = useCallback(
+    (names) => (agents.length > 0 && names.length === agents.length ? [] : names),
+    [agents.length]
+  );
 
   /** The current controls as the API's parameter object. */
   const toParams = useCallback(
     () => ({
-      agentName: agentName.trim(),
+      agentNames: scopeNames([...selectedNames]),
       fromDt: istInputToApi(fromLocal, "00"),
       toDt: istInputToApi(toLocal, "59"),
       bucket,
     }),
-    [agentName, fromLocal, toLocal, bucket]
+    [scopeNames, selectedNames, fromLocal, toLocal, bucket]
   );
 
   /**
@@ -220,7 +277,7 @@ export default function SOC2Report() {
   // without waiting on a click.
   useEffect(() => {
     load({
-      agentName: initialAgent,
+      agentNames: initialAgents,
       fromDt: istInputToApi(initialRange.from, "00"),
       toDt: istInputToApi(initialRange.to, "59"),
       bucket: defaultBucket(spanHours(initialRange.from, initialRange.to)),
@@ -231,14 +288,20 @@ export default function SOC2Report() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // The agent picker's suggestions and the Agents tab. Failure here is not
-  // fatal: the field stays free-text, and an empty name means "all agents".
+  // The agent picker and the Agents tab. Failure here is not fatal: the picker
+  // is then empty, and sending no agent name means "all agents" anyway.
   useEffect(() => {
     let alive = true;
     setAgentsLoading(true);
     fetchAgents()
       .then((list) => {
-        if (alive) setAgents(list);
+        if (!alive) return;
+        setAgents(list);
+        // Default is everything ticked. A URL that named agents wins, so a
+        // link from the dashboard still arrives scoped to what it asked for.
+        if (initialAgents.length === 0) {
+          setSelectedNames(new Set(list.map((a) => a.name)));
+        }
       })
       .catch(() => {})
       .finally(() => {
@@ -247,6 +310,8 @@ export default function SOC2Report() {
     return () => {
       alive = false;
     };
+    // initialAgents is read once, on arrival — see the useMemo above
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const applyPreset = (hours) => {
@@ -263,37 +328,60 @@ export default function SOC2Report() {
    * the controls move on.
    */
   const syncUrl = useCallback(
-    (name, from, to) => {
+    (names, from, to) => {
       const next = new URLSearchParams(searchParams);
       next.delete("agent_name"); // normalise the alias away
-      if (name) next.set("agent", name);
-      else next.delete("agent");
+      next.delete("agent");
+      // Every agent selected is the default, so it is left off the URL — the
+      // link stays short and still means the same thing.
+      const list = names || [];
+      if (list.length && list.length !== agents.length) {
+        list.forEach((n) => next.append("agent", n));
+      }
       if (from && to) {
         next.set("from", from);
         next.set("to", to);
       }
       setSearchParams(next, { replace: true });
     },
-    [searchParams, setSearchParams]
+    [searchParams, setSearchParams, agents.length]
   );
 
   const onSubmit = (e) => {
     e.preventDefault();
     const params = toParams();
-    syncUrl(params.agentName, fromLocal, toLocal);
+    syncUrl(params.agentNames, fromLocal, toLocal);
     load(params);
   };
 
   /**
-   * Clicking a row in the Agents table scopes the whole report to that agent —
-   * its name becomes `agent_name` on all five requests. Clicking the row that is
-   * already scoped clears the filter and goes back to every agent.
+   * Clicking a row in the Agents table narrows the report to that agent alone,
+   * which is the useful move from a list you are reading. Clicking the row that
+   * is already the only one selected goes back to every agent.
    */
   const selectAgent = (agent) => {
-    const next = agentName.trim() === agent.name ? "" : agent.name;
-    setAgentName(next);
+    const only = selectedNames.size === 1 && selectedNames.has(agent.name);
+    const next = only ? agents.map((a) => a.name) : [agent.name];
+    setSelectedNames(new Set(next));
     syncUrl(next, fromLocal, toLocal);
-    load({ ...toParams(), agentName: next });
+    load({ ...toParams(), agentNames: scopeNames(next) });
+  };
+
+  /** Tick / untick one agent in the picker. */
+  const toggleAgent = (name) => {
+    setSelectedNames((prev) => {
+      const next = new Set(prev);
+      if (next.has(name)) next.delete(name);
+      else next.add(name);
+      return next;
+    });
+  };
+
+  /** One click for the whole list — the picker's header control. */
+  const toggleAllAgents = () => {
+    setSelectedNames((prev) =>
+      prev.size === agents.length ? new Set() : new Set(agents.map((a) => a.name))
+    );
   };
 
   /** Left/right (and Home/End) move between tabs, as a tablist should. */
@@ -327,8 +415,8 @@ export default function SOC2Report() {
   // What the report on screen covers: the loaded parameters once there is a
   // report, the pending controls before that.
   const scopeAgent = loadedParams
-    ? loadedParams.agentName || "All agents"
-    : agentName.trim() || "All agents";
+    ? agentScopeLabel(loadedParams.agentNames, agents.length)
+    : agentScopeLabel([...selectedNames], agents.length);
   const scopeWindow = loadedParams
     ? `${fmtIst(loadedParams.fromDt)} – ${fmtIst(loadedParams.toDt)} IST`
     : periodText;
@@ -391,7 +479,7 @@ export default function SOC2Report() {
             agents={agents}
             loading={agentsLoading}
             onSelect={selectAgent}
-            selectedName={agentName.trim()}
+            selectedNames={selectedNames}
           />
         );
       case "recommendations":
@@ -424,23 +512,72 @@ export default function SOC2Report() {
         </div>
 
         <form className="soc2-controls" onSubmit={onSubmit}>
-          <label className="soc2-field">
-            <span className="soc2-field-label">Agent</span>
-            <input
-              className="soc2-input"
-              type="text"
-              list="soc2-agent-names"
-              value={agentName}
-              onChange={(e) => setAgentName(e.target.value)}
-              placeholder="All agents"
-              autoComplete="off"
-            />
-          </label>
-          <datalist id="soc2-agent-names">
-            {agents.map((a) => (
-              <option key={a.id} value={a.name} />
-            ))}
-          </datalist>
+          <div className="soc2-field soc2-agentpicker" ref={pickerRef}>
+            <span className="soc2-field-label">Agents</span>
+            <button
+              type="button"
+              className="soc2-input soc2-agentpicker-toggle"
+              onClick={() => setAgentPickerOpen((open) => !open)}
+              aria-expanded={agentPickerOpen}
+              aria-haspopup="true"
+              disabled={agentsLoading && agents.length === 0}
+            >
+              <span className="soc2-agentpicker-value">
+                {agentsLoading && agents.length === 0
+                  ? "Loading agents…"
+                  : agentScopeLabel([...selectedNames], agents.length)}
+              </span>
+              <span className="soc2-agentpicker-caret" aria-hidden="true">
+                ▾
+              </span>
+            </button>
+
+            {agentPickerOpen && (
+              <div className="soc2-agentpicker-menu" role="group" aria-label="Agents to report on">
+                <div className="soc2-agentpicker-head">
+                  <label className="soc2-agentpicker-row">
+                    <input
+                      type="checkbox"
+                      checked={allSelected}
+                      // some but not all: a dash rather than a tick
+                      ref={(el) => {
+                        if (el)
+                          el.indeterminate =
+                            !allSelected && selectedNames.size > 0;
+                      }}
+                      onChange={toggleAllAgents}
+                    />
+                    <span className="soc2-agentpicker-name">
+                      {allSelected ? "Clear all" : "Select all"}
+                    </span>
+                  </label>
+                  <span className="soc2-agentpicker-count">
+                    {selectedNames.size}/{agents.length}
+                  </span>
+                </div>
+
+                <div className="soc2-agentpicker-list">
+                  {agents.length === 0 ? (
+                    <div className="soc2-agentpicker-empty">No agents registered.</div>
+                  ) : (
+                    agents.map((a) => (
+                      <label key={a.id} className="soc2-agentpicker-row">
+                        <input
+                          type="checkbox"
+                          checked={selectedNames.has(a.name)}
+                          onChange={() => toggleAgent(a.name)}
+                        />
+                        <span className="soc2-agentpicker-name" title={a.name}>
+                          {a.name}
+                        </span>
+                        <span className={`soc2-agentpicker-dot soc2-dot-${a.status}`} />
+                      </label>
+                    ))
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
 
           <label className="soc2-field">
             <span className="soc2-field-label">Range</span>
@@ -1854,7 +1991,7 @@ function scoreTone(score) {
   return "bad";
 }
 
-function AgentsTab({ agents, loading, onSelect, selectedName }) {
+function AgentsTab({ agents, loading, onSelect, selectedNames }) {
   const counts = useMemo(() => {
     const c = { total: agents.length, online: 0, degraded: 0, offline: 0 };
     agents.forEach((a) => {
@@ -1877,8 +2014,8 @@ function AgentsTab({ agents, loading, onSelect, selectedName }) {
       <Section title="Agent inventory" wide>
         {onSelect && (
           <div className="soc2-hint">
-            {selectedName
-              ? `Reporting on ${selectedName} only — click its row again to include every agent.`
+            {selectedNames && selectedNames.size === 1
+              ? `Reporting on ${[...selectedNames][0]} only — click its row again to include every agent.`
               : "Click an agent to report on that agent only."}
           </div>
         )}
@@ -1886,7 +2023,7 @@ function AgentsTab({ agents, loading, onSelect, selectedName }) {
           agents={agents}
           loading={loading}
           onSelect={onSelect}
-          selectedName={selectedName}
+          selectedNames={selectedNames}
         />
       </Section>
     </div>
