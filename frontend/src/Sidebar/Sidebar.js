@@ -6,6 +6,7 @@ import {
   LuUsers,
   LuFolderTree,
   LuMonitor,
+  LuMonitorCog,
   LuBell,
   LuMessageSquare,
   LuShieldCheck,
@@ -26,6 +27,7 @@ import {
  */
 const ROUTED_PATHS = new Set([
   "/dashboard",
+  "/agentDetails",
   "/messages",
   "/reports/soc2",
   "/access",
@@ -53,6 +55,12 @@ const Sidebar = ({ isOpen, onClose }) => {
       label: "Agents",
       icon: LuUsers,
       href: "/agents",
+    },
+    {
+      id: "agent-details",
+      label: "Agent Details",
+      icon: LuMonitorCog,
+      href: "/agentDetails",
     },
     {
       id: "groups",
