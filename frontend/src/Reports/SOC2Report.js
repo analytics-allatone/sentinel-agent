@@ -7,6 +7,7 @@ import ProgressBar from "./components/ProgressBar";
 import EventList from "./components/EventList";
 import IncidentsTable from "./components/IncidentsTable";
 import AgentsTable from "./components/AgentsTable";
+import useCopyFlash from "../hooks/useCopyFlash";
 import CriteriaScores from "./components/CriteriaScores";
 import TimeSeriesChart from "./components/TimeSeriesChart";
 
@@ -1458,7 +1459,8 @@ function StatRow({ children }) {
 }
 
 /** Top-N list from the API's {label, count} breakdowns, scaled to its own max. */
-function BreakdownList({ items = [] }) {
+export function BreakdownList({ items = [], copyable = false }) {
+  const [flash, copy] = useCopyFlash();
   const max = items.reduce((m, i) => Math.max(m, Number(i.count) || 0), 0);
   if (items.length === 0) return <div className="evt-empty">Nothing recorded.</div>;
 
@@ -1470,9 +1472,17 @@ function BreakdownList({ items = [] }) {
         // instead of rendering a bar against blank space.
         const blank = String(i.label == null ? "" : i.label).trim() === "";
         const label = blank ? "(not reported)" : i.label;
-        return (
-          <div className="soc2-bd-row" key={`${i.label}-${idx}`}>
-            <span className={`soc2-bd-label ${blank ? "soc2-bd-blank" : ""}`} title={String(label)}>
+        // "(not reported)" is a placeholder, not a path: nothing to copy.
+        const canCopy = copyable && !blank;
+        const id = `${idx}-${i.label}`;
+        const state = flash.id === id ? (flash.ok ? "copied" : "failed") : "";
+
+        const body = (
+          <>
+            <span
+              className={`soc2-bd-label ${blank ? "soc2-bd-blank" : ""}`}
+              title={String(label)}
+            >
               {label}
             </span>
             <span className="soc2-bd-track">
@@ -1482,7 +1492,32 @@ function BreakdownList({ items = [] }) {
               />
             </span>
             <span className="soc2-bd-count">{fmtInt(i.count)}</span>
-          </div>
+          </>
+        );
+
+        // The whole row is the target: the label is often short, and the bar
+        // and the count are the easiest things on the row to aim at.
+        if (!canCopy) {
+          return (
+            <div className="soc2-bd-row" key={`${i.label}-${idx}`}>
+              {body}
+            </div>
+          );
+        }
+
+        return (
+          <button
+            type="button"
+            key={`${i.label}-${idx}`}
+            className={`soc2-bd-row soc2-copyrow ${state}`}
+            onClick={() => copy(id, i.label)}
+            aria-label={`Copy ${i.label}`}
+          >
+            {body}
+            <span className="soc2-copy-flag" aria-hidden="true">
+              {state === "copied" ? "✓" : state === "failed" ? "⚠" : "⧉"}
+            </span>
+          </button>
         );
       })}
     </div>
@@ -1525,12 +1560,33 @@ function BreakdownList({ items = [] }) {
 //   );
 // }
 
-function DataTable({ columns = [], rows = [], maxRows = 50 }) {
+export function DataTable({ columns = [], rows = [], maxRows = 50 }) {
   const shown = rows.slice(0, maxRows);
+  // which cell just flashed, as `${row}-${column}`
+  const [flash, copyCell] = useCopyFlash();
 
   if (rows.length === 0) {
     return <div className="evt-empty">Nothing recorded.</div>;
   }
+
+  // The cells worth copying: paths, mount points, command lines, hashes and
+  // serials. All of them are long, and all of them end up in a shell or a
+  // ticket rather than being read off the screen.
+  const isPathColumn = (key, label) => {
+    const value = `${key || ""} ${label || ""}`.toLowerCase();
+
+    return (
+      value.includes("path") ||
+      value.includes("file") ||
+      value.includes("directory") ||
+      value.includes("mount") ||
+      value.includes("command") ||
+      value.includes("sha") ||
+      value.includes("hash") ||
+      value.includes("serial") ||
+      value.includes("ioc")
+    );
+  };
 
   const isSeverityColumn = (key, label) => {
     const value = `${key || ""} ${label || ""}`.toLowerCase();
@@ -1640,10 +1696,46 @@ function DataTable({ columns = [], rows = [], maxRows = 50 }) {
                     ? normalizeCategory(rawValue)
                     : "";
 
+                // `<key>Full` carries the value behind an abbreviated cell, when
+                // the two differ (a USB transfer shows the file name, copies the
+                // path). An empty one means the row does not have that variant,
+                // so fall back on the cell itself — `??` would keep the blank and
+                // leave the cell with neither a copy nor a tooltip.
+                const fullValue = r[`${c.key}Full`] || rawValue;
+                const copyable =
+                  isPathColumn(c.key, c.label) &&
+                  fullValue != null &&
+                  fullValue !== "" &&
+                  fullValue !== "—";
+                const cellId = `${i}-${c.key}`;
+
+                if (copyable) {
+                  const state =
+                    flash.id === cellId ? (flash.ok ? "copied" : "failed") : "";
+                  return (
+                    <td key={c.key} className="soc2-table-copy-cell">
+                      <button
+                        type="button"
+                        className={`soc2-copy ${state}`}
+                        onClick={() => copyCell(cellId, fullValue)}
+                        title={String(fullValue)}
+                      >
+                        <span className="soc2-copy-text">{displayValue}</span>
+                        <span className="soc2-copy-flag" aria-hidden="true">
+                          {state === "copied" ? "✓" : state === "failed" ? "⚠" : "⧉"}
+                        </span>
+                      </button>
+                      <span className="soc2-sr-only" aria-live="polite">
+                        {state === "copied" ? `Copied ${fullValue}` : ""}
+                      </span>
+                    </td>
+                  );
+                }
+
                 return (
                   <td
                     key={c.key}
-                    title={String(displayValue)}
+                    title={String(fullValue)}
                     className={
                       severity
                         ? "soc2-table-severity-cell"
@@ -1830,7 +1922,9 @@ function SectionView({ view, expanded = false }) {
           <div className="soc2-card-grid">
             {view.breakdowns.map((b) => (
               <Section key={b.title} title={b.title}>
-                <BreakdownList items={b.items} />
+                {/* every breakdown row copies its label on click — paths,
+                    users, techniques alike; they all get pasted somewhere */}
+                <BreakdownList items={b.items} copyable />
               </Section>
             ))}
           </div>

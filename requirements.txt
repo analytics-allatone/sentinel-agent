@@ -38,6 +38,7 @@ Pygments==2.20.0
 PyJWT==2.12.1
 PyNaCl==1.6.2
 python-dotenv==1.2.2
+python-multipart==0.0.32
 PyYAML==6.0.2
 rich==15.0.0
 reportlab==5.0.1

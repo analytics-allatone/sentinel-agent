@@ -3,7 +3,7 @@ import platform
 import uuid
 from collectors.dbprobe.detect import detect_engines
 from collectors.webprobe.detect import detect_servers
-from utils.command_registry import get_handler , get_status , set_status , register_thread , remove_thread
+from utils.command_registry import get_handler , get_status , set_status ,list_threads , register_thread , remove_thread , pause_thread , restart_thread
 from collectors.flyprobe.detect import detect_fly
 from collectors.appprobe.detect import detect_appservers
 
@@ -69,6 +69,16 @@ async def handle_command(payload):
         status = set_status(args.get("status"))
         return {"success": True , "status" : status}
 
+    if command == "update_service":
+        action = args.get("action")
+        service_name = args.get("service_name")
+        if action == "pause":
+            return pause_thread(service_name)
+        if action == "restart":
+            return restart_thread(service_name)
+        
+    if command == "list_threads":
+        return list_threads()
     
     if command ==  "list_services":
         det=[]
