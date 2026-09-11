@@ -289,7 +289,8 @@ def _parse_teams_link(value: str):
     if value and value.strip().startswith("http"):
         p = urlparse(value)
         parts = p.path.split("/")
-        channel_id = unquote(parts[parts.index("team") + 1]) if "team" in parts else None
+        print(parts)
+        channel_id = unquote(parts[parts.index("channel") + 1]) if "channel" in parts else None
         team_id = parse_qs(p.query).get("groupId", [None])[0]
     elif "|" in (value or ""):
         team_id, channel_id = value.split("|", 1)

@@ -27,8 +27,8 @@ communication_router = APIRouter()
 
 
 @communication_router.get("/communication-channels" , response_model = standard_success_response[getCommunicationChannelsResponse] , status_code=200)
-async def get_communication_channels(db: AsyncSession = Depends(get_async_db) ,
-                                     user:dict = Depends(verify_token)):
+async def get_communication_channels(db: AsyncSession = Depends(get_async_db) ):#,
+                                    #  user:dict = Depends(verify_token)):
     channel_result = await db.execute(select(CommunicationChannel))
     existing_channels = channel_result.scalars().all()
 
@@ -57,8 +57,8 @@ async def get_communication_channels(db: AsyncSession = Depends(get_async_db) ,
 
 @communication_router.post("/add-communication-channels" , response_model = standard_success_response[addCommunicationChannelResponse] , status_code=201)
 async def add_communication_channels(req : addCommunicationChannelRequest,
-                                     db: AsyncSession = Depends(get_async_db) ,
-                                     user:dict = Depends(verify_admin_token)):
+                                     db: AsyncSession = Depends(get_async_db) ):#,
+                                    #  user:dict = Depends(verify_admin_token)):
     channel_result = await db.execute(select(CommunicationChannel).where(CommunicationChannel.name == req.name))
     existing_channels = channel_result.scalars().one_or_none()
     if existing_channels is not None:
@@ -88,8 +88,8 @@ async def add_communication_channels(req : addCommunicationChannelRequest,
 
 @communication_router.delete("/delete-communicaiton-channel", status_code=200)
 async def delete_communicaiton_channel(communication_channel_id: int = Query(),
-                            db: AsyncSession = Depends(get_async_db),
-                            user: dict = Depends(verify_admin_token)):
+                            db: AsyncSession = Depends(get_async_db)): #,
+                            # user: dict = Depends(verify_admin_token)):
     """Remove a stored credential."""
 
     credential = await db.get(CommunicationChannel, communication_channel_id)

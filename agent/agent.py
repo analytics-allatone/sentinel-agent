@@ -65,62 +65,127 @@ class SentinelAgent:
         try:
             register(name, factory())
         except Exception as e:
-            print(f"{name} error: {e}")
-
-    def _add_collector(self, name, factory):
-        """Always-on collector: started now, and registered as static so a
-        global pause can stop it.
-
-        Started BEFORE registering, so a collector that fails to start is not
-        left in the static set for a later resume to trip over.
-        """
+            print(f"Engine Handler error: {e}")
         try:
-            c = factory()
-            c.start()
-            add_static_collector(name, c)
-            self._collectors.append(c)
-            print(f"{name} started")
-        except ImportError as e:
-            print(f"{name} unavailable: {e}")
+            wi = WebInspector(dispatch=dispatch, machine_info=self.machine_info)
+            # wi.start({"server": "apache", "host": "127.0.0.1", "port": 8080})
+            register("web_inspector", wi)
+            self._collectors.append(wi)
         except Exception as e:
-            print(f"{name} error: {e}")
+            print(f"Web_Server inspector error: {e}")
+        try:
+            rc = ResourceCollector(
+                dispatch      = dispatch,
+                machine_info  = self.machine_info,
+                poll_interval = 10.0,
+            )
+            rc.start()
+            add_static_collector(rc)
+            self._collectors.append(rc)
+            print("Resource Collector started")
+        except Exception as e:
+            print(f"Resource collector error: {e}")
 
-    def start(self):
-        self._dispatcher = self._build_dispatcher()
-        dispatch = self._make_dispatch()
-        mi = self.machine_info
 
-        # --- on-demand inspectors (driven by start_*/stop_* commands) ---------
-        self._add_handler("Appserver_inspector",
-                          lambda: AppServerInspector(dispatch, machine_info=mi))
-        self._add_handler("fly_inspector",
-                          lambda: FlyInspector(dispatch, machine_info=mi, interval=60))
-        self._add_handler("engines_handler",
-                          lambda: EnginesHandler(dispatch=dispatch, machine_info=mi))
-        self._add_handler("web_inspector",
-                          lambda: WebInspector(dispatch=dispatch, machine_info=mi))
+        try:
+            
+            fc = FileCollector(
+                dispatch    = dispatch,
+                machine_info= self.machine_info,
+                watch_paths = None,
+                ignore_dirs = None,
+                recursive   = True,
+                use_polling = False,
+            )
+            add_static_collector(fc)
+            fc.start()
+            self._collectors.append(fc)
+            print("File Collector started")
+        except ImportError as e:
+            print(f"File collector unavailable: {e}")
+        except Exception as e:
+            print(f"File collector error: {e}")
 
-        # --- always-on collectors --------------------------------------------
-        self._add_collector("Resource collector", lambda: ResourceCollector(
-            dispatch=dispatch, machine_info=mi, poll_interval=10.0))
 
-        self._add_collector("File collector", lambda: FileCollector(
-            dispatch=dispatch, machine_info=mi, watch_paths=None,
-            ignore_dirs=None, recursive=True, use_polling=False))
+        try:
+            
+            ac = create_auth_collector(
+                dispatch       = dispatch,
+                machine_info = self.machine_info
+            )
+            add_static_collector(ac)
+            ac.start()
+            self._collectors.append(ac)
+            print("Auth Collector started")
+        except Exception as e:
+            print(f"Auth collector error: {e}")
 
-        self._add_collector("Auth collector", lambda: create_auth_collector(
-            dispatch=dispatch, machine_info=mi))
+        try:
+            
+            nc = NetworkCollector(
+                dispatch        = dispatch,
+                machine_info= self.machine_info,
+                poll_interval   = 2.0,
+                track_bandwidth = True
+            )
+            add_static_collector(nc)
+            nc.start()
 
-        self._add_collector("Network collector", lambda: NetworkCollector(
-            dispatch=dispatch, machine_info=mi, poll_interval=2.0, track_bandwidth=True))
+            self._collectors.append(nc)
+            print(" Network Collector started")
+        except Exception as e:
+            print(f"Network collector error: {e}")
 
-        self._add_collector("Process collector", lambda: ProcessCollector(
-            dispatch=dispatch, machine_info=mi, poll_interval=1.5,
-            resource_interval=30.0, hash_executables=True))
+        try:
+            
+            pc = ProcessCollector(
+                dispatch          = dispatch,
+                machine_info= self.machine_info,
+                poll_interval     = 1.5,
+                resource_interval = 30.0,
+                hash_executables  = True
+            )
+            add_static_collector(pc)
+            pc.start()
+            self._collectors.append(pc)
+            print("Process Collector started")
+        except Exception as e:
+            print(f"Process collector error: {e}")
 
-        self._add_collector("Usb collector", lambda: USBCollector(
-            dispatch=dispatch, machine_info=mi, poll_interval=3.0,
-            scan_on_connect=True, transfer_threshold_bytes=524288000))
+
+        try:
+            uc = USBCollector(
+                dispatch                 = dispatch,
+                machine_info= self.machine_info,
+                poll_interval            = 3.0,
+                scan_on_connect          = True,
+                transfer_threshold_bytes = 524288000,
+            )
+            add_static_collector(uc)
+            uc.start()
+            self._collectors.append(uc)
+            print("USB Collector started")
+        except Exception as e:
+            print(f"USB collector error: {e}")
+
+
+
+
+        # found = run_detect(dispatch, self.machine_info)
+
+        # Database discovery collector (detects local engines: postgres/mysql/oracle...)
+        # dd_cfg = self.config.get("collectors", {}).get("db_discovery", {})
+        # if dd_cfg.get("enabled", True):
+        #     try:
+        #         self._db_inspector = DatabaseInspector(
+        #         dispatch=dispatch, machine_info=self.machine_info,
+        #         config_file=dd_cfg.get("config_file"),
+        #         poll_interval=dd_cfg.get("poll_interval", 300.0),
+        #         control_url=os.getenv("DB_CONTROL_URL"),
+        #         )
+        #         self._db_inspector.set_detected(found)
+        #         self._db_inspector.start()          # exits by itself while nothing is ticked
+        #         self._collectors.append(self._db_inspector)
 
         # Hard disk collector — re-enable by uncommenting the import above too.
         # hd = self.config.get("collectors", {}).get("harddisk", {})

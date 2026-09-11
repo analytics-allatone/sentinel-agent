@@ -82,7 +82,9 @@ async def handle_command(payload):
     
     if command ==  "list_services":
         det=[]
-        det=(detect_engines()+detect_servers()+detect_fly()+detect_appservers())
+        det=detect_engines()
+        # det=(detect_engines()+detect_servers()+detect_fly()+detect_appservers())
+        print(det)
         return det
     
     inspector = get_handler("engines_handler")
@@ -92,13 +94,18 @@ async def handle_command(payload):
 
 
     if inspector is not None:
-        service_name = args.get("service_name")
+
+        service_name = args.get("engine")
+        # print(service_name)
 
         if command == "start_engine":
+            # return inspector()
             ins = inspector
             return register_thread(service_name , ins , args)
             
         if command == "stop_engine":
+            print("service",args.get('engine'))
+            return inspector.stop(args.get('engine'))
             return remove_thread(service_name)
 
 
