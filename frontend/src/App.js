@@ -23,6 +23,7 @@ import AccessManagement from "./Access/AccessManagement";
 import CapacityDashboard from "./Reports/CapacityDashboard";
 import AgentInfoDashboard from "./Reports/AgentInfoDashboard";
 import Unauthorized from "./pages/Unauthorized/Unauthorized";
+import NotFound from "./pages/NotFound/NotFound";
 import Messaging from "./Messaging/Messaging";
 import ChannelsManager from "./Channels/ChannelsManager";
 
@@ -130,6 +131,10 @@ function AppContent() {
               />
             }
           />
+
+          {/* Anything that matched none of the above — a mistyped, moved or
+              stale address. Must stay last: it matches everything. */}
+          <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
     </div>

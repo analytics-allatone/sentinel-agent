@@ -1,0 +1,476 @@
+/* ─────────────────────────────────────────────────────────────
+   Not Found (404) page — a sibling of the 403 page: same glass card on a
+   gridded gradient, same theme switch, its own palette tokens. The root .nf
+   carries data-theme ("dark" | "light"), and every colour below reads from a
+   token so the two themes cannot drift apart.
+   ───────────────────────────────────────────────────────────── */
+
+.nf {
+  --nf-bg-1: #0b1020;
+  --nf-bg-2: #131a33;
+  --nf-bg-3: #1b2145;
+  --nf-card: rgba(24, 30, 54, 0.55);
+  --nf-card-border: rgba(255, 255, 255, 0.12);
+  --nf-text: #eef1f8;
+  --nf-text-dim: #9aa4bf;
+  --nf-accent-1: #29b6a6;
+  --nf-accent-2: #5b8cff;
+  --nf-mark-1: #29b6a6;
+  --nf-mark-2: #5b8cff;
+  --nf-scope-fill: rgba(41, 182, 166, 0.07);
+  --nf-scope-ring: rgba(255, 255, 255, 0.22);
+  --nf-trail: rgba(255, 255, 255, 0.42);
+  --nf-miss-fill: rgba(255, 255, 255, 0.16);
+  --nf-miss-mark: #eef1f8;
+  --nf-btn: rgba(255, 255, 255, 0.08);
+  --nf-btn-border: rgba(255, 255, 255, 0.16);
+  --nf-chip: rgba(255, 255, 255, 0.08);
+  --nf-chip-border: rgba(255, 255, 255, 0.14);
+  --nf-shadow: 0 40px 90px rgba(0, 0, 0, 0.5);
+  --nf-focus: #7fe3d6;
+  --nf-grid: rgba(255, 255, 255, 0.045);
+
+  position: relative;
+  min-height: 100vh;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  box-sizing: border-box;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  color: var(--nf-text);
+  text-align: center;
+  background:
+    radial-gradient(1200px 700px at 15% 10%, var(--nf-bg-3), transparent 60%),
+    radial-gradient(1000px 600px at 85% 90%, var(--nf-bg-2), transparent 55%),
+    linear-gradient(140deg, var(--nf-bg-1), var(--nf-bg-2));
+}
+
+.nf[data-theme="light"] {
+  --nf-bg-1: #eef6f5;
+  --nf-bg-2: #e6eefc;
+  --nf-bg-3: #dfeaff;
+  --nf-card: rgba(255, 255, 255, 0.74);
+  --nf-card-border: rgba(15, 23, 42, 0.1);
+  --nf-text: #16203a;
+  --nf-text-dim: #5c6a86;
+  --nf-accent-1: #10897b;
+  --nf-accent-2: #2f6bff;
+  --nf-mark-1: #10897b;
+  --nf-mark-2: #2f6bff;
+  --nf-scope-fill: rgba(16, 137, 123, 0.08);
+  --nf-scope-ring: rgba(15, 23, 42, 0.18);
+  --nf-trail: rgba(15, 23, 42, 0.35);
+  --nf-miss-fill: rgba(15, 23, 42, 0.12);
+  --nf-miss-mark: #16203a;
+  --nf-btn: rgba(15, 23, 42, 0.05);
+  --nf-btn-border: rgba(15, 23, 42, 0.12);
+  --nf-chip: rgba(16, 137, 123, 0.1);
+  --nf-chip-border: rgba(16, 137, 123, 0.22);
+  --nf-shadow: 0 40px 80px rgba(38, 62, 130, 0.22);
+  --nf-focus: #10897b;
+  --nf-grid: rgba(15, 23, 42, 0.05);
+}
+
+/* faint grid, faded out towards the edges */
+.nf::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(var(--nf-grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--nf-grid) 1px, transparent 1px);
+  background-size: 46px 46px;
+  mask-image: radial-gradient(circle at 50% 42%, #000 0%, transparent 72%);
+  -webkit-mask-image: radial-gradient(circle at 50% 42%, #000 0%, transparent 72%);
+}
+
+.nf__sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ── drifting background blobs ──────────────────────────────── */
+.nf__shapes {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.nf__shape {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(52px);
+  opacity: 0.5;
+  will-change: transform;
+}
+
+.nf__shape--1 {
+  width: 340px;
+  height: 340px;
+  left: -70px;
+  top: -50px;
+  background: radial-gradient(circle, var(--nf-accent-1), transparent 70%);
+  animation: nf-float-1 18s ease-in-out infinite;
+}
+
+.nf__shape--2 {
+  width: 300px;
+  height: 300px;
+  right: -60px;
+  bottom: -40px;
+  background: radial-gradient(circle, var(--nf-accent-2), transparent 70%);
+  animation: nf-float-2 22s ease-in-out infinite;
+}
+
+@keyframes nf-float-1 {
+  0%, 100% { transform: translate3d(0, 0, 0); }
+  50% { transform: translate3d(40px, 30px, 0); }
+}
+
+@keyframes nf-float-2 {
+  0%, 100% { transform: translate3d(0, 0, 0); }
+  50% { transform: translate3d(-34px, -26px, 0); }
+}
+
+/* ── theme switch ───────────────────────────────────────────── */
+.nf__theme {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  z-index: 3;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  cursor: pointer;
+  color: var(--nf-text);
+  background: var(--nf-btn);
+  border: 1px solid var(--nf-btn-border);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  transition: transform 0.15s ease, background 0.15s ease;
+}
+
+.nf__theme:hover {
+  transform: translateY(-1px);
+  background: var(--nf-chip);
+}
+
+/* ── card ───────────────────────────────────────────────────── */
+.nf__card {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  max-width: 620px;
+  padding: 40px 36px 30px;
+  border-radius: 24px;
+  background: var(--nf-card);
+  border: 1px solid var(--nf-card-border);
+  box-shadow: var(--nf-shadow), inset 0 1px 0 rgba(255, 255, 255, 0.14);
+  backdrop-filter: blur(24px) saturate(120%);
+  -webkit-backdrop-filter: blur(24px) saturate(120%);
+  animation: nf-card-in 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes nf-card-in {
+  from { opacity: 0; transform: translateY(14px) scale(0.985); }
+  to { opacity: 1; transform: none; }
+}
+
+/* ── radar mark ─────────────────────────────────────────────── */
+.nf__radar {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 6px;
+  animation: nf-bob 6s ease-in-out infinite;
+}
+
+.nf__radar-halo {
+  position: absolute;
+  width: 150px;
+  height: 150px;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--nf-accent-1), transparent 62%);
+  opacity: 0.28;
+  filter: blur(18px);
+}
+
+.nf__radar-svg {
+  position: relative;
+}
+
+/* the sweep goes round; the missed contact pulses */
+.nf__radar-sweep {
+  transform-origin: 66px 66px;
+  animation: nf-sweep 4.5s linear infinite;
+}
+
+.nf__radar-miss {
+  transform-origin: 112px 40px;
+  animation: nf-miss 2.4s ease-in-out infinite;
+}
+
+@keyframes nf-sweep {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes nf-miss {
+  0%, 100% { opacity: 0.55; transform: scale(0.92); }
+  50% { opacity: 1; transform: scale(1); }
+}
+
+@keyframes nf-bob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+
+/* ── copy ───────────────────────────────────────────────────── */
+.nf__eyebrow {
+  margin: 8px 0 0;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--nf-text-dim);
+}
+
+.nf__code {
+  margin: 6px 0 0;
+  font-size: clamp(64px, 15vw, 104px);
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  background: linear-gradient(120deg, var(--nf-accent-1), var(--nf-accent-2));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.nf__title {
+  margin: 6px 0 10px;
+  font-size: clamp(22px, 5vw, 30px);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  outline: none;
+}
+
+.nf__message {
+  margin: 0 auto;
+  max-width: 46ch;
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--nf-text-dim);
+}
+
+/* the address that was asked for, shown verbatim and never wrapped mid-word */
+.nf__path {
+  display: inline-block;
+  max-width: 100%;
+  margin: 14px 0 0;
+  padding: 7px 12px;
+  border-radius: 10px;
+  background: var(--nf-chip);
+  border: 1px solid var(--nf-chip-border);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 13px;
+  color: var(--nf-text);
+  overflow-wrap: anywhere;
+}
+
+/* ── actions ────────────────────────────────────────────────── */
+.nf__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 22px;
+}
+
+.nf__btn {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 44px;
+  padding: 0 18px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  text-decoration: none;
+  color: var(--nf-text);
+  background: var(--nf-btn);
+  border: 1px solid var(--nf-btn-border);
+  transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease, filter 0.15s ease;
+}
+
+.nf__btn:hover {
+  transform: translateY(-1px);
+  background: var(--nf-chip);
+}
+
+.nf__btn:focus-visible {
+  outline: 2px solid var(--nf-focus);
+  outline-offset: 2px;
+}
+
+.nf__btn--primary {
+  color: #fff;
+  border-color: transparent;
+  background: linear-gradient(120deg, var(--nf-accent-1), var(--nf-accent-2));
+  box-shadow: 0 10px 26px rgba(41, 182, 166, 0.28);
+}
+
+.nf__btn--primary:hover {
+  filter: brightness(1.06);
+}
+
+/* ── "try one of these" ─────────────────────────────────────── */
+.nf__suggest {
+  margin-top: 26px;
+  padding-top: 20px;
+  border-top: 1px solid var(--nf-card-border);
+}
+
+.nf__suggest-title {
+  margin: 0 0 12px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--nf-text-dim);
+}
+
+.nf__links {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.nf__link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 13px;
+  border-radius: 12px;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--nf-text);
+  background: var(--nf-btn);
+  border: 1px solid var(--nf-btn-border);
+  transition: transform 0.15s ease, background 0.15s ease, border-color 0.15s ease;
+}
+
+.nf__link:hover {
+  transform: translateY(-1px);
+  background: var(--nf-chip);
+  border-color: var(--nf-chip-border);
+}
+
+.nf__link:focus-visible {
+  outline: 2px solid var(--nf-focus);
+  outline-offset: 2px;
+}
+
+.nf__link-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  flex: none;
+  border-radius: 9px;
+  color: var(--nf-accent-1);
+  background: var(--nf-chip);
+}
+
+.nf__link-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.nf__link-sub {
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--nf-text-dim);
+}
+
+/* ── small screens ──────────────────────────────────────────── */
+@media (max-width: 560px) {
+  .nf__card {
+    padding: 30px 20px 24px;
+    border-radius: 18px;
+  }
+
+  .nf__actions {
+    flex-direction: column;
+  }
+
+  .nf__btn {
+    width: 100%;
+  }
+
+  .nf__links {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* ── motion preferences ─────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  .nf__card,
+  .nf__radar,
+  .nf__radar-sweep,
+  .nf__radar-miss,
+  .nf__shape {
+    animation: none !important;
+  }
+
+  .nf__btn,
+  .nf__link,
+  .nf__theme {
+    transition: none;
+  }
+}
+
+/* nobody prints a 404, but if they do, drop the decoration */
+@media print {
+  .nf__shapes,
+  .nf__theme,
+  .nf::before {
+    display: none;
+  }
+
+  .nf {
+    min-height: auto;
+    background: none;
+    color: #000;
+  }
+
+  .nf__card {
+    box-shadow: none;
+    backdrop-filter: none;
+  }
+}

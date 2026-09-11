@@ -2582,3 +2582,218 @@
 .agents-table td:nth-child(10) {
   width: 70px;
 }
+
+/* ── agents table filters (status / operating system) ────────────────────
+   A popover on the existing Filters button rather than more controls in an
+   already busy toolbar. */
+.agents-filter {
+  position: relative;
+}
+
+.filter-button.active {
+  border-color: #6654e8;
+  color: #6654e8;
+  background: #f4f2ff;
+}
+
+.filter-button-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 16px;
+  height: 16px;
+  margin-left: 6px;
+  padding: 0 4px;
+  border-radius: 8px;
+  background: #6654e8;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.agents-filter-panel {
+  position: absolute;
+  z-index: 30;
+  top: calc(100% + 6px);
+  right: 0;
+  width: 240px;
+  padding: 12px;
+  border: 1px solid #e4e1fb;
+  border-radius: 10px;
+  background: #fff;
+  box-shadow: 0 12px 28px rgba(23, 32, 51, 0.14);
+}
+
+.agents-filter-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin-bottom: 10px;
+}
+
+.agents-filter-label {
+  color: #667085;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.agents-filter-select {
+  height: 34px;
+  padding: 0 8px;
+  border: 1px solid #dfe4ec;
+  border-radius: 7px;
+  background: #fff;
+  color: #172033;
+  font-family: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  outline: none;
+}
+
+.agents-filter-select:focus {
+  border-color: #6654e8;
+  box-shadow: 0 0 0 2px rgba(102, 84, 232, 0.15);
+}
+
+.agents-filter-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding-top: 9px;
+  border-top: 1px solid #eef0f4;
+}
+
+.agents-filter-count {
+  color: #98a2b3;
+  font-size: 11px;
+}
+
+.agents-filter-clear {
+  padding: 5px 9px;
+  border: 1px solid #dfe4ec;
+  border-radius: 6px;
+  background: #fff;
+  color: #475467;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.agents-filter-clear:hover:not(:disabled) {
+  border-color: #6654e8;
+  color: #6654e8;
+}
+
+.agents-filter-clear:disabled {
+  color: #b6bdc9;
+  cursor: not-allowed;
+}
+
+/* ── per-agent status toggle (Actions column) ────────────────────────────
+   Pausing an agent is a round trip to the machine over MQTT, so the control
+   carries its own pending state and never fires twice. */
+.agent-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.status-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 3px 8px 3px 4px;
+  border: 1px solid #dfe4ec;
+  border-radius: 999px;
+  background: #fff;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  color: #667085;
+  cursor: pointer;
+  transition: border-color 0.18s ease, color 0.18s ease, background 0.18s ease;
+}
+
+.status-toggle:hover:not(:disabled) {
+  border-color: #6654e8;
+}
+
+.status-toggle:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.status-toggle-track {
+  position: relative;
+  width: 26px;
+  height: 14px;
+  flex: none;
+  border-radius: 999px;
+  background: #cfd4de;
+  transition: background 0.18s ease;
+}
+
+.status-toggle-knob {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(23, 32, 51, 0.3);
+  transition: transform 0.18s ease;
+}
+
+.status-toggle.on {
+  color: #067647;
+  border-color: #a9dfc4;
+  background: #f2fbf6;
+}
+
+.status-toggle.on .status-toggle-track {
+  background: #00a86b;
+}
+
+.status-toggle.on .status-toggle-knob {
+  transform: translateX(12px);
+}
+
+.status-toggle-text {
+  white-space: nowrap;
+}
+
+.agents-toggle-error {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 0 0 10px;
+  padding: 9px 12px;
+  border: 1px solid #f4c7c7;
+  border-radius: 8px;
+  background: #fef4f4;
+  color: #b42318;
+  font-size: 12px;
+}
+
+.agents-toggle-error-close {
+  border: 0;
+  background: none;
+  color: inherit;
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+/* an agent that is not reporting cannot answer a pause: the control is present
+   (so the column does not jump about) but visibly inert */
+.status-toggle.unreachable {
+  opacity: 0.45;
+  border-style: dashed;
+  cursor: not-allowed;
+}
