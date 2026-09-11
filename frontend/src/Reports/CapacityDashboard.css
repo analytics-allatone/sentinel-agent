@@ -971,9 +971,6 @@
     flex-direction: column;
 
     min-height: 260mm;
-
-    break-inside: avoid;
-    page-break-inside: avoid;
   }
 
 
@@ -1658,6 +1655,43 @@
   color: #7b8797;
 }
 
+  /* The cover carries the executive summary too, so it is set tighter than a
+     title page on its own would be: less lead-in space, a smaller headline and
+     closer section labels. Scoped to the cover, so evidence pages are untouched. */
+  .capacity-dash__print-cover-content {
+    padding-top: 9mm;
+  }
+
+  .capacity-dash__print-cover-title {
+    font-size: 31px;
+  }
+
+  .capacity-dash__print-cover .capacity-dash__print-cover-lead {
+    margin-top: 5mm;
+    font-size: 13px;
+  }
+
+  .capacity-dash__print-cover .capacity-dash__print-section-label {
+    margin-top: 6mm;
+    margin-bottom: 3mm;
+  }
+
+  .capacity-dash__print-cover .capacity-dash__print-summary-note {
+    margin-top: 5mm;
+  }
+
+  /* An agent name is an identifier, not a headline: it is long, it wraps
+     badly, and it competes with the numbers when set at full size. */
+  .capacity-dash__print-summary-meta-name {
+    font-size: 10.5px;
+    overflow-wrap: anywhere;
+  }
+
+  .capacity-dash__print-summary-meta-ip {
+    font-size: 10.5px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+
 .capacity-dash__print-summary-meta-card strong {
   margin-top: 6px;
 
@@ -1734,4 +1768,15 @@
 
   color: #176b4d;
 }
+}
+
+/* the caption now names the machine as well as the agent: the agent name reads
+   as the subject, the address in monospace so octets line up at a glance */
+.capacity-dash__subtitle-agent {
+  font-weight: 600;
+}
+
+.capacity-dash__subtitle-ip {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.95em;
 }

@@ -6,7 +6,9 @@ import {
   LuUsers,
   LuFolderTree,
   LuMonitor,
+  LuMonitorCog,
   LuBell,
+  LuMessageSquare,
   LuShieldCheck,
   LuChartNoAxesColumn,
   LuClipboardList,
@@ -17,6 +19,26 @@ import {
   LuChevronDown,
   LuChevronsLeft,
 } from "react-icons/lu";
+
+/**
+ * The menu below names every section the product will have; only some of them
+ * are built. These are the ones with a route in App.js — anything else lands on
+ * the 403 page instead of a blank screen. Building a page? Add its path here.
+ */
+const ROUTED_PATHS = new Set([
+  "/dashboard",
+  "/agentDetails",
+  "/messages",
+  "/reports/soc2",
+  "/access",
+]);
+
+const UNROUTED_PATH = "/*";
+
+/** Where a menu item actually goes: its own page, or the 403 until it exists. */
+function hrefFor(item) {
+  return `/app${ROUTED_PATHS.has(item.href) ? item.href : UNROUTED_PATH}`;
+}
 
 const Sidebar = ({ isOpen, onClose }) => {
   const [activeMenu, setActiveMenu] = useState("dashboard");
@@ -33,6 +55,12 @@ const Sidebar = ({ isOpen, onClose }) => {
       label: "Agents",
       icon: LuUsers,
       href: "/agents",
+    },
+    {
+      id: "agent-details",
+      label: "Agent Details",
+      icon: LuMonitorCog,
+      href: "/agentDetails",
     },
     {
       id: "groups",
@@ -52,6 +80,12 @@ const Sidebar = ({ isOpen, onClose }) => {
       icon: LuBell,
       href: "/alerts",
       badge: 3,
+    },
+    {
+      id: "messages",
+      label: "Messages",
+      icon: LuMessageSquare,
+      href: "/messages",
     },
     {
       id: "policies",
@@ -152,7 +186,7 @@ const Sidebar = ({ isOpen, onClose }) => {
                 <li key={item.id}>
 
                   <a
-                    href={`/app${item.href}`}
+                    href={hrefFor(item)}
                     className={`nav-item ${
                       activeMenu === item.id ? "active" : ""
                     }`}
