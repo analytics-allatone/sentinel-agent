@@ -83,6 +83,7 @@ async def handle_command(payload):
     if command ==  "list_services":
         det=[]
         det=(detect_engines()+detect_servers()+detect_fly()+detect_appservers())
+        print(det)
         return det
     
     inspector = get_handler("engines_handler")

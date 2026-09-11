@@ -344,13 +344,14 @@ async def add_credential(req: AddCredentialRequest,
 @agent_management_router.get("/get-credentials",
                              response_model=standard_success_response[GetCredentialsResponse],
                              status_code=200)
-async def get_credentials(engine: Optional[str] = Query(None),
-                          agent_name: Optional[str] = Query(None),
+async def get_credentials(engine:str = Query(),
+                          service_name : str = Query(),
+                          agent_name:str = Query(),
                           db: AsyncSession = Depends(get_async_db),):
                         #   user: dict = Depends(verify_token)):
     """List stored credentials. Passwords are never returned."""
 
-    query = select(CredentialStorage)
+    query = select(CredentialStorage).where(C)
     if engine:
         query = query.where(CredentialStorage.engine == canon_engine(engine))
     if agent_name:
@@ -374,13 +375,15 @@ async def delete_credential(credential_id: int = Query(),
     credential = await db.get(CredentialStorage, credential_id)
     if not credential:
         raise HTTPException(status_code=404, detail="Credential not found")
-    result = await mqtt_request(agent_name=credential.agent_name, command="stop_engine",args={"engine" : credential.engine} , timeout=10.0)
+    result = await mqtt_request(agent_name=credential.agent_name, command="stop_engine",args={"engine" : credential.engine ,  "service_name" : credential.service_name} , timeout=10.0)
     print(result)
     await db.delete(credential)
     await db.commit()
 
     return standard_success_response(data={"id": credential_id},
                                      message="Credential deleted successfully")
+
+
 @agent_management_router.post("/stop-db", status_code=200)
 async def stop_db(engine: str =Query(),agent_name: str = Query(),
                    db: AsyncSession = Depends(get_async_db)):
