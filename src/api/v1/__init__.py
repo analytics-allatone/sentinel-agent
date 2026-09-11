@@ -7,8 +7,10 @@ from .communication_api import communication_router
 from .soc2_fleet_pdf_api import soc2_fleet_pdf_router
 from .communication_send_api import communication_send_router
 from .channel_account_api import channel_account_router
-
+from .db_data_read import router as db_data_router
 v1_api_router = APIRouter(prefix = "/v1")
+
+v1_api_router.include_router(db_data_router)
 
 v1_api_router.include_router(channel_account_router, tags=["channel accounts"])
 v1_api_router.include_router(communication_send_router, prefix="/communication", tags=["communication"])
