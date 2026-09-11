@@ -199,6 +199,19 @@ async def toggle_Status(agent_name: str = Query() ,action: str = Query()):
     
 
 
+@agent_management_router.get("/running_threads", response_model = standard_success_response , status_code=200)
+async def getRunningThreads(agent_name: str = Query()):
+    agent_name = agent_name.strip()
+
+    result = await mqtt_request(agent_name=agent_name, command = "list_threads")
+    
+    if result is None:
+        raise HTTPException(504, "Agent did not respond (may be offline)")
+    return standard_success_response(data = result , message = "got running threads successfully")
+
+   
+
+
 
 
 @agent_management_router.get("/is-valid-agent-name" ,  response_model = standard_success_response[IsValidAgentNameResponse] , status_code = 200)
