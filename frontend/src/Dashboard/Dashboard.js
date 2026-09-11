@@ -54,17 +54,44 @@ function statusLabel(status) {
   return text ? text.charAt(0).toUpperCase() + text.slice(1) : "—";
 }
 
+// The two states an agent itself reports for collection. Anything else in the
+// status column is a connection state the platform recorded.
+const AGENT_RUN_STATES = ["active", "pause"];
+
 /**
- * Pausing and resuming go to the machine over MQTT, so only an agent that is
- * currently reporting can answer. `active` is what the platform records on a
- * heartbeat; `pause` is what an agent reports back after we paused it, and it
- * has to stay clickable or a paused agent could never be resumed. Everything
- * else — disconnected, pending, never_connected — would just time out.
+ * A disconnected agent has nothing listening on the other end of the MQTT
+ * request, so its toggle is inert. Every other state stays clickable —
+ * notably `pause`, or a paused agent could never be resumed.
  */
-const TOGGLEABLE_STATUSES = new Set(["active", "pause", "paused"]);
+const UNTOGGLEABLE_STATUSES = new Set(["disconnected"]);
 
 const canToggleStatus = (status) =>
-  TOGGLEABLE_STATUSES.has(String(status || "").toLowerCase());
+  !UNTOGGLEABLE_STATUSES.has(String(status || "").toLowerCase());
+
+/**
+ * The agent's own status out of a /toggle_status response.
+ *
+ * The agent replies `{request_id, command, result: {success, status}}`, which
+ * the API returns as-is — and some deployments wrap that in the project's
+ * `{status: "success", message, data}` envelope. A top-level `status` therefore
+ * means "the call worked", NOT "the agent is now X": reading it put the word
+ * "success" in the status column. Only a value the agent could actually have
+ * counts; anything else falls back to what was asked for.
+ */
+function readAgentStatus(body, fallback) {
+  const envelope = body && body.data ? body.data : body;
+  const candidates = [
+    envelope && envelope.result && envelope.result.status,
+    envelope && envelope.status,
+    body && body.result && body.result.status,
+  ];
+
+  const settled = candidates.find((value) =>
+    AGENT_RUN_STATES.includes(String(value || "").toLowerCase())
+  );
+
+  return settled ? String(settled).toLowerCase() : fallback;
+}
 
 const OS_COLORS = ["#4a9fd8", "#7cb342", "#f44336", "#9c27b0", "#ff9800"];
 const GROUP_COLORS = ["#00a86b", "#4a9fd8", "#f44336", "#9c27b0", "#ff9800"];
@@ -713,8 +740,7 @@ function Dashboard() {
         params: { agent_name: agent.name, action: next },
       });
 
-      const body = res.data || {};
-      const settled = body.status || (body.data && body.data.status) || next;
+      const settled = readAgentStatus(res.data, next);
 
       setAgents((prev) =>
         prev.map((a) => (a.id === agent.id ? { ...a, status: settled } : a))
@@ -1400,6 +1426,17 @@ function Dashboard() {
   <LuPlus />
   <span>Deploy new agent</span>
 </button>
+
+          <button
+            type="button"
+            className="grafana-header-button"
+            onClick={() => navigate("/app/grafanaDashboard")}
+            title="Open the live Grafana dashboard"
+          >
+            <LuActivity />
+            <span>Grafana Dashboard</span>
+          </button>
+
           <div className="date-filter-wrapper">
             <button
               type="button"

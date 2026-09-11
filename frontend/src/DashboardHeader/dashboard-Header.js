@@ -55,7 +55,8 @@ const DashboardHeader = ({ onMenuToggle , sidebarOpen}) => {
       <div className="header-right">
 
         {/* SEARCH */}
-        <div className="search-box">
+       {false && <>
+         <div className="search-box">
 
           <LuSearch className="header-search-icon" />
 
@@ -68,7 +69,7 @@ const DashboardHeader = ({ onMenuToggle , sidebarOpen}) => {
             ⌘ K
           </span> */}
 
-        </div>
+        </div></>}
 
 
         {/* NOTIFICATION */}

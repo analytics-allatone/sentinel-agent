@@ -2797,3 +2797,33 @@
   border-style: dashed;
   cursor: not-allowed;
 }
+
+/* Secondary to "Deploy new agent": same metrics, outlined rather than filled,
+   so the primary action still reads as the primary one. */
+.grafana-header-button {
+  height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 0 14px;
+  border: 1px solid #dfe4ec;
+  border-radius: 7px;
+  background: #ffffff;
+  color: #475467;
+  font-family: inherit;
+  font-size: 10px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    background 0.2s ease,
+    border-color 0.2s ease,
+    color 0.2s ease;
+}
+
+.grafana-header-button:hover {
+  border-color: #6947e8;
+  color: #6947e8;
+  background: #f6f4ff;
+}

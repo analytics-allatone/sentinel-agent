@@ -119,7 +119,7 @@ function AppContent() {
             Signed in, no access -> /unauthorized (the 403 page).
           */}
           <Route
-            path="/app/agentDetails"
+            path="/app/grafanaDashboard"
             element={
               <ProtectedRoute
                 element={

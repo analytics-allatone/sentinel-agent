@@ -80,11 +80,69 @@ test("a paused agent asks for active instead", async () => {
 test("the row follows the status the agent settled on, not the one requested", async () => {
   await renderDashboard();
   // asked to pause, but the agent reports it stayed active
-  api.get.mockResolvedValueOnce({ data: { success: true, status: "active" } });
+  api.get.mockResolvedValueOnce({
+    data: { request_id: "r1", command: "update_status", result: { success: true, status: "active" } },
+  });
 
   fireEvent.click(toggleFor("Mywindows"));
 
   await waitFor(() => expect(toggleFor("Mywindows")).toHaveTextContent("Active"));
+});
+
+/**
+ * The agent's reply is `{request_id, command, result: {success, status}}`, and
+ * some deployments wrap it in `{status: "success", message, data}`. Reading the
+ * outer `status` used to put the literal word "success" in the status column —
+ * which then made the toggle look like neither state.
+ */
+describe("reading the agent status out of the reply", () => {
+  test("the raw MQTT reply shape is understood", async () => {
+    await renderDashboard();
+    api.get.mockResolvedValueOnce({
+      data: { request_id: "r1", command: "update_status", result: { success: true, status: "pause" } },
+    });
+
+    fireEvent.click(toggleFor("Mywindows"));
+
+    await waitFor(() => expect(toggleFor("Mywindows")).toHaveTextContent("Paused"));
+  });
+
+  test("so is the same reply inside the standard envelope", async () => {
+    await renderDashboard();
+    api.get.mockResolvedValueOnce({
+      data: {
+        status: "success",
+        message: "ok",
+        data: { request_id: "r1", command: "update_status", result: { success: true, status: "pause" } },
+      },
+    });
+
+    fireEvent.click(toggleFor("Mywindows"));
+
+    await waitFor(() => expect(toggleFor("Mywindows")).toHaveTextContent("Paused"));
+  });
+
+  test("the envelope's own \"success\" is never taken for an agent status", async () => {
+    await renderDashboard();
+    api.get.mockResolvedValueOnce({ data: { status: "success", message: "ok" } });
+
+    fireEvent.click(toggleFor("Mywindows"));
+
+    // nothing usable came back, so the row shows what was asked for
+    await waitFor(() => expect(toggleFor("Mywindows")).toHaveTextContent("Paused"));
+  });
+
+  test("a paused agent is still clickable afterwards", async () => {
+    await renderDashboard();
+    api.get.mockResolvedValueOnce({
+      data: { request_id: "r1", command: "update_status", result: { success: true, status: "pause" } },
+    });
+
+    fireEvent.click(toggleFor("Mywindows"));
+
+    await waitFor(() => expect(toggleFor("Mywindows")).toHaveTextContent("Paused"));
+    expect(toggleFor("Mywindows")).toBeEnabled();
+  });
 });
 
 test("an offline agent (504) is reported and changes nothing", async () => {
@@ -104,10 +162,10 @@ describe("agents that cannot answer", () => {
     expect(toggleFor("gone-a")).toBeDisabled();
   });
 
-  test("so does one that has never connected", async () => {
+  test("one that has never connected is still clickable — only disconnected is not", async () => {
     await renderDashboard();
 
-    expect(toggleFor("new-a")).toBeDisabled();
+    expect(toggleFor("new-a")).toBeEnabled();
   });
 
   test("clicking it sends nothing", async () => {
