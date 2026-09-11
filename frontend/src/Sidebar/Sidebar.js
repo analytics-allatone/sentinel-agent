@@ -27,7 +27,7 @@ import {
  */
 const ROUTED_PATHS = new Set([
   "/dashboard",
-  "/agentDetails",
+  "/grafanaDashboard",
   "/messages",
   "/reports/soc2",
   "/access",
@@ -58,9 +58,9 @@ const Sidebar = ({ isOpen, onClose }) => {
     },
     {
       id: "agent-details",
-      label: "Agent Details",
+      label: "Grafana Dashboard",
       icon: LuMonitorCog,
-      href: "/agentDetails",
+      href: "/grafanaDashboard",
     },
     {
       id: "groups",
