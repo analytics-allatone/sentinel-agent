@@ -11,6 +11,7 @@ import VerifyOtp from "./VerifyOtp/VerifyOtp";
 import InstallationProcess from "./InstallationProcess/InstallationProcess";
 import AgentDetails from "./Dashboard/AgentDashboard/AgentDetails";
 import ProtectedRoute from "./components/ProtectedRoute";
+import ErrorBoundary from "./components/ErrorBoundary/ErrorBoundary";
 import { LoadingProvider } from "./context/LoadingContext";
 import Loader from "./components/Loader/Loader";
 import { useEffect, useState } from "react";
@@ -42,7 +43,8 @@ function AppContent() {
     <div className="App">
       <Loader isVisible={isLoading} />
       <BrowserRouter>
-        <Routes>
+        <ErrorBoundary>
+          <Routes>
           {/* Root → send users into the /app-prefixed app */}
           <Route path="/" element={<Navigate to="/app/login" replace />} />
 
@@ -135,7 +137,8 @@ function AppContent() {
           {/* Anything that matched none of the above — a mistyped, moved or
               stale address. Must stay last: it matches everything. */}
           <Route path="*" element={<NotFound />} />
-        </Routes>
+          </Routes>
+        </ErrorBoundary>
       </BrowserRouter>
     </div>
   );
