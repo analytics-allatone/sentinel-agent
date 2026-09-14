@@ -19,7 +19,10 @@ async def check_active_status():
                     res = await session.execute(select(Agents))
                     res = res.scalars().all()
                     for a in res:
+                        print(f"Testing for agent : {a.agent_name}")
                         result = await check_active(a.agent_name)
+                        print(f"Testing Response for agent : {a.agent_name} : {result}")
+
                         if result:
                             a.is_active = True
                             a.status = res.get("status")
