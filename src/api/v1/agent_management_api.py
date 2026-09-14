@@ -166,16 +166,21 @@ async def get_available_services(agent_name: str = Query() ,  db: AsyncSession =
 
 
 @agent_management_router.get("/toggle_status", response_model = standard_success_response , status_code=200)
-async def toggle_Status(agent_name: str = Query() ,action: str = Query()):
+async def toggle_Status(agent_name: str = Query() ,action: str = Query(), db: AsyncSession = Depends(get_async_db)):
     agent_name = agent_name.strip()
     action = action.strip()
     valid_actions = ["pause" , "active"]
     if action in valid_actions:
+        result = await db.execute(select(Agents).where(Agents.agent_name == agent_name))
+        existing_agent = result.scalars().one_or_none()
+        if existing_agent:
 
-        result = await mqtt_request(agent_name=agent_name, command = "update_status" , args = {"status" : action})
+            result = await mqtt_request(agent_name=agent_name, command = "update_status" , args = {"status" : action})
         
-        if result is None:
-            raise HTTPException(504, "Agent did not respond (may be offline)")
+            if result is None:
+                raise HTTPException(504, "Agent did not respond (may be offline)")
+            existing_agent.status = action
+            await db.commit()
         return standard_success_response(data = result , message = "Status changed successfully")
 
     else:
