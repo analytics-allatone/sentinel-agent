@@ -31,7 +31,6 @@ async def check_active_status():
                 names = [a.agent_name for a in agents]
 
             results = dict(await asyncio.gather(*(probe(n) for n in names)))
-            print(results)
             async with get_async_session() as session:
                 agents = (await session.execute(select(Agents))).scalars().all()
                 for a in agents:
@@ -47,4 +46,4 @@ async def check_active_status():
         except Exception:
             print("exception occured")
 
-        await asyncio.sleep(30)
+        await asyncio.sleep(120)
