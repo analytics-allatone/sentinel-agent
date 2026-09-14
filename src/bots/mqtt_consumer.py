@@ -69,7 +69,8 @@ async def mqtt_background_consumer():
                     event_data = data_dict.get("event", {})
 
                     agent_name = machine_info.get("agent_name" , None)
-
+                    if agent_name == "AgentWithStatusAndThreads1":
+                        print(agent_name)
                     category = event_data.get("category" , None)
 
                     if not agent_name or not category:
