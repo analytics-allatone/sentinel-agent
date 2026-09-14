@@ -151,7 +151,7 @@ async def get_available_services(agent_name: str = Query() ,  db: AsyncSession =
         engine = s.engine
         this_service = {
             "service_name" : s.service_name,
-            "is_enable" : s.is_active
+            "is_active" : s.is_active
         }
         curr_services[engine].append(this_service)
 
