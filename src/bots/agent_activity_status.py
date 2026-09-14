@@ -25,7 +25,7 @@ async def check_active_status():
 
                         if result:
                             a.is_active = True
-                            a.status = res.get("status")
+                            a.status = result.get("status")
                         else:
                             a.is_active = False
                             a.status = "disconnected" if a.mac_address is not None else "never_connected"
