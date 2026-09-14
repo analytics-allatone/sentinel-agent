@@ -224,3 +224,5 @@ __marimo__/
 databases
 databases/
 *.db
+retry_cache/
+*.mmdb
