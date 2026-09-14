@@ -16,7 +16,7 @@ class CredentialStorage(Base):
     user_name = Column(String(255), nullable=True)
     password_enc = Column(Text, nullable=True)          # encrypted, never plaintext
 
-    service_name = Column(String(255), nullable=True)   # oracle
+    service_name = Column(String(255), nullable=False)   # oracle
     dbname = Column(String(255), nullable=True)         # mysql / postgres / mongo
 
     is_active = Column(Boolean, default=True)

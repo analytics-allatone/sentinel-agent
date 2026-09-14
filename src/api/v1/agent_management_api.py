@@ -148,7 +148,6 @@ async def get_available_services(agent_name: str = Query() ,  db: AsyncSession =
 
     curr_services = {e : [] for e in engines}
     for s in res:
-        print(s.service_name)
         engine = s.engine
         this_service = {
             "service_name" : s.service_name,
@@ -240,7 +239,7 @@ async def agent_installation_command(os : str,
 
     linux_command = f"curl -fsSL {server_ip}:8000/api/v1/scripts/setup.sh | sudo bash -s -- --server-ip {server_ip} --agent-name {agent_name} --group-name {group_name}"
     win_command = f"$env:SERVER_IP='{server_ip}'; $env:AGENT_NAME='{agent_name}'; $env:GROUP_NAME='{group_name}'; irm {server_ip}:8000/api/v1/scripts/windows_install.ps1 | iex"
-    res_date = None
+    res_data = None
     if os == "windows":
         res_data = AgentInstallationCommandResponse(installation_command = win_command)
     else:
@@ -276,10 +275,16 @@ async def add_credential(req: AddCredentialRequest,
                         #  user: dict = Depends(verify_token)):
     """Store user_name / password / service_name / dbname for an engine."""
 
-    # Oracle needs one of these to build a connect string.
-    if req.engine == "oracle" and not (req.service_name or req.dbname):
-        raise HTTPException(status_code=422,
-                            detail="service_name is required for oracle")
+    # Oracle needs one of these to build a connect string
+    verification = await db.execute(select(CredentialStorage).where(
+                CredentialStorage.agent_name == req.agent_name,
+                CredentialStorage.service_name == req.service_name))
+    
+    verification = verification.scalars().one_or_none()
+
+    if verification:
+        raise HTTPException(status_code=400,
+                            detail="service_name already exist in this engine with this agent")
 
     # Re-posting the same target updates it instead of creating a duplicate.
     result = await db.execute(
@@ -321,7 +326,7 @@ async def add_credential(req: AddCredentialRequest,
         "host": req.host,
         "port": req.port
     }
-    await mqtt_request(agent_name=req.agent_name, command="stop",args={"engine" : req.engine , "service_name" : req.service_name}) #, timeout=10.0)
+    await mqtt_request(agent_name=req.agent_name, command="stop",args={"engine" : req.engine , "service_name" : req.service_name , "category" : category}) #, timeout=10.0)
     result = await mqtt_request(agent_name=req.agent_name, command="start",args=starting_args )#, timeout=10.0)
 
     res_data = AddCredentialResponse(
@@ -331,47 +336,94 @@ async def add_credential(req: AddCredentialRequest,
                                      message="Credential saved successfully")
 
 
-# @agent_management_router.get("/get-credentials",
-#                              response_model=standard_success_response[GetCredentialsResponse],
-#                              status_code=200)
-# async def get_credentials(engine:str = Query(),
-#                           service_name : str = Query(),
-#                           agent_name:str = Query(),
-#                           db: AsyncSession = Depends(get_async_db),):
-#                         #   user: dict = Depends(verify_token)):
-#     """List stored credentials. Passwords are never returned."""
+@agent_management_router.get("/pause-service",
+                             response_model=standard_success_response,
+                             status_code=200)
+async def pause_service(agent_name:str = Query(),
+                          service_name : str = Query(),
+                          db: AsyncSession = Depends(get_async_db),):
+                        #   user: dict = Depends(verify_token)):
+    """List stored credentials. Passwords are never returned."""
 
-#     query = select(CredentialStorage)
-#     if engine:
-#         query = query.where(CredentialStorage.engine == canon_engine(engine))
-#     if agent_name:
-#         query = query.where(CredentialStorage.agent_name == agent_name)
+    credential = await db.execute(select(CredentialStorage).where(
+                        CredentialStorage.agent_name == agent_name,
+                        CredentialStorage.service_name == service_name))
+            
+    credential = credential.scalars().one_or_none()
+    if not credential:
+        raise HTTPException(status_code=404, detail="Credential not found")
 
-#     result = await db.execute(query.order_by(CredentialStorage.id))
-#     credentials = result.scalars().all()
-#     await mqtt_request(agent_name=agent_name, command="stop_engine",args={"engine" : engine}) # , timeout=10.0)
-#     res_data = GetCredentialsResponse(
-#         credentials=[_credential_data(c) for c in credentials])
-#     return standard_success_response(data=res_data,
-#                                      message="Credentials fetched successfully")
+    category = "databases" if credential.engine in CATEGORIES["databases"] else None
+    category = "web_servers" if credential.engine in CATEGORIES["web_servers"] else category
+    category = "app_servers" if credential.engine in CATEGORIES["app_servers"] else category
+
+    res = await mqtt_request(agent_name=agent_name, command="pause",args={"engine" : credential.engine , "service_name" : credential.service_name ,"category" : category}) #, timeout=10.0)
+    if res is not None:
+        credential.is_active = False
+        await db.commit()
+        await db.refresh(credential)
+    
+    return standard_success_response(data=res,
+                                     message="Paused successfully")
 
 
-# @agent_management_router.delete("/delete-credential", status_code=200)
-# async def delete_credential(service_name: str = Query(),
-#                             db: AsyncSession = Depends(get_async_db),):
-#                             # user: dict = Depends(verify_token)):
-#     """Remove a stored credential."""
 
-#     credential = await db.get(CredentialStorage)
-#     if not credential:
-#         raise HTTPException(status_code=404, detail="Credential not found")
-#     category = "databases" if req.engine in CATEGORIES["databases"] else None
-#     category = "web_servers" if req.engine in CATEGORIES["web_servers"] else category
-#     category = "app_servers" if req.engine in CATEGORIES["app_servers"] else category
-#     result = await mqtt_request(agent_name=credential.agent_name, command="stop",args={"engine" : credential.engine ,  "service_name" : credential.service_name} , timeout=10.0)
-#     print(result)
-#     await db.delete(credential)
-#     await db.commit()
 
-#     return standard_success_response(data={"id": credential_id},
-#                                      message="Credential deleted successfully")
+
+
+@agent_management_router.get("/restart-service",
+                             response_model=standard_success_response,
+                             status_code=200)
+async def restart_service(agent_name:str = Query(),
+                        service_name : str = Query(),
+                        db: AsyncSession = Depends(get_async_db),):
+                        #   user: dict = Depends(verify_token)):
+    """List stored credentials. Passwords are never returned."""
+
+    credential = await db.execute(select(CredentialStorage).where(
+                        CredentialStorage.agent_name == agent_name,
+                        CredentialStorage.service_name == service_name))
+            
+    credential = credential.scalars().one_or_none()
+    if not credential:
+        raise HTTPException(status_code=404, detail="Credential not found")
+
+    category = "databases" if credential.engine in CATEGORIES["databases"] else None
+    category = "web_servers" if credential.engine in CATEGORIES["web_servers"] else category
+    category = "app_servers" if credential.engine in CATEGORIES["app_servers"] else category
+
+    res = await mqtt_request(agent_name=agent_name, command="restart",args={"engine" : credential.engine , "service_name" : credential.service_name ,"category" : category}) #, timeout=10.0)
+    if res is not None:
+        credential.is_active = True
+        await db.commit()
+        await db.refresh(credential)
+    
+    return standard_success_response(data=res,
+                                     message="Restarted successfully")
+
+
+
+@agent_management_router.delete("/delete-credential", status_code=200)
+async def delete_credential(agent_name: str = Query(),
+                            service_name: str = Query(),
+                            db: AsyncSession = Depends(get_async_db),):
+                            # user: dict = Depends(verify_token)):
+    """Remove a stored credential."""
+
+    credential = await db.execute(select(CredentialStorage).where(
+                    CredentialStorage.agent_name == agent_name,
+                    CredentialStorage.service_name == service_name))
+        
+    credential = credential.scalars().one_or_none()
+    if not credential:
+        raise HTTPException(status_code=404, detail="Credential not found")
+    category = "databases" if credential.engine in CATEGORIES["databases"] else None
+    category = "web_servers" if credential.engine in CATEGORIES["web_servers"] else category
+    category = "app_servers" if credential.engine in CATEGORIES["app_servers"] else category
+    result = await mqtt_request(agent_name=credential.agent_name, command="stop",args={"engine" : credential.engine ,  "service_name" : credential.service_name} , timeout=10.0)
+    print(result)
+    await db.delete(credential)
+    await db.commit()
+
+    return standard_success_response(data={"service_name": service_name},
+                                     message="Credential deleted successfully")
