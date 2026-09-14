@@ -269,33 +269,45 @@ const SENDER_SERVICES = [
   },
 
   {
-    id: "outlook365",
-    label: "Outlook 365",
-    icon: "📧",
-    color: "#0078d4",
-    blurb: "Send emails from Microsoft 365",
-    fields: [
-      {
-        name: "label",
-        label: "Sender Name",
-        placeholder: "e.g. Microsoft Alerts",
-      },
-      {
-        name: "email",
-        label: "Outlook Email",
-        type: "email",
-        placeholder: "alerts@company.com",
-        required: true,
-      },
-      {
-        name: "password",
-        label: "Password",
-        type: "password",
-        placeholder: "Enter password",
-        required: true,
-      },
-    ],
-  },
+  id: "outlook365",
+  label: "Outlook 365",
+  icon: "📧",
+  color: "#0078d4",
+  blurb: "Send emails from Microsoft 365 using Microsoft Graph",
+  fields: [
+    {
+      name: "label",
+      label: "Sender Name",
+      placeholder: "e.g. Microsoft Alerts",
+    },
+    {
+      name: "sender_email",
+      label: "Sender Email",
+      type: "email",
+      placeholder: "alerts@company.com",
+      required: true,
+    },
+    {
+      name: "tenant_id",
+      label: "Tenant ID",
+      placeholder: "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+      required: true,
+    },
+    {
+      name: "client_id",
+      label: "Client ID",
+      placeholder: "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+      required: true,
+    },
+    {
+      name: "client_secret",
+      label: "Client Secret",
+      type: "password",
+      placeholder: "Enter client secret",
+      required: true,
+    },
+  ],
+},
 
   {
     id: "telegram",
@@ -788,7 +800,10 @@ const presentSenderServices = useMemo(
     }
 
     const label =
-      (senderValues.label || "").trim() || senderValues.email || service.label;
+  (senderValues.label || "").trim() ||
+  senderValues.sender_email ||
+  senderValues.email ||
+  service.label;
 
     setSenderSaving(true);
     setSenderErrors({});

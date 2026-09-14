@@ -757,6 +757,7 @@ z-index: 99999;
 }
 
 .ch-sender-card:hover {
+  z-index: 1000;
   transform: translateY(-3px);
   border-color: #d7d2c8;
   box-shadow: 0 14px 34px rgba(20, 19, 15, 0.12);
