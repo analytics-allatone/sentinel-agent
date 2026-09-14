@@ -9,8 +9,7 @@ from models.agent_model import Agents
 
 async def check_active(agent_name):
     result = await mqtt_request(agent_name=agent_name, command =  "active_test",timeout=10.0)
-    res = result != None
-    return res
+    return result
 
 
 
@@ -19,9 +18,6 @@ async def check_active_status():
         async with get_async_session() as session:
                     res = await session.execute(select(Agents))
                     res = res.scalars().all()
-                    await session.execute(
-                        select(Agents)
-                    )
                     for a in res:
                         result = await check_active(a.agent_name)
                         if result:
@@ -32,4 +28,4 @@ async def check_active_status():
                             a.status = "disconnected" if a.mac_address is not None else "never_connected"
                     await session.commit()
 
-        await asyncio.sleep(300)
+        await asyncio.sleep(3)
