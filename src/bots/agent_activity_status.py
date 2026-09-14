@@ -34,10 +34,11 @@ async def check_active_status():
             async with get_async_session() as session:
                 agents = (await session.execute(select(Agents))).scalars().all()
                 for a in agents:
-                    result = results.get(a.agent_name)
+                    reply = results.get(a.agent_name)
+                    result = reply.get("result") if isinstance(reply, dict) else None
                     if result:
                         a.is_active = True
-                        a.status = result.get("status")          # result, not res
+                        a.status = result.get("status")          
                     else:
                         a.is_active = False
                         a.status = "disconnected" if a.mac_address else "never_connected"
