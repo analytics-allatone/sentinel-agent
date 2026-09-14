@@ -2735,6 +2735,8 @@ export default function CapacityDashboard() {
             stats={STATS}
             periodText={periodText}
             theme="light"
+             hostName={hostName}
+      ipAddress={ipAddress}
           />
         </div>
       )}
