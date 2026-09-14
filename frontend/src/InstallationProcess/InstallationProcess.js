@@ -21,6 +21,9 @@ const InstallationProcess = () => {
   const [groupsLoading, setGroupsLoading] = useState(false);
   const [groupsError, setGroupsError] = useState("");
   const [groupDropdownOpen, setGroupDropdownOpen] = useState(false);
+  // Shown when a space is typed or pasted into the group name, and cleared
+  // again a few seconds later so it does not sit there for the rest of the form.
+  const [groupSpaceWarning, setGroupSpaceWarning] = useState(false);
 
   // Command generation state
   const [commandLoading, setCommandLoading] = useState(false);
@@ -42,6 +45,25 @@ const InstallationProcess = () => {
   };
 
   /* ----------------------------- Helpers ----------------------------- */
+
+  /**
+   * Group names travel as a query parameter and end up in the install command,
+   * so a space in one is a problem long before anyone sees the group. Typing or
+   * pasting a space is refused and said out loud rather than silently dropped.
+   */
+  const handleGroupChange = (raw) => {
+    const cleaned = raw.replace(/\s+/g, "");
+    setSelectedGroup(cleaned);
+    setGroupDropdownOpen(true);
+    if (cleaned !== raw) setGroupSpaceWarning(true);
+  };
+
+  // Auto-dismiss the warning; typing on regardless also clears it.
+  useEffect(() => {
+    if (!groupSpaceWarning) return undefined;
+    const t = setTimeout(() => setGroupSpaceWarning(false), 4000);
+    return () => clearTimeout(t);
+  }, [groupSpaceWarning]);
 
   // Normalize whatever /v1/existing-groups returns into [{ id, name }]
   const normalizeGroups = (data) => {
@@ -525,11 +547,17 @@ const InstallationProcess = () => {
                   value={selectedGroup}
                   disabled={groupsLoading}
                   autoComplete="off"
-                  onChange={(e) => {
-                    setSelectedGroup(e.target.value);
-                    setGroupDropdownOpen(true);
+                  onChange={(e) => handleGroupChange(e.target.value)}
+                  // Stop the space before it lands, so the caret does not jump
+                  // over a character that was never inserted.
+                  onKeyDown={(e) => {
+                    if (e.key === " ") {
+                      e.preventDefault();
+                      setGroupSpaceWarning(true);
+                    }
                   }}
                   onFocus={() => setGroupDropdownOpen(true)}
+                  aria-describedby={groupSpaceWarning ? "group-space-warning" : undefined}
                 />
 
                 {groupDropdownOpen && !groupsLoading && (
@@ -566,6 +594,17 @@ const InstallationProcess = () => {
                   </ul>
                 )}
               </div>
+
+              {groupSpaceWarning && (
+                <div
+                  className="error-message"
+                  id="group-space-warning"
+                  role="alert"
+                >
+                  Spaces are not allowed in a group name — use a hyphen or an
+                  underscore instead.
+                </div>
+              )}
 
               {groupsError && (
                 <div className="error-message">{groupsError}</div>

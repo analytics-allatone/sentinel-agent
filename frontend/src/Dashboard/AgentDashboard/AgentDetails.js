@@ -1,5 +1,11 @@
 import { useState, useRef, useEffect } from "react";
+
+import GrafanaDashboard from "../../components/GrafanaDashboard/GrafanaDashboard";
 import "./AgentDetails.css";
+
+// Grafana's own "All" value for a template variable — every agent, every OS,
+// which is what the shared dashboard link opens on.
+const GRAFANA_ALL = "$__all";
 
 // ─── SVG Gauge ──────────────────────────────────────────────────────────────
 function Gauge({
@@ -519,127 +525,40 @@ export default function AgentDetails({ agentData }) {
 
   return (
     <div className={`dashboard-root${darkMode ? "" : " light-mode"}`}>
-      {/* FILTER BAR */}
-      <div className="filter-bar">
-        <span className="filter-label">Agent Name</span>
-
-        <div className="filter-sep" />
-
-        <TimeRangeFilter range={timeRange} onChange={setTimeRange} />
-
-        <button
-          className="theme-toggle"
-          onClick={() => setDarkMode((d) => !d)}
-          title="Toggle dark/light mode"
-        >
-          {darkMode ? "☀ Light" : "🌙 Dark"}
-        </button>
-      </div>
+      
 
       {/* MAIN DASHBOARD */}
       <div className="dashboard-main">
-        {/* TOP ROW */}
-        <div className="top-row">
-          {/* OUTCOME */}
-          <div className="card-0 outcome-card-0">
-            <div className="card-0-title">Outcome</div>
-            <div className="gauge-wrap">
-              <Gauge
-                value={data.outcome.success}
-                max={data.outcome.total}
-                label="success"
-                gradientId="outcome-grad"
-                colors={["#7b2d8b", "#e040fb", "#fa4d56"]}
-                size={260}
-              />
-            </div>
+       
+   
+
+        {/* AGENT INFO — the live Grafana dashboard, embedded. The component
+            already defaults to this server and dashboard, so only what the
+            shared link states is passed here. */}
+        <div className="card-0 grafana-card-0">
+          <div className="card-0-title">
+            Agent Info — live dashboard
           </div>
 
-          {/* SEVERITY */}
-          <div className="card-0 severity-card-0">
-            <div className="card-0-title">Severity</div>
-            <div className="severity-gauges">
-              <div className="severity-item">
-                <Gauge
-                  value={data.severity.critical}
-                  max={data.outcome.total}
-                  label="critical"
-                  gradientId="crit-grad"
-                  colors={["#5f1fa0", "#b044e0", "#e06030", "#fa8231"]}
-                  size={260}
-                />
-              </div>
-              <div className="severity-item">
-                <Gauge
-                  value={data.severity.critical}
-                  max={data.outcome.total}
-                  label="critical"
-                  gradientId="crit-grad"
-                  colors={["#5f1fa0", "#b044e0", "#e06030", "#fa8231"]}
-                  size={260}
-                />
-              </div>
-              <div className="severity-item">
-                <Gauge
-                  value={data.severity.info}
-                  max={data.outcome.total}
-                  label="info"
-                  gradientId="info-grad"
-                  colors={["#5f1fa0", "#b044e0", "#e06030", "#fa8231"]}
-                  size={260}
-                />
-              </div>
-            </div>
+          <div className="agent-grafana-frame">
+            <GrafanaDashboard
+              agentName={GRAFANA_ALL}
+              os={GRAFANA_ALL}
+              from="now-6h"
+              to="now"
+              timezone="browser"
+              // The shared link carries no &kiosk, so Grafana keeps its own
+              // chrome inside the frame — same as the Agent Info page.
+              kiosk={false}
+              helpFooter={false}
+              // follow the page rather than the OS, so the frame does not
+              // glare white inside the dark theme
+              theme={darkMode ? "dark" : "light"}
+              title="Agent info — all agents"
+              height="100%"
+            />
           </div>
         </div>
-
-        {/* BOTTOM ROW */}
-        <div className="bottom-row">
-          {/* ACTIONS */}
-          <div className="card-0">
-            <div className="card-0-title">Actions</div>
-            <div className="actions-bars">
-              <ActionBar
-                count={data.actions.create}
-                label="create"
-                barClass="bar-create"
-                heightPx={barHeight(data.actions.create)}
-              />
-              <ActionBar
-                count={data.actions.delete}
-                label="delete"
-                barClass="bar-delete"
-                heightPx={barHeight(data.actions.delete)}
-              />
-              <ActionBar
-                count={data.actions.rename}
-                label="rename"
-                barClass="bar-rename"
-                heightPx={barHeight(data.actions.rename)}
-              />
-              <ActionBar
-                count={data.actions.update}
-                label="update"
-                barClass="bar-update"
-                heightPx={barHeight(data.actions.update)}
-              />
-            </div>
-          </div>
-
-          {/* TIMELINE */}
-          <div className="card-0 timeline-card-0">
-            <div className="card-0-title">Agent Ingested Time Stamp</div>
-            <Timeline />
-          </div>
-        </div>
-
-        {/* DATA TABLE */}
-        <DataTable
-          rows={rows}
-          page={page}
-          setPage={setPage}
-          totalRows={data.totalRows}
-        />
       </div>
     </div>
   );

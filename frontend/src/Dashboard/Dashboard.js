@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api, { logout } from "../api/api";
 import "./Dashboard.css";
@@ -26,6 +26,73 @@ const STATUS_COLORS = {
   pending: "#ffd700",
   neverConnected: "#4a4a4a",
 };
+/**
+ * The agent's `os` is a full build string ("Windows 10 10.0.19045",
+ * "Ubuntu 22.04 5.15.0-91-generic"), so it is close to unique per host and
+ * useless as a filter value. The family behind it is what people filter on.
+ */
+const OS_FAMILIES = [
+  { key: "windows", label: "Windows", match: ["windows"] },
+  {
+    key: "linux",
+    label: "Linux",
+    match: ["linux", "ubuntu", "debian", "centos", "red hat", "rhel", "fedora", "suse", "alpine"],
+  },
+  { key: "mac", label: "macOS", match: ["mac", "darwin", "os x"] },
+];
+
+/** Which family an OS string belongs to, or "other" when none of them fit. */
+function osFamilyOf(os) {
+  const value = String(os || "").toLowerCase();
+  const family = OS_FAMILIES.find((f) => f.match.some((m) => value.includes(m)));
+  return family ? family.key : "other";
+}
+
+/** "never_connected" -> "Never connected", for the status dropdown. */
+function statusLabel(status) {
+  const text = String(status || "").replace(/[_-]+/g, " ").trim();
+  return text ? text.charAt(0).toUpperCase() + text.slice(1) : "—";
+}
+
+// The two states an agent itself reports for collection. Anything else in the
+// status column is a connection state the platform recorded.
+const AGENT_RUN_STATES = ["active", "pause"];
+
+/**
+ * A disconnected agent has nothing listening on the other end of the MQTT
+ * request, so its toggle is inert. Every other state stays clickable —
+ * notably `pause`, or a paused agent could never be resumed.
+ */
+const UNTOGGLEABLE_STATUSES = new Set(["disconnected"]);
+
+const canToggleStatus = (status) =>
+  !UNTOGGLEABLE_STATUSES.has(String(status || "").toLowerCase());
+
+/**
+ * The agent's own status out of a /toggle_status response.
+ *
+ * The agent replies `{request_id, command, result: {success, status}}`, which
+ * the API returns as-is — and some deployments wrap that in the project's
+ * `{status: "success", message, data}` envelope. A top-level `status` therefore
+ * means "the call worked", NOT "the agent is now X": reading it put the word
+ * "success" in the status column. Only a value the agent could actually have
+ * counts; anything else falls back to what was asked for.
+ */
+function readAgentStatus(body, fallback) {
+  const envelope = body && body.data ? body.data : body;
+  const candidates = [
+    envelope && envelope.result && envelope.result.status,
+    envelope && envelope.status,
+    body && body.result && body.result.status,
+  ];
+
+  const settled = candidates.find((value) =>
+    AGENT_RUN_STATES.includes(String(value || "").toLowerCase())
+  );
+
+  return settled ? String(settled).toLowerCase() : fallback;
+}
+
 const OS_COLORS = ["#4a9fd8", "#7cb342", "#f44336", "#9c27b0", "#ff9800"];
 const GROUP_COLORS = ["#00a86b", "#4a9fd8", "#f44336", "#9c27b0", "#ff9800"];
 
@@ -70,6 +137,19 @@ function Dashboard() {
 
   // Search
   const [searchTerm, setSearchTerm] = useState("");
+
+  // Table filters: "all", or one status / OS family. They narrow the same list
+  // the search does, so the two compose rather than override each other.
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [osFilter, setOsFilter] = useState("all");
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const filtersRef = useRef(null);
+
+  // Agent id currently mid toggle_status call, and the last one that failed.
+  // The call goes out over MQTT to the machine itself, so it is slow enough to
+  // need a pending state and often enough refused to need an error one.
+  const [togglingAgent, setTogglingAgent] = useState(null);
+  const [toggleError, setToggleError] = useState(null);
 
   // Date filter
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
@@ -409,6 +489,17 @@ function Dashboard() {
     }
 
     // ---------------------------------------
+    // STATUS / OS FILTERS
+    // ---------------------------------------
+    if (statusFilter !== "all") {
+      result = result.filter((agent) => agent.status === statusFilter);
+    }
+
+    if (osFilter !== "all") {
+      result = result.filter((agent) => osFamilyOf(agent.os) === osFilter);
+    }
+
+    // ---------------------------------------
     // SEARCH FILTER
     // ---------------------------------------
     const term = searchTerm.trim().toLowerCase();
@@ -432,12 +523,55 @@ function Dashboard() {
     }
 
     return result;
-  }, [agents, searchTerm, appliedStartDate, appliedEndDate]);
+  }, [agents, searchTerm, statusFilter, osFilter, appliedStartDate, appliedEndDate]);
 
-  // Reset to page 1 whenever the search term or page size changes.
+  // Reset to page 1 whenever the search term, a filter, or the page size
+  // changes — page 4 of the old result set means nothing in the new one.
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, rowsPerPage]);
+  }, [searchTerm, statusFilter, osFilter, rowsPerPage]);
+
+  // Only offer values that are actually present: a dropdown listing statuses
+  // no agent has just invites a filter that returns nothing.
+  const statusOptions = useMemo(
+    () => [...new Set(agents.map((a) => a.status).filter(Boolean))].sort(),
+    [agents]
+  );
+
+  const osOptions = useMemo(() => {
+    const present = new Set(agents.map((a) => osFamilyOf(a.os)));
+    const known = OS_FAMILIES.filter((f) => present.has(f.key));
+    return present.has("other")
+      ? [...known, { key: "other", label: "Other" }]
+      : known;
+  }, [agents]);
+
+  const activeFilterCount =
+    (statusFilter !== "all" ? 1 : 0) + (osFilter !== "all" ? 1 : 0);
+
+  const clearFilters = () => {
+    setStatusFilter("all");
+    setOsFilter("all");
+  };
+
+  // A panel that stays open after the pointer has moved on is a nuisance.
+  useEffect(() => {
+    if (!filtersOpen) return undefined;
+    const onDown = (e) => {
+      if (filtersRef.current && !filtersRef.current.contains(e.target)) {
+        setFiltersOpen(false);
+      }
+    };
+    const onKey = (e) => {
+      if (e.key === "Escape") setFiltersOpen(false);
+    };
+    document.addEventListener("mousedown", onDown);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDown);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [filtersOpen]);
 
   // ---------------------------------------------------------------------
   // Pagination — the "current" page is clamped inline at render time
@@ -585,8 +719,46 @@ function Dashboard() {
     setSelectedAgents(newSelected);
   };
 
-  const handleAgentAction = (agentId, agentName) => {
-    alert(`Actions for agent: ${agentName}`);
+  /**
+   * Pause or resume an agent's collection.
+   *
+   * GET /toggle_status?agent_name=…&action=active|pause — the API forwards it to
+   * the agent over MQTT and answers with the status the agent settled on, so
+   * that answer (not the value we asked for) is what the row is updated to. An
+   * offline agent never replies and the API returns 504.
+   */
+  const handleToggleStatus = async (agent) => {
+    if (togglingAgent) return; // one at a time: each is a round trip to a machine
+    if (!canToggleStatus(agent.status)) return; // nothing there to answer
+
+    const next = agent.status === "active" ? "pause" : "active";
+    setTogglingAgent(agent.id);
+    setToggleError(null);
+
+    try {
+      const res = await api.get("/toggle_status", {
+        params: { agent_name: agent.name, action: next },
+      });
+
+      const settled = readAgentStatus(res.data, next);
+
+      setAgents((prev) =>
+        prev.map((a) => (a.id === agent.id ? { ...a, status: settled } : a))
+      );
+    } catch (error) {
+      const status = error.response && error.response.status;
+      const detail = error.response && error.response.data && error.response.data.detail;
+      setToggleError({
+        agentName: agent.name,
+        message:
+          status === 504
+            ? `${agent.name} did not respond — it may be offline.`
+            : detail || `Could not ${next === "pause" ? "pause" : "resume"} ${agent.name}.`,
+      });
+      if (status === 401) logout();
+    } finally {
+      setTogglingAgent(null);
+    }
   };
 
   // "+" in the first column: expand the row and load that agent's available
@@ -1254,6 +1426,17 @@ function Dashboard() {
   <LuPlus />
   <span>Deploy new agent</span>
 </button>
+
+          <button
+            type="button"
+            className="grafana-header-button"
+            onClick={() => navigate("/app/grafanaDashboard")}
+            title="Open the live Grafana dashboard"
+          >
+            <LuActivity />
+            <span>Grafana Dashboard</span>
+          </button>
+
           <div className="date-filter-wrapper">
             <button
               type="button"
@@ -1833,9 +2016,70 @@ function Dashboard() {
               )}
             </div>
 
-            <button type="button" className="filter-button" onClick={() => {}}>
-              ⚱ Filters
-            </button>
+            <div className="agents-filter" ref={filtersRef}>
+              <button
+                type="button"
+                className={`filter-button ${activeFilterCount ? "active" : ""}`}
+                onClick={() => setFiltersOpen((open) => !open)}
+                aria-expanded={filtersOpen}
+                aria-haspopup="true"
+              >
+                ⚱ Filters
+                {activeFilterCount > 0 && (
+                  <span className="filter-button-count">{activeFilterCount}</span>
+                )}
+              </button>
+
+              {filtersOpen && (
+                <div className="agents-filter-panel" role="group" aria-label="Filter agents">
+                  <label className="agents-filter-field">
+                    <span className="agents-filter-label">Status</span>
+                    <select
+                      className="agents-filter-select"
+                      value={statusFilter}
+                      onChange={(e) => setStatusFilter(e.target.value)}
+                    >
+                      <option value="all">All statuses</option>
+                      {statusOptions.map((s) => (
+                        <option key={s} value={s}>
+                          {statusLabel(s)}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+
+                  <label className="agents-filter-field">
+                    <span className="agents-filter-label">Operating system</span>
+                    <select
+                      className="agents-filter-select"
+                      value={osFilter}
+                      onChange={(e) => setOsFilter(e.target.value)}
+                    >
+                      <option value="all">All systems</option>
+                      {osOptions.map((o) => (
+                        <option key={o.key} value={o.key}>
+                          {o.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+
+                  <div className="agents-filter-foot">
+                    <span className="agents-filter-count">
+                      {filteredAgents.length} of {agents.length} agents
+                    </span>
+                    <button
+                      type="button"
+                      className="agents-filter-clear"
+                      onClick={clearFilters}
+                      disabled={activeFilterCount === 0}
+                    >
+                      Clear
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
 
             {/* <button
               type="button"
@@ -1846,6 +2090,20 @@ function Dashboard() {
             </button> */}
           </div>
         </div>
+
+        {toggleError && (
+          <div className="agents-toggle-error" role="alert">
+            <span>{toggleError.message}</span>
+            <button
+              type="button"
+              className="agents-toggle-error-close"
+              onClick={() => setToggleError(null)}
+              aria-label="Dismiss"
+            >
+              ×
+            </button>
+          </div>
+        )}
 
         <table className="agents-table">
           <thead>
@@ -1978,12 +2236,38 @@ function Dashboard() {
                       </span>
                     </td> */}
                     <td>
-                      <button
-                        className="btn-action"
-                        onClick={() => handleAgentAction(agent.id, agent.name)}
-                      >
-                        ⋯
-                      </button>
+                      <div className="agent-actions">
+                        {(() => {
+                          const isActive = agent.status === "active";
+                          const busy = togglingAgent === agent.id;
+                          const reachable = canToggleStatus(agent.status);
+                          return (
+                            <button
+                              type="button"
+                              className={`status-toggle ${isActive ? "on" : "off"} ${
+                                reachable ? "" : "unreachable"
+                              }`}
+                              onClick={() => handleToggleStatus(agent)}
+                              disabled={!reachable || busy || togglingAgent !== null}
+                              aria-pressed={isActive}
+                              title={
+                                !reachable
+                                  ? `${agent.name} is ${statusLabel(agent.status).toLowerCase()} — it cannot be paused or resumed`
+                                  : isActive
+                                    ? `Pause collection on ${agent.name}`
+                                    : `Resume collection on ${agent.name}`
+                              }
+                            >
+                              <span className="status-toggle-track">
+                                <span className="status-toggle-knob" />
+                              </span>
+                              <span className="status-toggle-text">
+                                {busy ? "…" : reachable ? (isActive ? "Active" : "Paused") : "—"}
+                              </span>
+                            </button>
+                          );
+                        })()}
+                      </div>
                     </td>
                   </tr>
                   {expandedAgent === agent.name && (

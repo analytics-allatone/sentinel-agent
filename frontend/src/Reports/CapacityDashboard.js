@@ -20,6 +20,7 @@ import {
   YAxis,
 } from "recharts";
 
+import { fetchAgents, findAgent } from "../api/agents";
 import { absoluteOverviewUrl, fetchOverview } from "./capacityApi";
 import {
   buildRows,
@@ -58,8 +59,30 @@ const MIN_BOX_PX = 12; // ignore box-zoom smudges
 // The default query window, and the presets the "Range" dropdown offers (hours).
 const DEFAULT_WINDOW_HOURS = 12;
 const WIDEN_WINDOW_HOURS = 24;
-const PRESET_HOURS = [1, 2, 3, 6, 12, 24];
-const presetLabel = (h) => `Last ${h} hour${h > 1 ? "s" : ""}`;
+const HOURS_PER_DAY = 24;
+// Everything downstream works in hours, so the multi-day presets are just
+// bigger hour counts — nothing else has to know about days.
+const PRESET_HOURS = [
+  1,
+  2,
+  3,
+  6,
+  12,
+  24,
+  2 * HOURS_PER_DAY,
+  3 * HOURS_PER_DAY,
+  5 * HOURS_PER_DAY,
+  7 * HOURS_PER_DAY,
+  15 * HOURS_PER_DAY,
+  30 * HOURS_PER_DAY,
+];
+
+/** Hours up to a day ("Last 12 hours"), days beyond it ("Last 5 days"). */
+const presetLabel = (h) => {
+  if (h < 2 * HOURS_PER_DAY) return `Last ${h} hour${h > 1 ? "s" : ""}`;
+  const days = h / HOURS_PER_DAY;
+  return `Last ${days} day${days > 1 ? "s" : ""}`;
+};
 
 /**
  * Theme-toggle glyph as inline SVG (currentColor) — the previous Unicode
@@ -884,12 +907,13 @@ function ChartPane({
 //   );
 // }
 
-function PrintReport({ payload, rows, gaps, stats, periodText, theme }) {
+function PrintReport({ payload, rows, gaps, stats, periodText, theme, hostName, ipAddress }) {
   const summary = (payload && payload.summary) || {};
   const lastIndex = Math.max(0, rows.length - 1);
 
-  // Cover = page 1, each metric gets its own page after that.
-  const pageCount = PANES.length + 2;
+  // Page 1 carries the cover and the executive summary together; each metric
+  // gets its own page after that.
+  const pageCount = PANES.length + 1;
 
   const sampleCount =
     payload && payload.sample_count != null
@@ -945,10 +969,35 @@ function PrintReport({ payload, rows, gaps, stats, periodText, theme }) {
             <div className="capacity-dash__print-meta-card">
               <div className="capacity-dash__print-meta-label">Agent</div>
 
-              <div className="capacity-dash__print-meta-value">
+              <div className="capacity-dash__print-meta-value capacity-dash__print-meta-value--small">
                 {payload ? payload.agent_name : "—"}
               </div>
             </div>
+
+
+            {/* Which machine this is, for a reader who does not know the
+                agent names. Blank when the directory did not answer. */}
+            <div className="capacity-dash__print-meta-card">
+              <div className="capacity-dash__print-meta-label">
+                Host
+              </div>
+
+              <div className="capacity-dash__print-meta-value capacity-dash__print-meta-value--small">
+                {hostName || "—"}
+              </div>
+            </div>
+
+
+            <div className="capacity-dash__print-meta-card">
+              <div className="capacity-dash__print-meta-label">
+                IP Address
+              </div>
+
+              <div className="capacity-dash__print-meta-value capacity-dash__print-meta-value--small">
+                {ipAddress || "—"}
+              </div>
+            </div>
+
 
             <div className="capacity-dash__print-meta-card">
               <div className="capacity-dash__print-meta-label">
@@ -1050,161 +1099,72 @@ function PrintReport({ payload, rows, gaps, stats, periodText, theme }) {
 
           </div> */}
 
+          {/* ── executive summary, on the same page as the title it belongs to.
+              The report information block that used to sit here is gone: the
+              meta grid above already states all six facts. ── */}
           <div className="capacity-dash__print-section-label">
-            REPORT CONTENTS
+                      EXECUTIVE SUMMARY
+                    </div>
+
+          <p className="capacity-dash__print-summary-subtitle">
+            Consolidated resource utilization overview for the selected
+            monitoring window.
+          </p>
+
+          <div className="capacity-dash__print-section-label">
+            AVERAGE UTILIZATION
           </div>
 
-          <div className="capacity-dash__print-contents">
-            <div className="capacity-dash__print-content-row">
-              <span className="capacity-dash__print-content-number">02</span>
+          <div className="capacity-dash__print-kpis">
+            {stats.map((stat) => (
+              <div className="capacity-dash__print-kpi" key={stat.key}>
+                <div className="capacity-dash__print-kpi-label">
+                  {stat.label}
+                </div>
 
-              <span className="capacity-dash__print-content-title">
-                Executive Summary
-              </span>
+                <div className="capacity-dash__print-kpi-value">
+                  {summary[stat.key] == null
+                    ? "—"
+                    : Number(summary[stat.key]).toFixed(2)}
 
-              <span className="capacity-dash__print-content-unit">
-                Overview
-              </span>
-            </div>
-
-            {PANES.map((pane, index) => (
-              <div className="capacity-dash__print-content-row" key={pane.id}>
-                <span className="capacity-dash__print-content-number">
-                  {String(index + 3).padStart(2, "0")}
-                </span>
-
-                <span className="capacity-dash__print-content-title">
-                  {pane.title}
-                </span>
-
-                <span className="capacity-dash__print-content-unit">
-                  {pane.unit}
-                </span>
+                  {summary[stat.key] != null && (
+                    <span className="capacity-dash__print-kpi-unit">
+                      {stat.unit}
+                    </span>
+                  )}
+                </div>
               </div>
             ))}
           </div>
+
+          <div className="capacity-dash__print-summary-note">
+            <strong>How to read this summary.</strong>{" "}
+            The values above are averages across the complete reporting window.
+            Short-lived spikes may have limited effect on an average, so the
+            summary should be reviewed together with the detailed evidence charts
+            on the following pages.
+            {gaps.length
+              ? ` The agent stopped reporting ${gaps.length} ${
+                  gaps.length === 1 ? "time" : "times"
+                } during this window. Reporting gaps are identified on the
+                corresponding evidence pages.`
+              : " The agent reported without interruption throughout the selected window."}
+          </div>
+
+
         </div>
+
 
         <div className="capacity-dash__print-cover-bottom">
-          <span>Generated from Guardlynx agent telemetry.</span>
+          <span>
+            Generated from Guardlynx agent telemetry.
+          </span>
 
-          <span>Capacity Monitoring Report · Page 1 of {pageCount}</span>
-        </div>
-      </section>
-
-      {/* =======================================================
-    PAGE 02 — EXECUTIVE SUMMARY
-    ======================================================= */}
-
-      <section className="capacity-dash__print-page capacity-dash__print-summary-page">
-        <div className="capacity-dash__print-page-number">02</div>
-
-        <div className="capacity-dash__print-page-heading">
-          <div className="capacity-dash__print-eyebrow">CAPACITY OVERVIEW</div>
-
-          <h2 className="capacity-dash__print-summary-title">
-            Executive Summary
-          </h2>
-
-          <div className="capacity-dash__print-summary-subtitle">
-            Consolidated resource utilization overview for the selected
-            monitoring window.
-          </div>
+          <span>
+            Capacity Monitoring Report · Page 1 of {pageCount}
+          </span>
         </div>
 
-        {/* REPORT INFORMATION */}
-
-        <div className="capacity-dash__print-section-label">
-          REPORT INFORMATION
-        </div>
-
-        <div className="capacity-dash__print-summary-meta">
-          <div className="capacity-dash__print-summary-meta-card">
-            <span>Monitoring Agent</span>
-            <strong>{payload ? payload.agent_name : "—"}</strong>
-          </div>
-
-          <div className="capacity-dash__print-summary-meta-card">
-            <span>Reporting Period</span>
-            <strong>{periodText}</strong>
-          </div>
-
-          <div className="capacity-dash__print-summary-meta-card">
-            <span>Total Samples</span>
-            <strong>{sampleCount}</strong>
-          </div>
-        </div>
-
-        {/* AVERAGE UTILIZATION */}
-
-        <div className="capacity-dash__print-section-label">
-          AVERAGE UTILIZATION
-        </div>
-
-        <div className="capacity-dash__print-kpis">
-          {stats.map((stat) => (
-            <div className="capacity-dash__print-kpi" key={stat.key}>
-              <div className="capacity-dash__print-kpi-label">{stat.label}</div>
-
-              <div className="capacity-dash__print-kpi-value">
-                {summary[stat.key] == null
-                  ? "—"
-                  : Number(summary[stat.key]).toFixed(2)}
-
-                {summary[stat.key] != null && (
-                  <span className="capacity-dash__print-kpi-unit">
-                    {stat.unit}
-                  </span>
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* MONITORING COVERAGE */}
-
-        <div className="capacity-dash__print-section-label">
-          MONITORING COVERAGE
-        </div>
-
-        <div className="capacity-dash__print-coverage">
-          {PANES.map((pane) => (
-            <div className="capacity-dash__print-coverage-row" key={pane.id}>
-              <span className="capacity-dash__print-coverage-name">
-                {pane.title}
-              </span>
-
-              <span className="capacity-dash__print-coverage-unit">
-                {pane.unit}
-              </span>
-
-              <span className="capacity-dash__print-coverage-status">
-                Available
-              </span>
-            </div>
-          ))}
-        </div>
-
-        {/* INTERPRETATION NOTE */}
-
-        <div className="capacity-dash__print-summary-note">
-          <strong>How to read this summary.</strong> The values above are
-          averages across the complete reporting window. Short-lived spikes may
-          have limited effect on an average, so the summary should be reviewed
-          together with the detailed evidence charts on the following pages.
-          {gaps.length
-            ? ` The agent stopped reporting ${gaps.length} ${
-                gaps.length === 1 ? "time" : "times"
-              } during this window. Reporting gaps are identified on the
-        corresponding evidence pages.`
-            : " The agent reported without interruption throughout the selected window."}
-        </div>
-
-        <div className="capacity-dash__print-page-footer">
-          <span>GUARDLYNX · CAPACITY MONITORING</span>
-
-          <span>CONFIDENTIAL · Page 2 of {pageCount}</span>
-        </div>
       </section>
 
       {/* =======================================================
@@ -1219,7 +1179,7 @@ function PrintReport({ payload, rows, gaps, stats, periodText, theme }) {
             key={pane.id}
           >
             <div className="capacity-dash__print-page-number">
-              {String(index + 3).padStart(2, "0")}
+              {String(index + 2).padStart(2, "0")}
             </div>
 
             <div className="capacity-dash__print-page-heading">
@@ -1297,7 +1257,7 @@ function PrintReport({ payload, rows, gaps, stats, periodText, theme }) {
               <span>GUARDLYNX · CAPACITY MONITORING</span>
 
               <span>
-                CONFIDENTIAL · Page {index + 3} of {pageCount}
+                CONFIDENTIAL · Page {index + 2} of {pageCount}
               </span>
             </div>
           </section>
@@ -1338,6 +1298,10 @@ export default function CapacityDashboard() {
   const [perRow, setPerRow] = useState(2);
 
   const [payload, setPayload] = useState(null);
+  // The registered agents, purely so the report can caption itself with the
+  // host and address behind the agent name — capacity_monitoring_events stores
+  // neither, so they come from /get-agents.
+  const [agents, setAgents] = useState([]);
   const [status, setStatus] = useState("loading"); // loading | success | error
   const [error, setError] = useState(null);
   const [hidden, setHidden] = useState({});
@@ -1451,6 +1415,18 @@ export default function CapacityDashboard() {
     };
     // Load once on mount; every later load is driven by the Load button.
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // The directory is a caption, not the report: a failure here leaves the host
+  // and IP blank and changes nothing else.
+  useEffect(() => {
+    let alive = true;
+    fetchAgents().then((list) => {
+      if (alive) setAgents(list);
+    });
+    return () => {
+      alive = false;
+    };
   }, []);
 
   // persist the theme choice
@@ -2048,6 +2024,13 @@ export default function CapacityDashboard() {
   const summary = (payload && payload.summary) || {};
   const isEmpty = status !== "loading" && payload != null && rows.length === 0;
 
+  // Match on what the report was actually built for, not what the field says —
+  // the two differ while an edited name is waiting for Load.
+  const loadedAgentName = (payload && payload.agent_name) || "";
+  const agentMeta = findAgent(agents, loadedAgentName);
+  const hostName = (agentMeta && agentMeta.hostName) || "";
+  const ipAddress = (agentMeta && agentMeta.ipAddress) || "";
+
   const periodText = `${fromLocal.replace("T", " ")} – ${toLocal.replace("T", " ")}`;
 
   return (
@@ -2057,8 +2040,29 @@ export default function CapacityDashboard() {
           <h1 className="capacity-dash__title">Capacity monitoring</h1>
           <p className="capacity-dash__subtitle">
             {payload
-              ? `${payload.agent_name} · ${rows.length} samples · times in IST`
-              : "times in IST"}
+              ? (
+              <>
+                <span className="capacity-dash__subtitle-agent">{payload.agent_name}</span>
+                {hostName && (
+                  <>
+                    {" · "}
+                    <span title="Host name">{hostName}</span>
+                  </>
+                )}
+                {ipAddress && (
+                  <>
+                    {" · "}
+                    <span className="capacity-dash__subtitle-ip" title="IP address">
+                      {ipAddress}
+                    </span>
+                  </>
+                )}
+                {` · ${rows.length} samples · times in IST`
+             }
+              </>
+            ) : (
+              "times in IST"
+            )}
           </p>
         </div>
 
@@ -2713,6 +2717,8 @@ export default function CapacityDashboard() {
           stats={STATS}
           periodText={periodText}
           theme={theme}
+          hostName={hostName}
+          ipAddress={ipAddress}
         />
       )}
 

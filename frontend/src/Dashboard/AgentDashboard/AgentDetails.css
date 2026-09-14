@@ -693,3 +693,25 @@ body {
     max-height: 160px;
   }
 }
+/* ── embedded Grafana dashboard ──────────────────────────────────────────
+   The frame fills this box; the box is what decides how tall it is, so the
+   dashboard does not collapse to nothing inside a flex column. */
+.grafana-card-0 {
+  height: auto;
+}
+
+.agent-grafana-frame {
+  height: 640px;
+  min-height: 480px;
+  margin-top: 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  overflow: hidden;
+  background: var(--bg-card);
+}
+
+@media (max-width: 900px) {
+  .agent-grafana-frame {
+    height: 520px;
+  }
+}
