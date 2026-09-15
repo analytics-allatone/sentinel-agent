@@ -1,3 +1,4 @@
+import logging
 from datetime import datetime, date
 from typing import Optional, Dict, Any, List
 
@@ -11,11 +12,12 @@ from models.db_events_models import (
 )
 
 try:
-    from schemas.v1.standard_schema import standard_success_response          # adjust path if different
+    from utils.responses import standard_success_response          # adjust path if different
 except Exception:
     def standard_success_response(data=None, message="ok"):
         return {"success": True, "message": message, "data": data}
 
+log = logging.getLogger("db_data_read")
 router = APIRouter(prefix="/api/db", tags=["db-data"])
 
 ENGINE_MODEL = {"postgresql": PostgresDbEvents, "mysql": MysqlDbEvents, "mariadb": MysqlDbEvents,
@@ -46,27 +48,32 @@ def _row_to_dict(row, model, compact=False):
 
 @router.get("/started")
 async def started_dbs(agent_name: str, db: AsyncSession = Depends(get_async_db)):
-    """List the databases that have stored data for this agent (by agent_name)."""
-    items = []
+    """List the databases that have stored data for this agent (by agent_name).
+
+    Each engine is queried independently; if one fails (e.g. its table doesn't
+    exist yet) we roll back and skip it instead of poisoning the transaction.
+    """
+    items: List[dict] = []
     for engine, model in UNIQUE:
-        dcols = [getattr(model, c) for c in ("db_host", "service_name", "target_name")
-                 if hasattr(model, c)]
-        base = select(model).where(model.agent_name == agent_name)
-        try:  # latest row per (host, service_name, target) — Postgres DISTINCT ON
-            stmt = base.distinct(*dcols).order_by(*dcols, model.timestamp.desc()) if dcols \
-                   else base.order_by(model.timestamp.desc())
-            rows = (await db.execute(stmt)).scalars().all()
-        except Exception:  # fallback: dedup in python
+        try:
             rows_all = (await db.execute(
-                base.order_by(model.timestamp.desc()).limit(200))).scalars().all()
-            seen, rows = set(), []
-            for r in rows_all:
-                k = (getattr(r, "db_host", None), getattr(r, "service_name", None),
-                     getattr(r, "target_name", None))
-                if k in seen:
-                    continue
-                seen.add(k); rows.append(r)
-        for r in rows:
+                select(model)
+                .where(model.agent_name == agent_name)
+                .order_by(model.timestamp.desc())
+                .limit(500)
+            )).scalars().all()
+        except Exception as ex:                 # noqa: BLE001
+            await db.rollback()                 # clear the aborted tx so next engine can run
+            log.warning("started_dbs: skipping %s (%s)", engine, ex)
+            continue
+
+        seen = set()
+        for r in rows_all:                      # latest-first, so first per key wins
+            key = (getattr(r, "db_host", None), getattr(r, "service_name", None),
+                   getattr(r, "target_name", None))
+            if key in seen:
+                continue
+            seen.add(key)
             ts = getattr(r, "timestamp", None)
             items.append({
                 "agent_name": agent_name, "engine": engine,
@@ -81,35 +88,57 @@ async def started_dbs(agent_name: str, db: AsyncSession = Depends(get_async_db))
     return standard_success_response(data=items, message="started databases")
 
 
+def _service_col(model):
+    """The column that holds the service identifier for a row. Prefer a real
+    service_name column; fall back to target_name (where Oracle's service is
+    stored when the table has no service_name column)."""
+    if hasattr(model, "service_name"):
+        return model.service_name
+    if hasattr(model, "target_name"):
+        return model.target_name
+    return None
+
+
 @router.get("/data")
 async def db_data(
-    agent_name: str,
     engine: str = Query(..., description="postgresql|mysql|mariadb|oracle|redis|mongodb"),
-    host: Optional[str] = Query(None, description="db_host; omit for any"),
-    service_name: Optional[str] = Query(None, description="oracle service; omit for any"),
+    service_name: str = Query(..., description="the service / target name you started"),
+    agent_name: Optional[str] = Query(None, description="optional: narrow to one agent"),
     limit: int = Query(1, ge=1, le=500, description=">1 returns a time series"),
     compact: bool = Query(False, description="drop null columns"),
     db: AsyncSession = Depends(get_async_db),
 ):
-    """Fetch the stored health row(s) for one started database, as stored."""
+    """Fetch the stored health row(s) for one database by engine + service_name.
+
+    service_name is matched against the service_name column if the table has one,
+    otherwise against target_name.
+    """
     model = ENGINE_MODEL.get(_canon(engine))
     if model is None:
         raise HTTPException(400, f"unknown engine '{engine}'")
 
-    stmt = select(model).where(model.agent_name == agent_name)
-    if host is not None:
-        stmt = stmt.where(model.db_host == host)
-    if service_name is not None and hasattr(model, "service_name"):
-        stmt = stmt.where(model.service_name == service_name)
+    svc = _service_col(model)
+    if svc is None:
+        raise HTTPException(400, f"{engine} table has no service_name/target_name column to match on")
+
+    stmt = select(model).where(svc == service_name)
+    if agent_name and hasattr(model, "agent_name"):
+        stmt = stmt.where(model.agent_name == agent_name)
     stmt = stmt.order_by(model.timestamp.desc()).limit(limit)
 
-    rows = (await db.execute(stmt)).scalars().all()
+    try:
+        rows = (await db.execute(stmt)).scalars().all()
+    except Exception as ex:                      # noqa: BLE001
+        await db.rollback()                      # don't hand a poisoned session back to the pool
+        log.exception("db_data query failed for %s", engine)
+        raise HTTPException(500, f"query failed for {engine}: {ex}")
+
     data = [_row_to_dict(r, model, compact) for r in rows]
     if not data:
-        raise HTTPException(404, "no stored data yet for that database "
-                                 "(not inspected yet, or host/service filter too narrow)")
+        raise HTTPException(404, f"no stored data for {engine} service '{service_name}' "
+                                 "(not inspected yet, or name doesn't match what was stored)")
 
     return standard_success_response(
-        data={"engine": _canon(engine), "host": host, "service_name": service_name,
-              "count": len(data), "latest": data[0], "rows": data},
+        data={"engine": _canon(engine), "service_name": service_name,
+              "matched_on": svc.key, "count": len(data), "latest": data[0], "rows": data},
         message="stored database data")
