@@ -168,7 +168,7 @@ class SentinelAgent:
 
     def wait(self):
         """Block the main thread until stopped. Call from the main thread."""
-        install_signal_handlers(self.stop)      # handles SIGINT and SIGTERM
+        # install_signal_handlers(self.stop)      # handles SIGINT and SIGTERM
         try:
             while self._running:
                 time.sleep(0.5)
