@@ -25,6 +25,7 @@ import CapacityDashboard from "./Reports/CapacityDashboard";
 import AgentInfoDashboard from "./Reports/AgentInfoDashboard";
 import Unauthorized from "./pages/Unauthorized/Unauthorized";
 import NotFound from "./pages/NotFound/NotFound";
+import DbHealthPage from "./DbHealth/DbHealthPage";
 import Messaging from "./Messaging/Messaging";
 import ChannelsManager from "./Channels/ChannelsManager";
 
@@ -132,6 +133,13 @@ function AppContent() {
                 }
               />
             }
+          />
+
+          {/* One database's stored health record. The services panel hands
+              over ?agent=…&engine=…&service=… */}
+          <Route
+            path="/app/db-health"
+            element={<ProtectedRoute element={<DbHealthPage />} />}
           />
 
           {/* Anything that matched none of the above — a mistyped, moved or

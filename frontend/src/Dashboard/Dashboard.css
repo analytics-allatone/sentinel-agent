@@ -2827,3 +2827,248 @@
   color: #6947e8;
   background: #f6f4ff;
 }
+
+/* ── available services: engines, each expanding to its own services ─────── */
+.svc-th-expand,
+.svc-td-expand {
+  width: 34px;
+  text-align: center;
+}
+
+/* keeps the engine column aligned with the rows that do have a control */
+.svc-expand-empty {
+  display: inline-block;
+  width: 24px;
+  height: 24px;
+}
+
+.svc-count {
+  color: #475467;
+  font-size: 12px;
+}
+
+.svc-none {
+  color: #98a2b3;
+  font-size: 12px;
+  font-style: italic;
+}
+
+.svc-link-btn {
+  border: 0;
+  background: none;
+  color: #6654e8;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.svc-link-btn:hover {
+  text-decoration: underline;
+}
+
+/* the nested table sits inside one cell of the engine row */
+.svc-detail-row > td {
+  padding: 0 0 10px 34px;
+  background: #fbfbfd;
+}
+
+.svc-detail-table {
+  width: 100%;
+  border-collapse: collapse;
+  border: 1px solid #eef0f4;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #fff;
+}
+
+.svc-detail-table th {
+  padding: 8px 12px;
+  border-bottom: 1px solid #eef0f4;
+  background: #f7f8fa;
+  color: #667085;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  text-align: left;
+}
+
+.svc-detail-table td {
+  padding: 9px 12px;
+  border-bottom: 1px solid #f4f5f7;
+  font-size: 12px;
+  color: #344054;
+}
+
+.svc-detail-table tr:last-child td {
+  border-bottom: none;
+}
+
+.svc-detail-name {
+  font-weight: 600;
+}
+
+/* the engine row's own add button — same shape as the panel-level one */
+.svc-add-btn {
+  padding: 5px 10px;
+  border: 1px solid #dfe4ec;
+  border-radius: 6px;
+  background: #fff;
+  color: #475467;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
+}
+
+.svc-add-btn:hover {
+  border-color: #6654e8;
+  color: #6654e8;
+  background: #f6f4ff;
+}
+
+/* toggle + delete sit together in the service row's action cell */
+.svc-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.svc-delete-btn {
+  padding: 5px 10px;
+  border: 1px solid #f0d3d3;
+  border-radius: 6px;
+  background: #fff;
+  color: #b42318;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.svc-delete-btn:hover:not(:disabled) {
+  border-color: #d64545;
+  background: #fef4f4;
+}
+
+.svc-delete-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* deleting stops the service on the agent as well, so the row asks first */
+.svc-confirm {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 6px 3px 9px;
+  border: 1px solid #f0d3d3;
+  border-radius: 6px;
+  background: #fef4f4;
+}
+
+.svc-confirm-text {
+  color: #b42318;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.svc-confirm-yes,
+.svc-confirm-no {
+  padding: 3px 9px;
+  border-radius: 5px;
+  border: 1px solid transparent;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.svc-confirm-yes {
+  background: #d64545;
+  color: #fff;
+}
+
+.svc-confirm-yes:hover:not(:disabled) {
+  background: #b42318;
+}
+
+.svc-confirm-no {
+  border-color: #e4d5d5;
+  background: #fff;
+  color: #667085;
+}
+
+.svc-confirm-yes:disabled,
+.svc-confirm-no:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* the panel's own "it worked" line, now that the popup closes on save */
+.services-status.services-ok {
+  color: #067647;
+  background: #f2fbf6;
+  border: 1px solid #a9dfc4;
+  border-radius: 8px;
+  padding: 8px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+/* ── service table: two columns, the right one holding two controls ──────
+   The engine table's `.svc-th-action` caps its action column at 130px, which
+   is narrower than a toggle plus a Delete button — so this table sizes its own,
+   and aligns the header over the content instead of against the opposite edge. */
+.svc-detail-table th.svc-detail-th-name {
+  width: auto;
+}
+
+.svc-detail-table th.svc-detail-th-action,
+.svc-detail-table td.svc-detail-td-action {
+  width: 1%;
+  white-space: nowrap;
+  text-align: right;
+}
+
+/* "Delete?  Yes  No" is wider than "Delete", so the column is held at the
+   larger of the two and the row does not jump when it appears */
+.svc-detail-table td.svc-detail-td-action {
+  min-width: 210px;
+}
+
+.svc-detail-table .svc-actions {
+  justify-content: flex-end;
+}
+
+/* the toggle is the row's main control, so it reads at a fixed width rather
+   than resizing between "Enabled" and "Disabled" */
+.svc-detail-table .status-toggle {
+  min-width: 96px;
+  justify-content: flex-start;
+}
+
+/* the service name is the way into that database's stored rows */
+.svc-name-btn {
+  border: 0;
+  padding: 0;
+  background: none;
+  color: #6654e8;
+  font-family: inherit;
+  font-size: inherit;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+
+.svc-name-btn:hover {
+  text-decoration: underline;
+}
