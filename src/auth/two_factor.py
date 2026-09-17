@@ -6,7 +6,7 @@ from fastapi import HTTPException
 import jwt 
 import pyotp
 import qrcode
-from jwt_auth import (JWT_SECRET, JWT_ALGORITHM)
+from auth.jwt_auth import (JWT_SECRET, JWT_ALGORITHM)
 
 ISSUER = "Sentinel"
 CHALLENGE_TTL_MINUTES = 5
