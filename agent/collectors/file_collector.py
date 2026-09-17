@@ -160,7 +160,9 @@ class SentinelFileHandler(FileSystemEventHandler):
         # Skip modify events where hash didn't change (metadata-only touch)
         if action == EventAction.UPDATE and old_sha and old_sha == event.file_sha256:
             return
+        print("pushing file change")
         self._dispatch(event.to_dict(), self.machine_info)
+        print("pushed")
 
     def on_created(self, event):
         if not event.is_directory:
