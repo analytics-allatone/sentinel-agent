@@ -6,7 +6,7 @@ from fastapi import HTTPException
 import jwt 
 import pyotp
 import qrcode
-from auth.jwt_auth import (JWT_SECRET, JWT_ALGORITHM)
+from auth.jwt_auth import (JWT_SECRET_KEY, ALGORITHM)
 
 ISSUER = "Sentinel"
 CHALLENGE_TTL_MINUTES = 5
@@ -27,13 +27,13 @@ def create_challenge_token(email) -> str:
         "scope": "2fa_challenge",
         "exp": datetime.now(timezone.utc) + timedelta(minutes=CHALLENGE_TTL_MINUTES),
     }
-    return jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
+    return jwt.encode(payload, JWT_SECRET_KEY, algorithm=ALGORITHM)
 
 
 
 def read_challenge_token(token: str):
     try:
-        payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+        payload = jwt.decode(token, JWT_SECRET_KEY, algorithms=[ALGORITHM])
     except:
         raise HTTPException(status_code=401, detail="Challenge expired or invalid, please log in again")
     if payload.get("scope") != "2fa_challenge":
