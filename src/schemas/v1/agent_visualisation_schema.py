@@ -25,3 +25,4 @@ class CapacityMonitoringOverviewResponse(BaseModel):
     agent_cpu_utilization_series : list
     agent_memory_utilization_series : list
     agent_bandwidth_mbps_series : list
+    disk_partitions: list
