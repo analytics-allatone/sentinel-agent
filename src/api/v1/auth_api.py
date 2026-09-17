@@ -101,7 +101,7 @@ async def signup(req: SignupRequest ,  db: AsyncSession = Depends(get_async_db))
     hashed_password = hash_password(req.password)
 
     new_user = Users(
-        name = req.last,
+        name = req.name,
         email = req.email,
         password = hashed_password,
         role = "super_admin"
