@@ -125,7 +125,9 @@ class ResourceCollector:
         while not self._stop.wait(self.poll_interval):
             try:
                 event = self._collect()
+                print("pushin data")
                 self.dispatch(event, self.machine_info)
+                print("pushed")
             except Exception as e:
                 self.dispatch(
                     {"category": "resource", "action": "resource_error",
