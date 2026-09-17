@@ -57,6 +57,7 @@ const ZOOM_OUT = 1.25;
 const MIN_BOX_PX = 12; // ignore box-zoom smudges
 
 // The default query window, and the presets the "Range" dropdown offers (hours).
+const CHART_MAX_POINTS = 2500;
 const DEFAULT_WINDOW_HOURS = 12;
 const WIDEN_WINDOW_HOURS = 24;
 const HOURS_PER_DAY = 24;
@@ -506,7 +507,7 @@ function CapacityTooltip({ active, payload, lines, unit }) {
  * No syncId: each pane now zooms to its own window, so a shared crosshair would
  * point at a different sample in every pane. Hover is per-pane, like the zoom.
  */
-function ChartBody({
+const ChartBody = React.memo(function ChartBody({
   lines,
   data,
   rows,
@@ -609,7 +610,8 @@ function ChartBody({
       {chart}
     </ResponsiveContainer>
   );
-}
+});
+
 
 /** Pane title + unit + toggleable legend, shared by screen and print. */
 function PaneHeader({ pane, lines, hidden, onToggle }) {
@@ -662,7 +664,7 @@ function PaneHeader({ pane, lines, hidden, onToggle }) {
 // the Full range strip and its buttons; the pane adopts it whenever it changes,
 // but zooming THIS pane (wheel, drag, box, its own buttons) only touches local
 // state — so the graphs zoom independently, and Full range still moves them all.
-function ChartPane({
+const ChartPane = React.memo(function ChartPane({
   pane,
   rows,
   masterRange,
@@ -689,8 +691,29 @@ function ChartPane({
   });
 
   const [start, end] = range;
+
+  const visualRows = useMemo(() => {
+  if (!rows.length) return [];
+
+  const rangeLength = end - start + 1;
+
+  // Small ranges: render original data.
+  if (rangeLength <= CHART_MAX_POINTS) {
+    return rows.slice(start, end + 1);
+  }
+
+  const result = [];
+  const step = (rangeLength - 1) / (CHART_MAX_POINTS - 1);
+
+  for (let i = 0; i < CHART_MAX_POINTS; i += 1) {
+    const sourceIndex = start + Math.round(i * step);
+    result.push(rows[sourceIndex]);
+  }
+
+  return result;
+}, [rows, start, end]);
   // Slicing is what makes the Y axis rescale to the window instead of the whole run.
-  const visible = useMemo(() => rows.slice(start, end + 1), [rows, start, end]);
+  // const visible = useMemo(() => rows.slice(start, end + 1), [rows, start, end]);
   const visibleGaps = useMemo(
     () => gaps.filter((gap) => gap.at > start && gap.at < end),
     [gaps, start, end],
@@ -700,7 +723,10 @@ function ChartPane({
     () => paintLines(pane.lines, theme),
     [pane.lines, theme],
   );
-  const shown = painted.filter((line) => !hidden[line.key]);
+ const shown = useMemo(
+  () => painted.filter((line) => !hidden[line.key]),
+  [painted, hidden],
+);
 
   const windowed = start > 0 || end < lastIndex;
   const from = rows[start] && rows[start].ms;
@@ -758,17 +784,17 @@ function ChartPane({
         {...handlers}
         role="presentation"
       >
-        <ChartBody
-          lines={shown}
-          data={visible}
-          rows={rows}
-          gaps={visibleGaps}
-          start={start}
-          end={end}
-          theme={theme}
-          unit={pane.unit}
-          height={215}
-        />
+       <ChartBody
+  lines={shown}
+  data={visualRows}
+  rows={rows}
+  gaps={visibleGaps}
+  start={start}
+  end={end}
+  theme={theme}
+  unit={pane.unit}
+  height={215}
+/>
 
         {selection && (
           <div
@@ -783,7 +809,7 @@ function ChartPane({
       </div>
     </section>
   );
-}
+});
 
 // ════════════════════════════════════════════════════════════════
 //  Printable report — one chart per page, screen-hidden
@@ -1347,6 +1373,64 @@ export default function CapacityDashboard() {
   const rows = useMemo(() => buildRows(payload), [payload]);
   const gaps = useMemo(() => findGaps(rows), [rows]);
   const lastIndex = Math.max(0, rows.length - 1);
+
+  
+
+const chartRows = useMemo(() => {
+  if (rows.length <= CHART_MAX_POINTS) {
+    return rows;
+  }
+
+  const result = [];
+  const step = (rows.length - 1) / (CHART_MAX_POINTS - 1);
+
+  for (let i = 0; i < CHART_MAX_POINTS; i += 1) {
+    const sourceIndex = Math.round(i * step);
+    result.push(rows[sourceIndex]);
+  }
+
+  return result;
+}, [rows]);
+
+const chartStartIndex = useMemo(() => {
+  if (!chartRows.length) return 0;
+
+  const target = masterRange[0];
+
+  let closestIndex = 0;
+  let closestDistance = Infinity;
+
+  for (let i = 0; i < chartRows.length; i += 1) {
+    const distance = Math.abs(chartRows[i].i - target);
+
+    if (distance < closestDistance) {
+      closestDistance = distance;
+      closestIndex = i;
+    }
+  }
+
+  return closestIndex;
+}, [chartRows, masterRange]);
+
+const chartEndIndex = useMemo(() => {
+  if (!chartRows.length) return 0;
+
+  const target = masterRange[1];
+
+  let closestIndex = chartRows.length - 1;
+  let closestDistance = Infinity;
+
+  for (let i = 0; i < chartRows.length; i += 1) {
+    const distance = Math.abs(chartRows[i].i - target);
+
+    if (distance < closestDistance) {
+      closestDistance = distance;
+      closestIndex = i;
+    }
+  }
+
+  return closestIndex;
+}, [chartRows, masterRange]);
 
   // The inputs are IST wall clock; the API wants naive UTC — istInputToApi bridges
   // it and adds the seconds (00 for the window start, 59 for the end).
@@ -2010,7 +2094,17 @@ export default function CapacityDashboard() {
 
   const widenTo24h = () => applyPreset(WIDEN_WINDOW_HOURS);
 
-  const toggle = (key) => setHidden((h) => ({ ...h, [key]: !h[key] }));
+  // const toggle = (key) => setHidden((h) => ({ ...h, [key]: !h[key] }));
+
+  const toggle = useCallback(
+  (key) => {
+    setHidden((h) => ({
+      ...h,
+      [key]: !h[key],
+    }));
+  },
+  [],
+);
 
   // These drive the SHARED window from the Full range strip, so they move every
   // graph together. Per-graph zoom lives inside each ChartPane.
@@ -2357,7 +2451,8 @@ export default function CapacityDashboard() {
             </header>
             <ResponsiveContainer width="100%" height={92}>
               <AreaChart
-                data={rows}
+                // data={rows}
+                 data={chartRows}
                 margin={{ top: 4, right: 14, bottom: 0, left: 4 }}
               >
                 <YAxis hide domain={["auto", "auto"]} />
@@ -2380,27 +2475,42 @@ export default function CapacityDashboard() {
                     travellerWidth={8}
                     stroke={CHART_CHROME[theme].cursor}
                     fill="transparent"
-                    startIndex={masterRange[0]}
-                    endIndex={masterRange[1]}
+                    startIndex={chartStartIndex}
+endIndex={chartEndIndex}
                     onChange={(next) => {
-                      if (
-                        !next ||
-                        next.startIndex == null ||
-                        next.endIndex == null
-                      )
-                        return;
-                      if (
-                        next.startIndex === masterRange[0] &&
-                        next.endIndex === masterRange[1]
-                      )
-                        return;
-                      setMasterRange(
-                        clampRange(next.startIndex, next.endIndex, lastIndex),
-                      );
-                    }}
-                    tickFormatter={(i) =>
-                      rows[i] ? formatClock(rows[i].ms) : ""
-                    }
+  if (
+    !next ||
+    next.startIndex == null ||
+    next.endIndex == null
+  ) {
+    return;
+  }
+
+  const startRow = chartRows[next.startIndex];
+  const endRow = chartRows[next.endIndex];
+
+  if (!startRow || !endRow) {
+    return;
+  }
+
+  const nextStart = startRow.i;
+  const nextEnd = endRow.i;
+
+  if (
+    nextStart === masterRange[0] &&
+    nextEnd === masterRange[1]
+  ) {
+    return;
+  }
+
+  setMasterRange(
+    clampRange(nextStart, nextEnd, lastIndex),
+  );
+}}
+                    tickFormatter={(i) => {
+          const row = chartRows.find((item) => item.i === i);
+          return row ? formatClock(row.ms) : "";
+        }}
                   />
                 )}
               </AreaChart>
