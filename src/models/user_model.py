@@ -1,6 +1,6 @@
 from sqlalchemy import Boolean, Column,Integer, String
 from db.base import Base
-
+from sqlalchemy.dialects.postgresql import JSONB
 
 
 
@@ -12,6 +12,8 @@ class Users(Base):
     email = Column(String , unique = True , nullable = False)
     password = Column(String , nullable = False)
     role = Column(String , nullable = False)
+    two_fa_enabled = Column(Boolean , default = False)
+    two_fa_secret = Column(String)
     is_active = Column(Boolean , default = True)
 
 

@@ -1,9 +1,11 @@
 from sqlalchemy.future import select
 from fastapi import APIRouter , Depends , HTTPException , status
 from sqlalchemy.ext.asyncio import AsyncSession
-
-
-
+import pyotp
+import qrcode
+import base64
+import io
+import secrets
 
 ###############################################
 #                                             #
@@ -19,15 +21,17 @@ from schemas.v1.auth_schema import(
     SignupRequest , SignupResponse,
     UpdateUserRequest , UpdateUserResponse,
     RefreshAccessTokenRequest , RefreshAccessTokenResponse,
-    DeleteUserRequest , GetUsersResponse , ApplicationUser
-)
+    DeleteUserRequest , GetUsersResponse , ApplicationUser,
+    TwoFASetupResponse , TwoFACodeRequest , TwoFAEnableResponse,
+    TwoFAVerifyRequest , TwoFADisableRequest
+    )
 from auth.crypto import hash_password , verify_password 
 
 from models.user_model import Users
 
 from auth.jwt_auth import create_access_token , create_refresh_token , verify_token , verify_superadmin_token , verify_admin_token
 
-
+from auth.two_factor import check_code , read_challenge_token , create_challenge_token
 
 
 
@@ -52,17 +56,30 @@ async def login(req: LoginRequest ,  db: AsyncSession = Depends(get_async_db)):
     
     if not verify_password(password , user.password):
         raise HTTPException(status_code=401, detail="Invalid password")
-    
-    token_data = {
-        "id" : user.id,
-        "email": user.email,
-        "role" : user.role
-    }
 
-    access_token = create_access_token(token_data)
-    refresh_token = create_refresh_token(token_data)
-    response = LoginResponse(access_token = access_token , refresh_token = refresh_token)
-    return  standard_success_response(data = response , message = "Logged in successfully")
+    two_fa_enabled = user.two_fa_enabled
+    
+    
+    access_token = None
+    refresh_token = None
+    response = None
+    challenge_token = None
+    if two_fa_enabled:
+        challenge_token = create_challenge_token(user.email)
+        response = LoginResponse(access_token = access_token , refresh_token = refresh_token , two_fa_enabled=two_fa_enabled , challenge_token = challenge_token)
+        return  standard_success_response(data = response , message = "Enter your authentication code")
+
+    else:
+        token_data = {
+            "id" : user.id,
+            "email": user.email,
+            "role" : user.role
+        }
+        
+        access_token = create_access_token(token_data)
+        refresh_token = create_refresh_token(token_data)
+        response = LoginResponse(access_token = access_token , refresh_token = refresh_token , two_fa_enabled=two_fa_enabled , challenge_token = challenge_token)
+        return  standard_success_response(data = response , message = "Logged in successfully")
 
 
 
@@ -73,11 +90,12 @@ async def login(req: LoginRequest ,  db: AsyncSession = Depends(get_async_db)):
 @auth_router.post("/signup" , response_model = standard_success_response[SignupResponse] , status_code=201)
 async def signup(req: SignupRequest ,  db: AsyncSession = Depends(get_async_db)):
 
-    result = await db.execute(select(Users).where(Users.email == req.email))
-    existing_user = result.scalars().first()
-
-    if existing_user:
-        raise HTTPException(status_code=401, detail="User already exists with this email, please login")
+    any_user = await db.execute(select(Users.id).limit(1))
+    if any_user.scalars().first() is not None:
+        raise HTTPException(
+            status_code=403,
+            detail="Signup is closed. Ask a super admin to create your account.",
+        )
     
 
     hashed_password = hash_password(req.password)
@@ -86,7 +104,7 @@ async def signup(req: SignupRequest ,  db: AsyncSession = Depends(get_async_db))
         name = req.last,
         email = req.email,
         password = hashed_password,
-        role = req.role
+        role = "super_admin"
     )
     db.add(new_user)
     await db.commit()
@@ -214,3 +232,102 @@ async def deleteUser(req: DeleteUserRequest, db: AsyncSession = Depends(get_asyn
     await db.delete(existing_user)
     await db.commit()
     return None
+
+
+
+
+@auth_router.post("/2fa/setup", response_model=standard_success_response[TwoFASetupResponse])
+async def two_fa_setup(db: AsyncSession = Depends(get_async_db),
+                       user: dict = Depends(verify_token)):
+    user = (await db.execute(
+        select(Users).where(Users.id == user["id"]))).scalars().first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    if user.two_fa_enabled:
+        raise HTTPException(status_code=409, detail="2FA is already enabled")
+
+    secret = pyotp.random_base32()
+    
+    user.two_fa_secret = secret
+    await db.commit()
+
+    uri = pyotp.TOTP(secret).provisioning_uri(name=user.email, issuer_name="sentinel")
+
+    buf = io.BytesIO()
+    qrcode.make(uri).save(buf, format="PNG")
+    qr_b64 = base64.b64encode(buf.getvalue()).decode()
+
+    res =  TwoFASetupResponse(secret=secret, otpauth_uri=uri, qr_code_png_base64=qr_b64)
+    return  standard_success_response(data = res , message = "2FA setup sended successfully")
+
+
+
+@auth_router.post("/2fa/enable", response_model=standard_success_response[TwoFAEnableResponse])
+async def two_fa_enable(req: TwoFACodeRequest,
+                        db: AsyncSession = Depends(get_async_db),
+                        user_claims: dict = Depends(verify_token)):
+    user = (await db.execute(
+        select(Users).where(Users.id == user_claims["id"]))).scalars().first()
+    if not user or not user.two_fa_secret:
+        raise HTTPException(status_code=400, detail="Run /2fa/setup first")
+    if user.two_fa_enabled:
+        raise HTTPException(status_code=409, detail="2FA is already enabled")
+
+    if not check_code(user, req.code):
+        raise HTTPException(status_code=401, detail="Invalid code")
+
+    user.two_fa_enabled = True
+    await db.commit()
+
+    # shown exactly once - they are hashed in the database and unrecoverable
+    res = TwoFAEnableResponse(two_fa_enabled=True)
+    return  standard_success_response(data = res , message = "2FA enabled successfully")
+
+
+
+
+@auth_router.post("/login/2fa" , response_model = standard_success_response)
+async def login_two_fa(req: TwoFAVerifyRequest,
+                       db: AsyncSession = Depends(get_async_db)):
+    user_id = read_challenge_token(req.challenge_token)
+
+    user = (await db.execute(select(Users).where(Users.id == user_id))).scalars().first()
+    if not user or not user.two_fa_enabled:
+        raise HTTPException(status_code=401, detail="Invalid challenge")
+
+    used_backup = False
+    if not check_code(user.two_fa_secret, req.code):
+        raise HTTPException(status_code=401, detail="Invalid code")
+    await db.commit()
+
+    token_data = {"id": user.id, "email": user.email, "role": user.role}
+    res = {
+        "access_token": create_access_token(token_data),
+        "refresh_token": create_refresh_token(token_data),
+    }
+    return standard_success_response(data = res , message = "2FA login successful")
+
+
+
+
+@auth_router.post("/2fa/disable")
+async def two_fa_disable(req: TwoFADisableRequest,
+                         db: AsyncSession = Depends(get_async_db),
+                         user_claims: dict = Depends(verify_token)):
+    user = (await db.execute(
+        select(Users).where(Users.id == user_claims["id"]))).scalars().first()
+    if not user or not user.two_fa_enabled:
+        raise HTTPException(status_code=409, detail="2FA is not enabled")
+
+    # password AND a code: a stolen session alone must not be able to turn 2FA off
+    if not verify_password(req.password, user.password):
+        raise HTTPException(status_code=401, detail="Invalid password")
+    if not check_code(user, req.code):
+        raise HTTPException(status_code=401, detail="Invalid code")
+
+    user.two_fa_enabled = False
+    user.two_fa_secret = None
+    await db.commit()
+    return {"two_fa_enabled": False}
+
+
