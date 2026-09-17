@@ -85,11 +85,8 @@ async def mqtt_background_consumer():
                         master_dict[agent_name]["event_data"] = []
                     master_dict[agent_name]["event_data"].append(event_data)
                     if len(master_dict[agent_name]["event_data"]) >= BATCH_SIZE:
-                        print("pushign in db")
                         try:
-                            print(master_dict[agent_name])
                             await push_data_to_db(master_dict[agent_name])
-                            print("pushed")
                         except Exception as e:
                             print(f"exception in pushing in db {str(e)}")
                         master_dict[agent_name]["event_data"] = []
