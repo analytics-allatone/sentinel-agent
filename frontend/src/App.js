@@ -11,6 +11,7 @@ import VerifyOtp from "./VerifyOtp/VerifyOtp";
 import InstallationProcess from "./InstallationProcess/InstallationProcess";
 import AgentDetails from "./Dashboard/AgentDashboard/AgentDetails";
 import ProtectedRoute from "./components/ProtectedRoute";
+import ErrorBoundary from "./components/ErrorBoundary/ErrorBoundary";
 import { LoadingProvider } from "./context/LoadingContext";
 import Loader from "./components/Loader/Loader";
 import { useEffect, useState } from "react";
@@ -24,6 +25,7 @@ import CapacityDashboard from "./Reports/CapacityDashboard";
 import AgentInfoDashboard from "./Reports/AgentInfoDashboard";
 import Unauthorized from "./pages/Unauthorized/Unauthorized";
 import NotFound from "./pages/NotFound/NotFound";
+import DbHealthPage from "./DbHealth/DbHealthPage";
 import Messaging from "./Messaging/Messaging";
 import ChannelsManager from "./Channels/ChannelsManager";
 
@@ -42,7 +44,8 @@ function AppContent() {
     <div className="App">
       <Loader isVisible={isLoading} />
       <BrowserRouter>
-        <Routes>
+        <ErrorBoundary>
+          <Routes>
           {/* Root → send users into the /app-prefixed app */}
           <Route path="/" element={<Navigate to="/app/login" replace />} />
 
@@ -132,10 +135,18 @@ function AppContent() {
             }
           />
 
+          {/* One database's stored health record. The services panel hands
+              over ?agent=…&engine=…&service=… */}
+          <Route
+            path="/app/db-health"
+            element={<ProtectedRoute element={<DbHealthPage />} />}
+          />
+
           {/* Anything that matched none of the above — a mistyped, moved or
               stale address. Must stay last: it matches everything. */}
           <Route path="*" element={<NotFound />} />
-        </Routes>
+          </Routes>
+        </ErrorBoundary>
       </BrowserRouter>
     </div>
   );

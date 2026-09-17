@@ -93,6 +93,31 @@ function readAgentStatus(body, fallback) {
   return settled ? String(settled).toLowerCase() : fallback;
 }
 
+/**
+ * The port each engine listens on unless it was moved. Filling it in saves
+ * the common case a lookup; it is a starting value, not a claim — the field
+ * stays editable.
+ */
+const ENGINE_DEFAULT_PORTS = {
+  postgresql: 5432,
+  postgres: 5432,
+  mysql: 3306,
+  mariadb: 3306,
+  mongodb: 27017,
+  redis: 6379,
+  oracle: 1521,
+  sqlserver: 1433,
+  nginx: 80,
+  apache: 80,
+  httpd: 80,
+  tomcat: 8080,
+};
+
+const defaultPortFor = (engine) => {
+  const key = String(engine || "").toLowerCase().replace(/[^a-z]/g, "");
+  return ENGINE_DEFAULT_PORTS[key] ? String(ENGINE_DEFAULT_PORTS[key]) : "";
+};
+
 const OS_COLORS = ["#4a9fd8", "#7cb342", "#f44336", "#9c27b0", "#ff9800"];
 const GROUP_COLORS = ["#00a86b", "#4a9fd8", "#f44336", "#9c27b0", "#ff9800"];
 
@@ -164,6 +189,19 @@ function Dashboard() {
   // cache of { loading, error, list } so re-opening a row doesn't refetch.
   const [expandedAgent, setExpandedAgent] = useState(null);
   const [services, setServices] = useState({});
+  // Which engine row inside the open agent panel is showing its services,
+  // and which service is waiting on a pause/restart round trip.
+  const [expandedEngine, setExpandedEngine] = useState(null);
+  const [togglingService, setTogglingService] = useState(null);
+  const [serviceError, setServiceError] = useState(null);
+  // Said in the services panel, since the popup that used to carry this
+  // message is now closed by the time it applies.
+  const [serviceMsg, setServiceMsg] = useState(null);
+  // Deleting is not undoable and takes the service down on the agent too, so
+  // the row asks before it does it. Holds the key of the row asking, and of
+  // the one currently being deleted.
+  const [confirmDeleteService, setConfirmDeleteService] = useState(null);
+  const [deletingService, setDeletingService] = useState(null);
 
   // Credentials popup: opened by clicking an engine inside the services panel.
   // null when closed, else { agentName, engine, loading, error, data }.
@@ -765,6 +803,8 @@ function Dashboard() {
   // services. The endpoint queries the agent live over MQTT, so it can time out
   // with a 504 when the agent is offline — that message is surfaced inline.
   const handleToggleServices = (agentName) => {
+    setExpandedEngine(null);
+    setServiceError(null);
     if (expandedAgent === agentName) {
       setExpandedAgent(null); // clicking an open row collapses it
       return;
@@ -783,7 +823,14 @@ function Dashboard() {
     api
       .get("/available-services", { params: { agent_name: agentName } })
       .then((res) => {
-        const list = res.data?.data?.available_engines || [];
+        // `available_engines` is an object keyed by engine name, each value
+        // the services stored for it — an engine with no credentials yet
+        // comes back with an empty array and still deserves a row.
+        const engines = res.data?.data?.available_engines || {};
+        const list = Object.entries(engines).map(([engine, entries]) => ({
+          engine,
+          services: Array.isArray(entries) ? entries : [],
+        }));
         setServices((prev) => ({
           ...prev,
           [agentName]: { loading: false, error: "", list },
@@ -799,6 +846,142 @@ function Dashboard() {
           ...prev,
           [agentName]: { loading: false, error: msg, list: null },
         }));
+      });
+  };
+
+  /**
+   * Enable or disable one service.
+   *
+   * `is_enable` is the credential's `is_active` column, and the two endpoints
+   * that move it are GET /restart-service and GET /pause-service. Both go on
+   * to the agent over MQTT, so they are slow and can time out at 504; the row
+   * only flips once the call has actually succeeded.
+   */
+  const handleToggleService = async (agentName, engine, service) => {
+    const key = `${agentName}|${engine}|${service.service_name}`;
+    if (togglingService) return; // one round trip at a time
+
+    const enabling = !service.is_enable;
+    setTogglingService(key);
+    setServiceError(null);
+
+    try {
+      await api.get(enabling ? "/restart-service" : "/pause-service", {
+        params: { agent_name: agentName, service_name: service.service_name },
+      });
+
+      setServices((prev) => {
+        const state = prev[agentName];
+        if (!state || !state.list) return prev;
+        return {
+          ...prev,
+          [agentName]: {
+            ...state,
+            list: state.list.map((group) =>
+              group.engine !== engine
+                ? group
+                : {
+                    ...group,
+                    services: group.services.map((svc) =>
+                      svc.service_name === service.service_name
+                        ? { ...svc, is_enable: enabling }
+                        : svc
+                    ),
+                  }
+            ),
+          },
+        };
+      });
+    } catch (error) {
+      const status = error.response && error.response.status;
+      const detail =
+        error.response && error.response.data && error.response.data.detail;
+      setServiceError(
+        status === 504
+          ? `${agentName} did not respond — it may be offline.`
+          : detail ||
+              `Could not ${enabling ? "start" : "pause"} ${service.service_name}.`
+      );
+    } finally {
+      setTogglingService(null);
+    }
+  };
+
+  /**
+   * Remove one stored credential.
+   *
+   * DELETE /delete-credential?agent_name=…&service_name=… also tells the agent
+   * to stop that service before the row is dropped, so this is not just a list
+   * edit — it stops something running. Hence the confirm step in the row.
+   */
+  const handleDeleteService = async (agentName, engine, service) => {
+    const key = `${agentName}|${engine}|${service.service_name}`;
+    if (deletingService) return;
+
+    setDeletingService(key);
+    setServiceError(null);
+
+    try {
+      await api.delete("/delete-credential", {
+        params: { agent_name: agentName, service_name: service.service_name },
+      });
+
+      // Drop the row only once the server has actually deleted it.
+      setServices((prev) => {
+        const state = prev[agentName];
+        if (!state || !state.list) return prev;
+        return {
+          ...prev,
+          [agentName]: {
+            ...state,
+            list: state.list.map((group) =>
+              group.engine !== engine
+                ? group
+                : {
+                    ...group,
+                    services: group.services.filter(
+                      (svc) => svc.service_name !== service.service_name
+                    ),
+                  }
+            ),
+          },
+        };
+      });
+      setConfirmDeleteService(null);
+    } catch (error) {
+      const status = error.response && error.response.status;
+      const detail =
+        error.response && error.response.data && error.response.data.detail;
+      setServiceError(
+        status === 404
+          ? `${service.service_name} was not found — it may already be gone.`
+          : status === 504
+            ? `${agentName} did not respond — it may be offline.`
+            : detail || `Could not delete ${service.service_name}.`
+      );
+    } finally {
+      setDeletingService(null);
+    }
+  };
+
+  /** Re-read one agent's services, leaving the panel open where it is. */
+  const refreshServices = (agentName) => {
+    api
+      .get("/available-services", { params: { agent_name: agentName } })
+      .then((res) => {
+        const engines = res.data?.data?.available_engines || {};
+        const list = Object.entries(engines).map(([engine, entries]) => ({
+          engine,
+          services: Array.isArray(entries) ? entries : [],
+        }));
+        setServices((prev) => ({
+          ...prev,
+          [agentName]: { loading: false, error: "", list },
+        }));
+      })
+      .catch(() => {
+        // The credential was saved either way; a failed refresh just means
+        // the table is a moment stale, not that anything went wrong.
       });
   };
 
@@ -840,53 +1023,219 @@ function Dashboard() {
 
     return (
       <>
+        {serviceError && (
+          <div className="services-status services-error" role="alert">
+            {serviceError}
+            <button
+              type="button"
+              className="services-retry"
+              onClick={() => setServiceError(null)}
+            >
+              Dismiss
+            </button>
+          </div>
+        )}
+
+        {serviceMsg && (
+          <div className="services-status services-ok" role="status">
+            {serviceMsg}
+            <button
+              type="button"
+              className="services-retry"
+              onClick={() => setServiceMsg(null)}
+            >
+              Dismiss
+            </button>
+          </div>
+        )}
+
         <table className="services-table">
           <thead>
             <tr>
+              <th className="svc-th-expand" aria-label="Show services" />
               <th>Engine</th>
-              <th>Service Name</th>
-              <th>Username</th>
-              <th>Status</th>
+              <th>Services</th>
               <th className="svc-th-action" />
             </tr>
           </thead>
           <tbody>
-            {state.list.map((svc, i) => {
-              const style = getEngineStyle(svc.engine);
+            {state.list.map((group) => {
+              const style = getEngineStyle(group.engine);
+              const key = `${agentName}|${group.engine}`;
+              const open = expandedEngine === key;
+              const count = group.services.length;
+
               return (
-                <tr
-                  key={`${svc.engine}-${i}`}
-                  className="svc-row"
-                  onClick={() => handleEngineClick(agentName, svc.engine)}
-                  title={`View ${svc.engine} credentials`}
-                >
-                  <td className="svc-engine">
-                    <span className="svc-engine-cell">
-                      <span
-                        className="engine-avatar engine-avatar-sm"
-                        style={{ background: style.color }}
-                      >
-                        {style.label}
+                <Fragment key={group.engine}>
+                  <tr className="svc-row">
+                    <td className="svc-td-expand">
+                      {/* An engine with no stored credentials has nothing to
+                          open, so it gets no control rather than an empty one. */}
+                      {count > 0 ? (
+                        <button
+                          type="button"
+                          className={`btn-expand ${open ? "open" : ""}`}
+                          onClick={() => setExpandedEngine(open ? null : key)}
+                          aria-expanded={open}
+                          title={
+                            open
+                              ? `Hide ${group.engine} services`
+                              : `Show ${group.engine} services`
+                          }
+                        >
+                          {open ? "−" : "+"}
+                        </button>
+                      ) : (
+                        <span className="svc-expand-empty" aria-hidden="true" />
+                      )}
+                    </td>
+
+                    <td className="svc-engine">
+                      <span className="svc-engine-cell">
+                        <span
+                          className="engine-avatar engine-avatar-sm"
+                          style={{ background: style.color }}
+                        >
+                          {style.label}
+                        </span>
+                        <span className="svc-engine-name">{group.engine}</span>
                       </span>
-                      <span className="svc-engine-name">{svc.engine}</span>
-                    </span>
-                  </td>
-                  <td>{svc.service_name || "—"}</td>
-                  <td>{svc.username || "—"}</td>
-                  <td>
-                    <span
-                      className={`cred-chip ${svc.is_enable ? "chip-on" : "chip-off"}`}
-                    >
-                      <i className="chip-dot" />
-                      {svc.is_enable ? "Enabled" : "Disabled"}
-                    </span>
-                  </td>
-                  <td className="svc-td-action">
-                    <span className="svc-view-hint">
-                      View credentials <span className="svc-chevron">›</span>
-                    </span>
-                  </td>
-                </tr>
+                    </td>
+
+                    <td>
+                      {count === 0 ? (
+                        <span className="svc-none">No services yet</span>
+                      ) : (
+                        <span className="svc-count">
+                          {count} service{count === 1 ? "" : "s"}
+                        </span>
+                      )}
+                    </td>
+
+                    <td className="svc-td-action">
+                      <button
+                        type="button"
+                        className="svc-add-btn"
+                        onClick={() => handleAddCred(agentName, group.engine)}
+                        title={`Add a ${group.engine} credential for ${agentName}`}
+                      >
+                        + Add credential
+                      </button>
+                    </td>
+                  </tr>
+
+                  {open && (
+                    <tr className="svc-detail-row">
+                      <td colSpan={4}>
+                        <table className="svc-detail-table">
+                          <thead>
+                            <tr>
+                              <th className="svc-detail-th-name">Service name</th>
+                              <th className="svc-detail-th-action">Actions</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {group.services.map((svc) => {
+                              const svcKey = `${key}|${svc.service_name}`;
+                              const busy = togglingService === svcKey;
+                              return (
+                                <tr key={svc.service_name}>
+                                  <td className="svc-detail-name">
+                                    {svc.service_name ? (
+                                      <button
+                                        type="button"
+                                        className="svc-name-btn"
+                                        onClick={() =>
+                                          navigate(
+                                            `/app/db-health?agent=${encodeURIComponent(
+                                              agentName
+                                            )}&engine=${encodeURIComponent(
+                                              group.engine
+                                            )}&service=${encodeURIComponent(svc.service_name)}`
+                                          )
+                                        }
+                                        title={`Open the stored health record for ${svc.service_name}`}
+                                      >
+                                        {svc.service_name}
+                                      </button>
+                                    ) : (
+                                      "—"
+                                    )}
+                                  </td>
+                                  <td className="svc-detail-td-action">
+                                    <div className="svc-actions">
+                                      <button
+                                        type="button"
+                                        className={`status-toggle ${
+                                          svc.is_enable ? "on" : "off"
+                                        }`}
+                                        onClick={() =>
+                                          handleToggleService(agentName, group.engine, svc)
+                                        }
+                                        disabled={busy || togglingService !== null}
+                                        aria-pressed={Boolean(svc.is_enable)}
+                                        title={
+                                          svc.is_enable
+                                            ? `Pause ${svc.service_name}`
+                                            : `Start ${svc.service_name}`
+                                        }
+                                      >
+                                        <span className="status-toggle-track">
+                                          <span className="status-toggle-knob" />
+                                        </span>
+                                        <span className="status-toggle-text">
+                                          {busy
+                                            ? "…"
+                                            : svc.is_enable
+                                              ? "Enabled"
+                                              : "Disabled"}
+                                        </span>
+                                      </button>
+
+                                      {confirmDeleteService === svcKey ? (
+                                        <span className="svc-confirm">
+                                          <span className="svc-confirm-text">Delete?</span>
+                                          <button
+                                            type="button"
+                                            className="svc-confirm-yes"
+                                            onClick={() =>
+                                              handleDeleteService(agentName, group.engine, svc)
+                                            }
+                                            disabled={deletingService === svcKey}
+                                          >
+                                            {deletingService === svcKey ? "…" : "Yes"}
+                                          </button>
+                                          <button
+                                            type="button"
+                                            className="svc-confirm-no"
+                                            onClick={() => setConfirmDeleteService(null)}
+                                            disabled={deletingService === svcKey}
+                                          >
+                                            No
+                                          </button>
+                                        </span>
+                                      ) : (
+                                        <button
+                                          type="button"
+                                          className="svc-delete-btn"
+                                          onClick={() => setConfirmDeleteService(svcKey)}
+                                          disabled={deletingService !== null}
+                                          title={`Delete ${svc.service_name}`}
+                                        >
+                                          Delete
+                                        </button>
+                                      )}
+                                    </div>
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </td>
+                    </tr>
+                  )}
+                </Fragment>
               );
             })}
           </tbody>
@@ -910,23 +1259,36 @@ function Dashboard() {
   // straight in form mode with empty fields, so the form below can POST a
   // brand-new credential instead of overwriting an existing one. Nothing is
   // fetched here — there is no credential to load yet.
-  const handleAddCred = (agentName) => {
+  /**
+   * Open the credential form for a new entry.
+   *
+   * Opened from an engine row, everything already known is filled in: the
+   * engine itself, the agent's address as the host, and that engine's usual
+   * port. Only the service name, user and password are actually unknown — and
+   * every filled field stays editable, since a default port is a guess.
+   */
+  const handleAddCred = (agentName, engine = "") => {
     setSaveError("");
     setSaveMsg("");
+    setServiceMsg(null);
+    setServiceError(null);
     setConfirmDeleteId(null);
     setCredModal({
       agentName,
-      engine: "",
+      engine,
       loading: false,
       error: "",
       data: null,
     });
+
+    const agent = agents.find((a) => a.name === agentName);
+
     setEditCred({
       isNew: true,
-      engine: "",
+      engine,
       agent_name: agentName,
-      host: "",
-      port: "",
+      host: (agent && agent.ipAddress) || "",
+      port: defaultPortFor(engine),
       user_name: "",
       password: "",
       service_name: "",
@@ -1036,6 +1398,12 @@ function Dashboard() {
       setSaveError("Host and Username are required.");
       return;
     }
+    // The service name is how /pause-service and /restart-service find this
+    // credential later, so a blank one leaves a row nothing can act on.
+    if (!editCred.service_name.trim()) {
+      setSaveError("Service Name is required.");
+      return;
+    }
 
     const isNew = editCred.isNew;
 
@@ -1055,17 +1423,16 @@ function Dashboard() {
       .then(() => {
         setSaving(false);
         setEditCred(null);
-        setSaveMsg(
+        // Close the popup rather than turning it into the credentials list:
+        // the form was opened to add one entry, and that is now done. The new
+        // service appearing in the services table is the confirmation.
+        setCredModal(null);
+        setServiceMsg(
           isNew
-            ? "Credential added successfully."
-            : "Credential saved successfully.",
+            ? `${editCred.service_name.trim()} added to ${engine}.`
+            : `${editCred.service_name.trim()} saved.`,
         );
-        // Refresh the list so the popup shows the updated values. On an "add"
-        // the popup was opened without an engine, so adopt the one just typed.
-        setCredModal((prev) =>
-          prev ? { ...prev, engine, loading: true, error: "" } : prev,
-        );
-        fetchCredentials(agentName, engine);
+        refreshServices(agentName);
       })
       .catch((err) => {
         setSaving(false);
@@ -2424,9 +2791,17 @@ function Dashboard() {
                             value={editCred.engine}
                             list="engine-options"
                             placeholder="postgresql"
-                            onChange={(e) =>
-                              updateEditField("engine", e.target.value)
-                            }
+                            onChange={(e) => {
+                              const value = e.target.value;
+                              updateEditField("engine", value);
+                              // Offer the new engine's usual port, but never
+                              // overwrite a port the user typed themselves.
+                              const suggested = defaultPortFor(value);
+                              const previous = defaultPortFor(editCred.engine);
+                              if (suggested && (!editCred.port || editCred.port === previous)) {
+                                updateEditField("port", suggested);
+                              }
+                            }}
                             disabled={saving}
                           />
                           <datalist id="engine-options">
@@ -2498,10 +2873,11 @@ function Dashboard() {
                       />
                     </div>
                     <div className="form-field">
-                      <label>Service Name</label>
+                      <label>Service Name *</label>
                       <input
                         value={editCred.service_name}
                         placeholder="postgres"
+                        required
                         onChange={(e) =>
                           updateEditField("service_name", e.target.value)
                         }

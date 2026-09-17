@@ -1,0 +1,471 @@
+/* ─────────────────────────────────────────────────────────────
+   Stored database health record. One page per database, reached from a service
+   name in the dashboard's services panel.
+   ───────────────────────────────────────────────────────────── */
+
+.dbh-page {
+  min-height: 100vh;
+  padding: 20px 22px 40px;
+  box-sizing: border-box;
+  background: #f7f8fa;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  color: #172033;
+}
+
+/* ── header ─────────────────────────────────────────────────── */
+.dbh-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 14px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid #e4e7ec;
+}
+
+.dbh-back {
+  margin-bottom: 8px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: #6654e8;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.dbh-back:hover {
+  text-decoration: underline;
+}
+
+.dbh-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.dbh-sub {
+  margin: 5px 0 0;
+  color: #667085;
+  font-size: 12.5px;
+}
+
+.dbh-engine {
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #eef2ff;
+  color: #4338ca;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.dbh-mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+.dbh-badge {
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: capitalize;
+}
+
+.dbh-badge--ok {
+  background: #ecfdf3;
+  color: #067647;
+}
+
+.dbh-badge--warn {
+  background: #fffaeb;
+  color: #b54708;
+}
+
+.dbh-badge--bad {
+  background: #fef3f2;
+  color: #b42318;
+}
+
+.dbh-badge--muted {
+  background: #f2f4f7;
+  color: #475467;
+}
+
+/* ── the two query options ──────────────────────────────────── */
+.dbh-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px;
+}
+
+.dbh-field-ctl,
+.dbh-check-ctl {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #344054;
+}
+
+.dbh-field-ctl input {
+  width: 78px;
+  height: 34px;
+  padding: 0 8px;
+  border: 1px solid #dfe4ec;
+  border-radius: 7px;
+  background: #fff;
+  font-family: inherit;
+  font-size: 12px;
+  outline: none;
+}
+
+.dbh-field-ctl input:focus {
+  border-color: #6654e8;
+  box-shadow: 0 0 0 2px rgba(102, 84, 232, 0.15);
+}
+
+.dbh-check-ctl input {
+  accent-color: #6654e8;
+  cursor: pointer;
+}
+
+.dbh-hint {
+  color: #98a2b3;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.dbh-load {
+  height: 34px;
+  padding: 0 16px;
+  border: 1px solid #6654e8;
+  border-radius: 7px;
+  background: #6654e8;
+  color: #fff;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.dbh-load:hover:not(:disabled) {
+  background: #5746d5;
+}
+
+.dbh-load:disabled {
+  background: #cfc9f5;
+  border-color: #cfc9f5;
+  cursor: not-allowed;
+}
+
+/* ── states ─────────────────────────────────────────────────── */
+.dbh-status {
+  margin-top: 40px;
+  text-align: center;
+  color: #667085;
+  font-size: 13.5px;
+}
+
+.dbh-status--error {
+  color: #b42318;
+}
+
+/* ── time series picker ─────────────────────────────────────── */
+.dbh-history {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 16px;
+}
+
+.dbh-history-item {
+  padding: 6px 11px;
+  border: 1px solid #dfe4ec;
+  border-radius: 999px;
+  background: #fff;
+  color: #475467;
+  font-family: inherit;
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.dbh-history-item:hover {
+  border-color: #6654e8;
+  color: #6654e8;
+}
+
+.dbh-history-item.active {
+  border-color: #6654e8;
+  background: #6654e8;
+  color: #fff;
+}
+
+/* ── headline numbers ───────────────────────────────────────── */
+.dbh-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.dbh-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 13px 15px;
+  border: 1px solid #e4e7ec;
+  border-left: 3px solid #d0d5dd;
+  border-radius: 10px;
+  background: #fff;
+}
+
+.dbh-stat--ok {
+  border-left-color: #12b76a;
+}
+
+.dbh-stat--warn {
+  border-left-color: #f79009;
+}
+
+.dbh-stat--bad {
+  border-left-color: #d64545;
+}
+
+.dbh-stat-label {
+  color: #667085;
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.dbh-stat-value {
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+}
+
+.dbh-stat-sub {
+  color: #98a2b3;
+  font-size: 11px;
+  overflow-wrap: anywhere;
+}
+
+/* ── checks ─────────────────────────────────────────────────── */
+.dbh-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+  gap: 12px;
+  margin-top: 14px;
+  align-items: start;
+}
+
+.dbh-card {
+  padding: 14px 16px 16px;
+  border: 1px solid #e4e7ec;
+  border-radius: 10px;
+  background: #fff;
+  min-width: 0;
+}
+
+/* a card that is only a table gets the full width, so it is not squeezed */
+.dbh-cards .dbh-card:has(> .dbh-table-wrap) {
+  grid-column: 1 / -1;
+}
+
+.dbh-card-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 10px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #172033;
+}
+
+.dbh-card-count {
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: #f2f4f7;
+  color: #475467;
+  font-size: 10.5px;
+  font-weight: 700;
+}
+
+.dbh-sub-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 14px 0 8px;
+  color: #667085;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.dbh-subsection:first-of-type .dbh-sub-title {
+  margin-top: 6px;
+}
+
+.dbh-empty {
+  margin: 0;
+  color: #98a2b3;
+  font-size: 12px;
+  font-style: italic;
+}
+
+.dbh-inline-list {
+  margin: 0;
+  font-size: 12.5px;
+  color: #344054;
+  overflow-wrap: anywhere;
+}
+
+/* ── field lists ────────────────────────────────────────────── */
+.dbh-fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 0 18px;
+  margin: 0;
+}
+
+.dbh-field {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 6px 0;
+  border-bottom: 1px solid #f4f5f7;
+  min-width: 0;
+}
+
+.dbh-field dt {
+  flex: none;
+  width: 45%;
+  color: #667085;
+  font-size: 11.5px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.dbh-field dd {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  font-size: 12.5px;
+  color: #172033;
+  overflow-wrap: anywhere;
+}
+
+/* ── tables ─────────────────────────────────────────────────── */
+.dbh-table-wrap {
+  max-height: 340px;
+  overflow: auto;
+  border: 1px solid #eef0f4;
+  border-radius: 8px;
+}
+
+.dbh-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.dbh-table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  padding: 8px 11px;
+  border-bottom: 1px solid #eef0f4;
+  background: #f7f8fa;
+  color: #667085;
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.dbh-table td {
+  padding: 8px 11px;
+  border-bottom: 1px solid #f4f5f7;
+  color: #344054;
+  max-width: 320px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.dbh-table tbody tr:nth-child(even) td {
+  background: #fcfcfd;
+}
+
+.dbh-table tbody tr:hover td {
+  background: #f6f4ff;
+}
+
+.dbh-table tr:last-child td {
+  border-bottom: none;
+}
+
+/* ── raw record ─────────────────────────────────────────────── */
+.dbh-raw {
+  margin-top: 14px;
+}
+
+.dbh-raw-toggle {
+  border: 0;
+  background: none;
+  color: #98a2b3;
+  font-family: inherit;
+  font-size: 12px;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.dbh-raw-toggle:hover {
+  color: #475467;
+}
+
+.dbh-raw-body {
+  margin: 10px 0 0;
+  padding: 14px 16px;
+  max-height: 420px;
+  overflow: auto;
+  border-radius: 10px;
+  background: #1f2430;
+  color: #f4f5f7;
+  font-size: 11.5px;
+  line-height: 1.55;
+}
+
+@media (max-width: 720px) {
+  .dbh-page {
+    padding: 16px 14px 32px;
+  }
+
+  .dbh-cards {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .dbh-controls {
+    width: 100%;
+  }
+
+  .dbh-load {
+    margin-left: auto;
+  }
+}

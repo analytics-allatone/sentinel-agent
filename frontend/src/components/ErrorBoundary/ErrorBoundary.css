@@ -1,0 +1,119 @@
+/* The screen shown in place of a crashed page. Deliberately plain: it has to
+   render when the app's own styling may be part of what went wrong. */
+.crash {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  box-sizing: border-box;
+  background: #f7f8fa;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  color: #172033;
+}
+
+.crash__card {
+  width: 100%;
+  max-width: 540px;
+  padding: 30px 28px 24px;
+  border: 1px solid #e4e7ec;
+  border-radius: 14px;
+  background: #ffffff;
+  box-shadow: 0 14px 40px rgba(23, 32, 51, 0.08);
+  text-align: center;
+}
+
+.crash__mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 60px;
+  height: 60px;
+  margin-bottom: 14px;
+  border-radius: 50%;
+  background: #fef3f2;
+  color: #d64545;
+}
+
+.crash__title {
+  margin: 0 0 8px;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.crash__lead {
+  margin: 0 auto;
+  max-width: 44ch;
+  color: #667085;
+  font-size: 13.5px;
+  line-height: 1.6;
+}
+
+.crash__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 20px;
+}
+
+.crash__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 38px;
+  padding: 0 15px;
+  border: 1px solid #dfe4ec;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #344054;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease;
+}
+
+.crash__btn:hover {
+  border-color: #6654e8;
+  color: #6654e8;
+  background: #f6f4ff;
+}
+
+.crash__btn--primary {
+  border-color: #6654e8;
+  background: #6654e8;
+  color: #ffffff;
+}
+
+.crash__btn--primary:hover {
+  background: #5746d5;
+  color: #ffffff;
+}
+
+.crash__detail-toggle {
+  margin-top: 16px;
+  border: 0;
+  background: none;
+  color: #98a2b3;
+  font-family: inherit;
+  font-size: 12px;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.crash__detail {
+  margin: 10px 0 0;
+  padding: 10px 12px;
+  max-height: 190px;
+  overflow: auto;
+  border-radius: 8px;
+  background: #1f2430;
+  color: #f4f5f7;
+  font-size: 11.5px;
+  line-height: 1.5;
+  text-align: left;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
