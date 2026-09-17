@@ -269,45 +269,45 @@ const SENDER_SERVICES = [
   },
 
   {
-  id: "outlook365",
-  label: "Outlook 365",
-  icon: "📧",
-  color: "#0078d4",
-  blurb: "Send emails from Microsoft 365 using Microsoft Graph",
-  fields: [
-    {
-      name: "label",
-      label: "Sender Name",
-      placeholder: "e.g. Microsoft Alerts",
-    },
-    {
-      name: "sender_email",
-      label: "Sender Email",
-      type: "email",
-      placeholder: "alerts@company.com",
-      required: true,
-    },
-    {
-      name: "tenant_id",
-      label: "Tenant ID",
-      placeholder: "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
-      required: true,
-    },
-    {
-      name: "client_id",
-      label: "Client ID",
-      placeholder: "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
-      required: true,
-    },
-    {
-      name: "client_secret",
-      label: "Client Secret",
-      type: "password",
-      placeholder: "Enter client secret",
-      required: true,
-    },
-  ],
-},
+    id: "outlook365",
+    label: "Outlook 365",
+    icon: "📧",
+    color: "#0078d4",
+    blurb: "Send emails from Microsoft 365 using Microsoft Graph",
+    fields: [
+      {
+        name: "label",
+        label: "Sender Name",
+        placeholder: "e.g. Microsoft Alerts",
+      },
+      {
+        name: "sender_email",
+        label: "Sender Email",
+        type: "email",
+        placeholder: "alerts@company.com",
+        required: true,
+      },
+      {
+        name: "tenant_id",
+        label: "Tenant ID",
+        placeholder: "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+        required: true,
+      },
+      {
+        name: "client_id",
+        label: "Client ID",
+        placeholder: "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+        required: true,
+      },
+      {
+        name: "client_secret",
+        label: "Client Secret",
+        type: "password",
+        placeholder: "Enter client secret",
+        required: true,
+      },
+    ],
+  },
 
   {
     id: "telegram",
@@ -555,6 +555,9 @@ export default function ChannelsManager() {
   const [senderSaving, setSenderSaving] = useState(false);
   const [removingSenderId, setRemovingSenderId] = useState(null);
 
+  const [senderHelpOpen, setSenderHelpOpen] = useState(false);
+  const [receiverHelpOpen, setReceiverHelpOpen] = useState(false);
+
   const load = useCallback(async (signal) => {
     setLoading(true);
     setLoadError(null);
@@ -603,8 +606,6 @@ export default function ChannelsManager() {
     return map;
   }, [channels]);
 
-
-
   const visible = useMemo(
     () =>
       filter === "all"
@@ -621,33 +622,32 @@ export default function ChannelsManager() {
   );
 
   const senderCounts = useMemo(() => {
-  const map = {};
+    const map = {};
 
-  for (const account of senderAccounts) {
-    map[account.channel_type] =
-      (map[account.channel_type] || 0) + 1;
-  }
+    for (const account of senderAccounts) {
+      map[account.channel_type] = (map[account.channel_type] || 0) + 1;
+    }
 
-  return map;
-}, [senderAccounts]);
+    return map;
+  }, [senderAccounts]);
 
-const senderVisible = useMemo(
-  () =>
-    senderFilter === "all"
-      ? senderAccounts
-      : senderAccounts.filter(
-          (account) => account.channel_type === senderFilter
-        ),
-  [senderAccounts, senderFilter]
-);
+  const senderVisible = useMemo(
+    () =>
+      senderFilter === "all"
+        ? senderAccounts
+        : senderAccounts.filter(
+            (account) => account.channel_type === senderFilter,
+          ),
+    [senderAccounts, senderFilter],
+  );
 
-const presentSenderServices = useMemo(
-  () =>
-    Object.keys(senderCounts)
-      .map((id) => senderServiceById(id))
-      .filter(Boolean),
-  [senderCounts]
-);
+  const presentSenderServices = useMemo(
+    () =>
+      Object.keys(senderCounts)
+        .map((id) => senderServiceById(id))
+        .filter(Boolean),
+    [senderCounts],
+  );
 
   // ── modal controls ──────────────────────────────────────────────
   const openAdd = () => {
@@ -665,13 +665,16 @@ const presentSenderServices = useMemo(
     setStep("form");
   };
 
-  const closeModal = () => {
-    if (saving) return;
-    setModalOpen(false);
-    setServiceId(null);
-    setValues({});
-    setErrors({});
-  };
+ const closeModal = () => {
+  if (saving) return;
+
+  setReceiverHelpOpen(false);
+
+  setModalOpen(false);
+  setServiceId(null);
+  setValues({});
+  setErrors({});
+};
 
   const openAddSender = () => {
     setSenderServiceId(null);
@@ -689,6 +692,7 @@ const presentSenderServices = useMemo(
   const closeSenderModal = () => {
     if (senderSaving) return;
 
+    setSenderHelpOpen(false);
     setSenderModalOpen(false);
     setSenderServiceId(null);
     setSenderValues({});
@@ -704,6 +708,464 @@ const presentSenderServices = useMemo(
     setSenderServiceId(id);
     setSenderValues({});
     setSenderErrors({});
+  };
+
+  const getSenderHelpContent = () => {
+    switch (senderServiceId) {
+      case "gmail":
+  return {
+    title: "Gmail Sender Setup",
+    subtitle:
+      "Follow these steps to generate a Gmail App Password and use it in the sender form.",
+
+    steps: [
+      <>
+        <strong>Open your Google Account.</strong>
+        <br />
+        Go to the Account Section of your google account then click on <strong>Security & sign-in</strong>.
+      </>,
+
+      <>
+        <strong>Enable 2-Step Verification.</strong>
+        <br />
+        If 2-Step Verification is not already enabled, turn it on first.
+      </>,
+
+      <>
+        <strong>Open the App passwords page.</strong>
+        <br />
+        After 2-Step Verification is enabled, open this link:
+        <br />
+
+        <a
+          href="https://myaccount.google.com/apppasswords?utm_source=chatgpt.com"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="ch-help-link"
+        >
+          🔗 Open Google App Passwords
+        </a>
+
+        <br />
+
+        <small>
+          This link opens the Google App passwords page in a new tab.
+        </small>
+      </>,
+
+      <>
+        <strong>Enter a name and create the App Password.</strong>
+        <br />
+        On the App passwords page, enter a name for your app.
+        <br />
+        Example: <strong>Testing</strong>
+        <br />
+        Then click <strong>Create</strong>.
+
+        <img
+          src="/gmail.jpeg"
+          alt="Google App Passwords page showing the app name and Create button"
+          className="ch-help-screenshot"
+        />
+      </>,
+
+      <>
+        <strong>Copy the generated App Password.</strong>
+        <br />
+        Google will show you a <strong>16-character App Password</strong>.
+        <br />
+        Copy it and paste it into the <strong>App Password</strong> field
+        in the Gmail Sender form.
+      </>,
+    ],
+  };
+
+      case "outlook365":
+  return {
+    title: "Outlook 365 Sender Setup",
+    subtitle:
+      "Create a Microsoft Entra app for Microsoft Graph email sending.",
+
+    steps: [
+      <>
+        <strong>Open Microsoft Azure Portal and sign in.</strong>
+        <br />
+        Open the Microsoft Azure Portal and sign in with your Microsoft
+        account.
+      </>,
+
+      <>
+        <strong>Open Microsoft Entra.</strong>
+        <br />
+        Click the <strong>☰ Hamburger Menu</strong>.
+        <br />
+        From the menu, select <strong>Microsoft Entra ID</strong>.
+      </>,
+
+      <>
+        <strong>Open App registrations.</strong>
+        <br />
+        In the left-side menu, click <strong>App registrations</strong>.
+        <br />
+        Then click <strong>+ New registration</strong>.
+      </>,
+
+      <>
+        <strong>Register the application.</strong>
+        <br />
+        Enter the required application details and complete the app
+        registration.
+
+        <div className="ch-help-image-stack">
+          <img
+            src="/outlook1.jpeg"
+            alt="Microsoft Entra App Registration step 1"
+            className="ch-help-screenshot"
+          />
+
+          {/* <img
+            src="/outlook2.jpeg"
+            alt="Microsoft Entra App Registration step 2"
+            className="ch-help-screenshot"
+          /> */}
+
+          <img
+            src="/outlook3.jpeg"
+            alt="Microsoft Entra App Registration step 3"
+            className="ch-help-screenshot"
+          />
+        </div>
+      </>,
+
+      <>
+        <strong>Copy the Tenant ID and Client ID.</strong>
+        <br />
+        After the application is registered, open the app's overview page.
+        <br />
+        Copy:
+        <br />
+        • <strong>Directory (tenant) ID</strong>
+        <br />
+        • <strong>Application (client) ID</strong>
+        <br />
+        You will need these values in the Outlook 365 Sender form.
+      </>,
+
+      <>
+        <strong>Create a Client Secret.</strong>
+        <br />
+        In your registered application, open
+        <strong> Certificates &amp; secrets</strong>.
+        <br />
+        Click <strong>+ New client secret</strong>.
+        <br />
+        Enter a description and select an appropriate expiration period.
+        <br />
+        Click <strong>Add</strong>.
+
+        <div className="ch-help-image-stack">
+          <img
+            src="/outlook4.jpeg"
+            alt="Microsoft Entra Client Secret step 1"
+            className="ch-help-screenshot"
+          />
+
+          <img
+            src="/outlook5.jpeg"
+            alt="Microsoft Entra Client Secret step 2"
+            className="ch-help-screenshot"
+          />
+
+          <img
+            src="/outlook6.jpeg"
+            alt="Microsoft Entra Client Secret step 3"
+            className="ch-help-screenshot"
+          />
+        </div>
+      </>,
+
+      <>
+        <strong>Copy the Client Secret VALUE.</strong>
+        <br />
+        After creating the secret, copy the <strong>Value</strong>
+        immediately.
+        <br />
+        <strong>Important:</strong> copy the Secret <strong>Value</strong>,
+        not the Secret ID.
+      </>,
+
+      <>
+        <strong>Add Microsoft Graph permissions.</strong>
+        <br />
+        Go to <strong>API permissions</strong>.
+        <br />
+        Click <strong>+ Add a permission</strong>.
+        <br />
+        Select <strong>Microsoft Graph</strong>.
+        <br />
+        Select <strong>Application permissions</strong>.
+        <br />
+        Search for and select <strong>Mail.Send</strong>.
+
+        <div className="ch-help-image-stack">
+          <img
+            src="/outlook7.jpeg"
+            alt="Microsoft Graph API permissions step 1"
+            className="ch-help-screenshot"
+          />
+
+          <img
+            src="/outlook8.jpeg"
+            alt="Microsoft Graph API permissions step 2"
+            className="ch-help-screenshot"
+          />
+
+          <img
+            src="/outlook9.jpeg"
+            alt="Microsoft Graph API permissions step 3"
+            className="ch-help-screenshot"
+          />
+
+          <img
+            src="/outlook10.jpeg"
+            alt="Microsoft Graph Mail.Send permission step 4"
+            className="ch-help-screenshot"
+          />
+
+          <img
+            src="/outlook11.jpeg"
+            alt="Microsoft Graph Mail.Send permission step 5"
+            className="ch-help-screenshot"
+          />
+        </div>
+      </>,
+
+      <>
+        <strong>Grant Admin Consent.</strong>
+        <br />
+        On the <strong>API permissions</strong> page, click
+        <strong> Grant admin consent</strong>.
+        <br />
+        Confirm the permission when prompted.
+      </>,
+
+      <>
+        <strong>Enable Allow public client flows.</strong>
+        <br />
+        Open <strong>Authentication</strong>.
+        <br />
+        In <strong>Advanced settings</strong>, find
+        <strong> Allow public client flows</strong>.
+        <br />
+        Enable the toggle and save the configuration.
+
+        <img
+          src="/outlook12.jpeg"
+          alt="Microsoft Entra Authentication Allow public client flows"
+          className="ch-help-screenshot"
+        />
+      </>,
+
+      <>
+        <strong>Enter the values in Outlook 365 Sender.</strong>
+        <br />
+        Go back to <strong>Add Sender → Outlook 365</strong>.
+        <br />
+        Enter:
+        <br />
+        • <strong>Sender Email</strong>
+        <br />
+        • <strong>Tenant ID</strong>
+        <br />
+        • <strong>Client ID</strong>
+        <br />
+        • <strong>Client Secret</strong>
+        <br />
+        Then click <strong>Register Sender</strong>.
+      </>,
+    ],
+  };
+
+      case "telegram":
+  return {
+    title: "Telegram Sender Setup",
+    subtitle:
+      "Create a Telegram bot, get its Bot Token from BotFather, and use it in the sender form.",
+
+    steps: [
+      <>
+        <strong>Open Telegram and search for @BotFather.</strong>
+        <br />
+        Open the official <strong>@BotFather</strong> chat.
+      </>,
+
+      <>
+        <strong>Create a new bot.</strong>
+        <br />
+        Send:
+        <br />
+        <code>/newbot</code>
+        <br />
+        Then enter a name for your bot.
+      </>,
+
+      <>
+        <strong>Create a unique Bot Username.</strong>
+        <br />
+        BotFather will ask you to enter a username.
+        <br />
+        The username must end with <strong>bot</strong>.
+        <br />
+        Example:
+        <br />
+        <code>SentinelPracticeBot</code>
+        <br />
+        Telegram username:
+        <br />
+        <code>@SentinelPracticeBot</code>
+      </>,
+
+      // NEW BOT KE LIYE YE 3 STEPS
+      <>
+        <strong>BotFather will generate a Bot Token.</strong>
+        <br />
+        After the bot username is accepted, BotFather will generate an
+        API Bot Token for your new bot.
+      </>,
+
+      <>
+        <strong>Copy the Bot Token.</strong>
+        <br />
+        Copy the token provided by BotFather.
+        <br />
+        Keep this token private and do not share it publicly.
+      </>,
+
+      <>
+        <strong>Paste it into the Bot Token field.</strong>
+        <br />
+        Go to <strong>Add Sender → Telegram</strong> and paste the copied
+        token into the <strong>Bot Token</strong> field.
+      </>,
+
+      // EXISTING BOT KE LIYE
+      <>
+        <strong>Already have a bot? Use /mybots.</strong>
+        <br />
+        If you already created a bot, send:
+        <br />
+        <code>/mybots</code>
+        <br />
+        Select your bot.
+        <br />
+        You can then see options such as:
+        <br />
+        <strong>API Token, Edit Bot, Bot Settings</strong>, etc.
+      </>,
+
+      <>
+        <strong>Get the Bot Token from API Token.</strong>
+        <br />
+        From your bot's options, select <strong>API Token</strong>.
+        <br />
+        BotFather will show the Bot Token for your bot.
+
+        <img
+          src="/telegram.jpeg"
+          alt="Telegram BotFather bot options"
+          className="ch-help-screenshot"
+        />
+      </>,
+    ],
+  };
+
+      default:
+        return {
+          title: "Sender Setup",
+          subtitle: "Setup information for this sender.",
+          steps: [
+            "Enter the required sender account details.",
+            "Make sure all credentials are correct.",
+            "Click Register Sender to verify the account.",
+          ],
+        };
+    }
+  };
+
+  const getReceiverHelpContent = () => {
+    if (serviceId !== "telegram") {
+      return {
+        title: "Receiver Setup",
+        subtitle: "Setup information for this receiver.",
+        steps: [
+          "Enter the required receiver details.",
+          "Make sure the value is correct.",
+          "Click Add Receiver to save it.",
+        ],
+      };
+    }
+
+    return {
+      title: "Telegram Receiver Setup",
+      subtitle: "Follow these steps to get the Telegram Chat ID.",
+      steps: [
+        <>
+          <strong>Find your bot username in BotFather.</strong>
+          <br />
+          Example: Bot Name: Sentinel Notification Bot
+          <br />
+          Bot Username: @SentinelNotificationBot
+          <br />
+          The bot link will be:
+          <br />
+          <code>https://t.me/SentinelNotificationBot</code>
+          <br />
+          <small>Do not add @ in the link.</small>
+        </>,
+
+        <>
+          <strong>Send the bot link to the receiver.</strong>
+          <br />
+          For example, if Rahul needs to receive Telegram messages, send him:
+          <br />
+          <code>https://t.me/SentinelNotificationBot</code>
+          <br />
+          Rahul should open the link in Telegram and press{" "}
+          <strong>START</strong>.
+        </>,
+
+        <>
+          <strong>Get the receiver's Chat ID.</strong>
+          <br />
+          After Rahul presses START, use the same bot token with Telegram's
+          <code> getUpdates </code> API:
+          <br />
+          <code>https://api.telegram.org/bot&lt;BOT_TOKEN&gt;/getUpdates</code>
+        </>,
+
+        <>
+          <strong>Find the Chat ID in the response.</strong>
+          <br />
+          Look for:
+          <pre className="ch-help-code">
+            {`"chat": {
+  "id": 987654321,
+  "first_name": "Rahul",
+  "type": "private"
+}`}
+          </pre>
+          Rahul's Chat ID is <strong>987654321</strong>.
+        </>,
+
+        <>
+          <strong>Add the Chat ID as the receiver.</strong>
+          <br />
+          Go to <strong>Add Receiver → Telegram</strong>, enter
+          <strong> 987654321</strong> in the Chat ID field and save the
+          receiver.
+        </>,
+      ],
+    };
   };
 
   const setSenderField = (name, value) => {
@@ -800,10 +1262,10 @@ const presentSenderServices = useMemo(
     }
 
     const label =
-  (senderValues.label || "").trim() ||
-  senderValues.sender_email ||
-  senderValues.email ||
-  service.label;
+      (senderValues.label || "").trim() ||
+      senderValues.sender_email ||
+      senderValues.email ||
+      service.label;
 
     setSenderSaving(true);
     setSenderErrors({});
@@ -1133,26 +1595,47 @@ const presentSenderServices = useMemo(
             {step === "form" && service && (
               <>
                 <div className="ch-modal-head">
-                  <div className="ch-modal-title">
-                    <button
-                      className="ch-back"
-                      onClick={() => setStep("choose")}
-                      title="Back"
-                    >
-                      ‹
-                    </button>
-                    <span
-                      className="ch-tile-icon sm"
-                      style={{ background: `${service.color}18` }}
-                    >
-                      {renderIcon(service.icon, service.label, "md")}
-                    </span>
-                    <h2>New {service.label} channel</h2>
-                  </div>
-                  <button className="ch-close" onClick={closeModal}>
-                    ✕
-                  </button>
-                </div>
+  <div className="ch-modal-title">
+    <button
+      className="ch-back"
+      onClick={() => setStep("choose")}
+      title="Back"
+    >
+      ‹
+    </button>
+
+    <span
+      className="ch-tile-icon sm"
+      style={{ background: `${service.color}18` }}
+    >
+      {renderIcon(service.icon, service.label, "md")}
+    </span>
+
+    <h2>New {service.label} channel</h2>
+  </div>
+
+  <div className="ch-modal-head-actions">
+    {serviceId === "telegram" && (
+      <button
+        type="button"
+        className="ch-help-btn"
+        onClick={() => setReceiverHelpOpen(true)}
+        data-tooltip="How to get Telegram Chat ID?"
+        aria-label="Telegram receiver setup help"
+      >
+        ?
+      </button>
+    )}
+
+    <button
+      type="button"
+      className="ch-close"
+      onClick={closeModal}
+    >
+      ✕
+    </button>
+  </div>
+</div>
 
                 <form className="ch-form" onSubmit={submit}>
                   {service.fields.map((f) => (
@@ -1277,9 +1760,25 @@ const presentSenderServices = useMemo(
                     </h2>
                   </div>
 
-                  <button className="ch-close" onClick={closeSenderModal}>
-                    ✕
-                  </button>
+                  <div className="ch-modal-head-actions">
+                    <button
+                      type="button"
+                      className="ch-help-btn"
+                      onClick={() => setSenderHelpOpen(true)}
+                      data-tooltip="How to configure this sender?"
+                      aria-label="Sender setup help"
+                    >
+                      ?
+                    </button>
+
+                    <button
+                      className="ch-close"
+                      onClick={closeSenderModal}
+                      type="button"
+                    >
+                      ✕
+                    </button>
+                  </div>
                 </div>
 
                 <p className="ch-modal-sub">
@@ -1347,6 +1846,131 @@ const presentSenderServices = useMemo(
         </div>
       )}
 
+      {senderHelpOpen && senderServiceId && (
+        <div
+          className="ch-help-backdrop"
+          onClick={() => setSenderHelpOpen(false)}
+        >
+          <div
+            className="ch-help-modal"
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="sender-help-title"
+          >
+            <div className="ch-help-header">
+              <div>
+                <div className="ch-help-title-row">
+                  <span className="ch-help-icon">?</span>
+
+                  <h2 id="sender-help-title">{getSenderHelpContent().title}</h2>
+                </div>
+
+                <p className="ch-help-subtitle">
+                  {getSenderHelpContent().subtitle}
+                </p>
+              </div>
+
+              <button
+                type="button"
+                className="ch-close"
+                onClick={() => setSenderHelpOpen(false)}
+                aria-label="Close help"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="ch-help-steps">
+  {getSenderHelpContent().steps.map((item, index) => (
+    <div className="ch-help-step" key={index}>
+      <span className="ch-help-step-number">
+        {index + 1}
+      </span>
+
+      <div className="ch-help-step-content">
+        {item}
+      </div>
+    </div>
+  ))}
+</div>
+
+            <div className="ch-help-footer">
+              <button
+                type="button"
+                className="ch-btn primary"
+                onClick={() => setSenderHelpOpen(false)}
+              >
+                Got it
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {receiverHelpOpen && serviceId === "telegram" && (
+  <div
+    className="ch-help-backdrop"
+    onClick={() => setReceiverHelpOpen(false)}
+  >
+    <div
+      className="ch-help-modal"
+      onClick={(e) => e.stopPropagation()}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="telegram-receiver-help-title"
+    >
+      <div className="ch-help-header">
+        <div>
+          <div className="ch-help-title-row">
+            <span className="ch-help-icon">?</span>
+
+            <h2 id="telegram-receiver-help-title">
+              {getReceiverHelpContent().title}
+            </h2>
+          </div>
+
+          <p className="ch-help-subtitle">
+            {getReceiverHelpContent().subtitle}
+          </p>
+        </div>
+
+        <button
+          type="button"
+          className="ch-close"
+          onClick={() => setReceiverHelpOpen(false)}
+          aria-label="Close help"
+        >
+          ✕
+        </button>
+      </div>
+
+      <div className="ch-help-steps">
+        {getReceiverHelpContent().steps.map((item, index) => (
+          <div className="ch-help-step" key={index}>
+            <span className="ch-help-step-number">
+              {index + 1}
+            </span>
+
+            <div className="ch-help-step-content">
+              {item}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="ch-help-footer">
+        <button
+          type="button"
+          className="ch-btn primary"
+          onClick={() => setReceiverHelpOpen(false)}
+        >
+          Got it
+        </button>
+      </div>
+    </div>
+  </div>
+)}
+
       {senderListOpen && (
         <div className="ch-modal-backdrop" onClick={closeSenderList}>
           <div
@@ -1355,11 +1979,12 @@ const presentSenderServices = useMemo(
           >
             <div className="ch-modal-head">
               <div>
-               <h2>Senders</h2>
+                <h2>Senders</h2>
 
-<p className="ch-modal-sub">
-  Manage sender accounts used for sending notifications and reports.
-</p>
+                <p className="ch-modal-sub">
+                  Manage sender accounts used for sending notifications and
+                  reports.
+                </p>
               </div>
 
               <button className="ch-close" onClick={closeSenderList}>
@@ -1406,129 +2031,113 @@ const presentSenderServices = useMemo(
                 </button>
               </div>
             ) : (
-  <>
-    <div className="ch-stats">
-      <div className="ch-stat">
-        <span className="ch-stat-num">
-          {senderAccounts.length}
-        </span>
+              <>
+                <div className="ch-stats">
+                  <div className="ch-stat">
+                    <span className="ch-stat-num">{senderAccounts.length}</span>
 
-        <span className="ch-stat-label">
-          Sender{senderAccounts.length === 1 ? "" : "s"}
-        </span>
-      </div>
+                    <span className="ch-stat-label">
+                      Sender{senderAccounts.length === 1 ? "" : "s"}
+                    </span>
+                  </div>
 
-      <div className="ch-stat-divider" />
+                  <div className="ch-stat-divider" />
 
-      <div className="ch-stat">
-        <span className="ch-stat-num">
-          {Object.keys(senderCounts).length}
-        </span>
+                  <div className="ch-stat">
+                    <span className="ch-stat-num">
+                      {Object.keys(senderCounts).length}
+                    </span>
 
-        <span className="ch-stat-label">
-          Services connected
-        </span>
-      </div>
+                    <span className="ch-stat-label">Services connected</span>
+                  </div>
 
-      <div className="ch-stat-services">
-        {presentSenderServices.map((service) => (
-          <span
-            key={service.id}
-            className="ch-stat-chip"
-            style={{
-              background: `${service.color}14`,
-            }}
-            title={`${service.label}: ${senderCounts[service.id]}`}
-          >
-            {renderIcon(
-              service.icon,
-              service.label,
-              "xs"
-            )}
-          </span>
-        ))}
-      </div>
-    </div>
+                  <div className="ch-stat-services">
+                    {presentSenderServices.map((service) => (
+                      <span
+                        key={service.id}
+                        className="ch-stat-chip"
+                        style={{
+                          background: `${service.color}14`,
+                        }}
+                        title={`${service.label}: ${senderCounts[service.id]}`}
+                      >
+                        {renderIcon(service.icon, service.label, "xs")}
+                      </span>
+                    ))}
+                  </div>
+                </div>
 
-    <div className="ch-filters">
-      <button
-        className={`ch-filter ${
-          senderFilter === "all" ? "on" : ""
-        }`}
-        onClick={() => setSenderFilter("all")}
-      >
-        All
-        <span className="ch-filter-n">
-          {senderAccounts.length}
-        </span>
-      </button>
+                <div className="ch-filters">
+                  <button
+                    className={`ch-filter ${
+                      senderFilter === "all" ? "on" : ""
+                    }`}
+                    onClick={() => setSenderFilter("all")}
+                  >
+                    All
+                    <span className="ch-filter-n">{senderAccounts.length}</span>
+                  </button>
 
-      {presentSenderServices.map((service) => (
-        <button
-          key={service.id}
-          className={`ch-filter ${
-            senderFilter === service.id ? "on" : ""
-          }`}
-          onClick={() => setSenderFilter(service.id)}
-        >
-          {renderIcon(
-            service.icon,
-            service.label,
-            "xs"
-          )}
+                  {presentSenderServices.map((service) => (
+                    <button
+                      key={service.id}
+                      className={`ch-filter ${
+                        senderFilter === service.id ? "on" : ""
+                      }`}
+                      onClick={() => setSenderFilter(service.id)}
+                    >
+                      {renderIcon(service.icon, service.label, "xs")}
 
-          <span className="ch-filter-label">
-            {service.label}
-          </span>
+                      <span className="ch-filter-label">{service.label}</span>
 
-          <span className="ch-filter-n">
-            {senderCounts[service.id]}
-          </span>
-        </button>
-      ))}
-    </div>
+                      <span className="ch-filter-n">
+                        {senderCounts[service.id]}
+                      </span>
+                    </button>
+                  ))}
+                </div>
 
-    <div className="ch-sender-grid">
-                {senderVisible.map((account) => {
-                  const service = senderServiceById(account.channel_type);
+                <div className="ch-sender-grid">
+                  {senderVisible.map((account) => {
+                    const service = senderServiceById(account.channel_type);
 
-                  return (
-                    <div className="ch-sender-card" key={account.id}>
-                      <div className="ch-card-top">
-                        <span
-                          className="ch-badge"
-                          style={{
-                            background: `${service?.color || "#4f46e5"}18`,
-                          }}
-                        >
-                          {renderIcon(
-                            service?.icon || "📤",
-                            service?.label || account.channel_type,
-                            "lg",
-                          )}
-                        </span>
+                    return (
+                      <div className="ch-sender-card" key={account.id}>
+                        <div className="ch-card-top">
+                          <span
+                            className="ch-badge"
+                            style={{
+                              background: `${service?.color || "#4f46e5"}18`,
+                            }}
+                          >
+                            {renderIcon(
+                              service?.icon || "📤",
+                              service?.label || account.channel_type,
+                              "lg",
+                            )}
+                          </span>
 
-                        <div className="ch-card-head">
-                          <div className="ch-card-name">{account.label}</div>
+                          <div className="ch-card-head">
+                            <div className="ch-card-name">{account.label}</div>
 
-                          <div className="ch-card-service">
-                            {service?.label || account.channel_type}
+                            <div className="ch-card-service">
+                              {service?.label || account.channel_type}
+                            </div>
+                          </div>
+
+                          <div className="ch-card-actions">
+                            <button
+                              className="ch-icon-btn danger"
+                              title="Remove sender"
+                              onClick={() => removeSender(account)}
+                              disabled={removingSenderId === account.id}
+                            >
+                              {removingSenderId === account.id ? "…" : "🗑️"}
+                            </button>
                           </div>
                         </div>
 
-                        <div className="ch-card-actions">
-                          <button
-                            className="ch-icon-btn danger"
-                            title="Remove sender"
-                            onClick={() => removeSender(account)}
-                            disabled={removingSenderId === account.id}
-                          >
-                            {removingSenderId === account.id ? "…" : "🗑️"}
-                          </button>
-                        </div>
-                      </div>
-
-                      {/* <div className="ch-card-field">
+                        {/* <div className="ch-card-field">
 
                   <span className="ch-card-field-label">
                     Sender
@@ -1539,36 +2148,36 @@ const presentSenderServices = useMemo(
                   </span>
 
                 </div> */}
-                      <div className="ch-card-field">
-                        <span className="ch-card-field-label">Sender</span>
+                        <div className="ch-card-field">
+                          <span className="ch-card-field-label">Sender</span>
 
-                        <button
-                          type="button"
-                          className="ch-card-primary"
-                          data-full-value={account.identifier || "—"}
-                          // title={account.identifier || "—"}
-                          onClick={() => copyToClipboard(account.identifier)}
-                        >
-                          <span className="ch-card-primary-text">
-                            {account.identifier || "—"}
+                          <button
+                            type="button"
+                            className="ch-card-primary"
+                            data-full-value={account.identifier || "—"}
+                            // title={account.identifier || "—"}
+                            onClick={() => copyToClipboard(account.identifier)}
+                          >
+                            <span className="ch-card-primary-text">
+                              {account.identifier || "—"}
+                            </span>
+                          </button>
+                        </div>
+
+                        <div className="ch-card-meta">
+                          <span className="ch-status-pill">
+                            <span className="ch-dot" />
+
+                            {account.is_active && account.is_verified
+                              ? "Verified & Active"
+                              : "Inactive"}
                           </span>
-                        </button>
+                        </div>
                       </div>
-
-                      <div className="ch-card-meta">
-                        <span className="ch-status-pill">
-                          <span className="ch-dot" />
-
-                          {account.is_active && account.is_verified
-                            ? "Verified & Active"
-                            : "Inactive"}
-                        </span>
-                      </div>
-                    </div>
-                  );
-                })}
-               </div>
-            </>
+                    );
+                  })}
+                </div>
+              </>
             )}
           </div>
         </div>
