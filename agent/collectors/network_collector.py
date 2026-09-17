@@ -206,9 +206,7 @@ class NetworkCollector:
                         event.process_user         = p.username()
                 except (psutil.NoSuchProcess, psutil.AccessDenied):
                     pass
-            print("pushing network data")
             self._dispatch(event.to_dict(), self._machine_info)
-            print("pushed")
         except Exception as e:
             print(f"Error emitting connection event: {e}")
     def _poll(self):
