@@ -173,4 +173,5 @@ async def push_data_to_db(data_to_push):
                         #     print(f"[sigma-batch] {cat}: {result['findings']} alert(s) "
                         #         f"from {result['batch_size']} events")
     except Exception as e:
-        print(f"Failed to psuh data in db {str(e)}")
+        # print(f"Failed to psuh data in db {str(e)}")
+        print("err")
