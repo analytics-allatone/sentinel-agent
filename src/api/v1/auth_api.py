@@ -273,7 +273,7 @@ async def two_fa_enable(req: TwoFACodeRequest,
     if user.two_fa_enabled:
         raise HTTPException(status_code=409, detail="2FA is already enabled")
 
-    if not check_code(user.two_fa_secret, req.code):
+    if not check_code(user, req.code):
         raise HTTPException(status_code=401, detail="Invalid code")
 
     user.two_fa_enabled = True
@@ -289,9 +289,9 @@ async def two_fa_enable(req: TwoFACodeRequest,
 @auth_router.post("/login/2fa" , response_model = standard_success_response)
 async def login_two_fa(req: TwoFAVerifyRequest,
                        db: AsyncSession = Depends(get_async_db)):
-    user_id = read_challenge_token(req.challenge_token)
+    user_email = read_challenge_token(req.challenge_token)
 
-    user = (await db.execute(select(Users).where(Users.id == user_id))).scalars().first()
+    user = (await db.execute(select(Users).where(Users.email == user_email))).scalars().first()
     if not user or not user.two_fa_enabled:
         raise HTTPException(status_code=401, detail="Invalid challenge")
 
