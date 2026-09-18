@@ -273,7 +273,7 @@ async def two_fa_enable(req: TwoFACodeRequest,
     if user.two_fa_enabled:
         raise HTTPException(status_code=409, detail="2FA is already enabled")
 
-    if not check_code(user, req.code):
+    if not check_code(user.two_fa_secret, req.code):
         raise HTTPException(status_code=401, detail="Invalid code")
 
     user.two_fa_enabled = True
