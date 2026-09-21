@@ -10,8 +10,10 @@ class LoginRequest(BaseModel):
 
 
 class LoginResponse(BaseModel):
-    access_token : str
-    refresh_token : str
+    access_token : str|None
+    refresh_token : str|None
+    two_fa_enabled : bool
+    challenge_token:str|None
 
 
 
@@ -33,7 +35,6 @@ class SignupRequest(BaseModel):
     name : str
     email : str
     password : str
-    role : str
 
 
 class SignupResponse(BaseModel):
@@ -81,3 +82,30 @@ class ApplicationUser(BaseModel):
 
 class GetUsersResponse(BaseModel):
     users : list[ApplicationUser]
+
+
+
+class TwoFASetupResponse(BaseModel):
+    secret: str
+    otpauth_uri: str
+    qr_code_png_base64: str
+
+
+
+
+class TwoFACodeRequest(BaseModel):
+    code: str
+
+
+class TwoFAEnableResponse(BaseModel):
+    two_fa_enabled: bool
+
+
+class TwoFAVerifyRequest(BaseModel):
+    challenge_token: str
+    code: str
+
+
+class TwoFADisableRequest(BaseModel):
+    password: str
+    code: str
