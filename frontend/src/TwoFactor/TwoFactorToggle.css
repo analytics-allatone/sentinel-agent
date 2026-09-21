@@ -1,0 +1,200 @@
+/* ─────────────────────────────────────────────────────────────
+   The two-step verification switch in the sidebar, and the dialog
+   that each direction opens. Sidebar colours, not page colours.
+   ───────────────────────────────────────────────────────────── */
+
+.tf-switch-block {
+  margin: 0 4px 6px;
+}
+
+.tf-switch-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 10px;
+  border: 1px solid #e8eaf0;
+  border-radius: 10px;
+  background: #fbfbfd;
+}
+
+.tf-switch-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  flex: 0 0 auto;
+  border-radius: 8px;
+  background: #f0edff;
+  color: #6654e8;
+  font-size: 14px;
+}
+
+.tf-switch-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.25;
+}
+
+.tf-switch-label {
+  color: #344054;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tf-switch-state {
+  color: #98a2b3;
+  font-size: 11px;
+}
+
+/* ── the switch itself ──────────────────────────────────────── */
+.tf-switch {
+  position: relative;
+  flex: 0 0 auto;
+  margin-left: auto;
+  width: 38px;
+  height: 21px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: #d0d5dd;
+  cursor: pointer;
+  transition: background 0.18s ease;
+}
+
+.tf-switch-knob {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(16, 24, 40, 0.25);
+  transition: transform 0.18s ease;
+}
+
+.tf-switch.tf-switch-on {
+  background: #6654e8;
+}
+
+.tf-switch.tf-switch-on .tf-switch-knob {
+  transform: translateX(17px);
+}
+
+.tf-switch:focus-visible {
+  outline: 2px solid #6654e8;
+  outline-offset: 2px;
+}
+
+.tf-switch:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.tf-switch-notice {
+  margin: 6px 2px 0;
+  color: #067647;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+/* ── dialog ─────────────────────────────────────────────────── */
+.tf-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(15, 23, 42, 0.45);
+}
+
+.tf-modal {
+  width: 100%;
+  max-width: 400px;
+  max-height: calc(100vh - 32px);
+  overflow-y: auto;
+  padding: 26px 24px;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 20px 48px rgba(15, 23, 42, 0.22);
+  text-align: center;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  color: #172033;
+}
+
+.tf-modal:focus {
+  outline: none;
+}
+
+.tf-modal-title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.tf-modal-lead {
+  margin: 9px auto 0;
+  max-width: 34ch;
+  color: #667085;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+/* The password asked for before 2FA can be switched off. */
+.tf-field {
+  margin-bottom: 16px;
+  text-align: left;
+}
+
+.tf-field label {
+  display: block;
+  margin-bottom: 6px;
+  color: #344054;
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.tf-field .pwd-input {
+  width: 100%;
+  min-height: 42px;
+  padding: 10px 44px 10px 12px;
+  border: 1px solid #dfe4ec;
+  border-radius: 8px;
+  background: #fff;
+  color: #172033;
+  font-family: inherit;
+  font-size: 13.5px;
+  box-sizing: border-box;
+}
+
+.tf-field .pwd-input:focus {
+  outline: none;
+  border-color: #6654e8;
+  box-shadow: 0 0 0 3px rgba(102, 84, 232, 0.14);
+}
+
+/* Turning the second factor off is the destructive direction, and reads as it. */
+.tf-btn-danger {
+  border-color: #d92d20;
+  background: #d92d20;
+  color: #fff;
+}
+
+.tf-btn-danger:hover:not(:disabled) {
+  background: #b42318;
+  border-color: #b42318;
+}
+
+@media (max-width: 480px) {
+  .tf-modal {
+    padding: 22px 16px;
+  }
+}

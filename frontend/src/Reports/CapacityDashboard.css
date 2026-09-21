@@ -2766,3 +2766,431 @@
   font-size: 0.95em;
 }
 
+
+/* ─────────────────────────────────────────────────────────────
+   DISK PARTITIONS
+
+   A snapshot of the mounted volumes from the latest sample. The
+   storage chart averages every partition into one line, so a small
+   volume at 98% vanishes into it; these cards are where it shows.
+
+   Each card is built to be read in one pass: what it is, how bad it
+   is in words, how much room is left, and where the warn/critical
+   lines sit relative to the bar.
+   ───────────────────────────────────────────────────────────── */
+
+.capacity-dash__disks {
+  background: var(--cap-panel);
+  border: 1px solid var(--cap-border);
+  border-radius: var(--cap-radius);
+  padding: 12px 14px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.capacity-dash__disk-tally {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.capacity-dash__disk-flag {
+  padding: 3px 9px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  font-size: 11px;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.capacity-dash__disk-flag--ok {
+  border-color: var(--cap-agent-cpu);
+  color: var(--cap-agent-cpu);
+}
+
+.capacity-dash__disk-flag--warn {
+  border-color: var(--cap-cpu);
+  color: var(--cap-cpu);
+}
+
+.capacity-dash__disk-flag--critical {
+  border-color: var(--cap-agent-mem);
+  color: var(--cap-agent-mem);
+}
+
+.capacity-dash__disk-empty {
+  margin: 0;
+  color: var(--cap-dim);
+  font-size: 12px;
+}
+
+.capacity-dash__disk-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 10px;
+}
+
+/* ── one volume ─────────────────────────────────────────────── */
+
+.capacity-dash__disk {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  padding: 12px 13px;
+  border: 1px solid var(--cap-border);
+  border-top: 2px solid var(--cap-faint);
+  border-radius: var(--cap-radius);
+  background: var(--cap-panel-hi);
+  min-width: 0;
+  transition: border-color 0.18s ease, transform 0.18s ease;
+}
+
+.capacity-dash__disk:hover {
+  border-color: var(--cap-accent-border);
+  transform: translateY(-1px);
+}
+
+.capacity-dash__disk--ok {
+  border-top-color: var(--cap-agent-cpu);
+}
+
+.capacity-dash__disk--warn {
+  border-top-color: var(--cap-cpu);
+}
+
+.capacity-dash__disk--critical {
+  border-top-color: var(--cap-agent-mem);
+}
+
+.capacity-dash__disk-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+}
+
+.capacity-dash__disk-id {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.capacity-dash__disk-mount {
+  color: var(--cap-strong);
+  font-size: 13.5px;
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* What the volume is for. Silent when the path is not a known one —
+   a wrong guess here would be worse than saying nothing. */
+.capacity-dash__disk-role {
+  color: var(--cap-dim);
+  font-size: 10.5px;
+  letter-spacing: 0.02em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.capacity-dash__disk-badge {
+  flex: 0 0 auto;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.capacity-dash__disk-badge--ok {
+  background: rgba(79, 214, 160, 0.14);
+  color: var(--cap-agent-cpu);
+}
+
+.capacity-dash__disk-badge--warn {
+  background: rgba(242, 169, 59, 0.16);
+  color: var(--cap-cpu);
+}
+
+.capacity-dash__disk-badge--critical {
+  background: rgba(242, 116, 141, 0.16);
+  color: var(--cap-agent-mem);
+}
+
+/* ── the numbers ────────────────────────────────────────────── */
+
+.capacity-dash__disk-readout {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  min-width: 0;
+}
+
+.capacity-dash__disk-percent {
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  color: var(--cap-strong);
+}
+
+.capacity-dash__disk-percent-sign {
+  font-size: 13px;
+  font-weight: 600;
+  margin-left: 1px;
+}
+
+.capacity-dash__disk--ok .capacity-dash__disk-percent {
+  color: var(--cap-agent-cpu);
+}
+
+.capacity-dash__disk--warn .capacity-dash__disk-percent {
+  color: var(--cap-cpu);
+}
+
+.capacity-dash__disk--critical .capacity-dash__disk-percent {
+  color: var(--cap-agent-mem);
+}
+
+.capacity-dash__disk-readout-label {
+  color: var(--cap-dim);
+  font-size: 11px;
+}
+
+/* Free space is the figure anyone acts on, so it sits beside the
+   percentage rather than being buried in the row below. */
+.capacity-dash__disk-free {
+  margin-left: auto;
+  color: var(--cap-dim);
+  font-size: 11.5px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.capacity-dash__disk-free strong {
+  color: var(--cap-text);
+  font-size: 12.5px;
+  font-weight: 700;
+}
+
+/* ── the bar, with the thresholds drawn on it ───────────────── */
+
+.capacity-dash__disk-meter {
+  position: relative;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--cap-grid);
+  overflow: hidden;
+}
+
+.capacity-dash__disk-meter-fill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--cap-faint);
+  transition: width 0.3s ease;
+}
+
+.capacity-dash__disk--ok .capacity-dash__disk-meter-fill {
+  background: var(--cap-agent-cpu);
+}
+
+.capacity-dash__disk--warn .capacity-dash__disk-meter-fill {
+  background: var(--cap-cpu);
+}
+
+.capacity-dash__disk--critical .capacity-dash__disk-meter-fill {
+  background: var(--cap-agent-mem);
+}
+
+/* The warn and critical lines, so the bar reads as a position
+   against a limit instead of a bare quantity. */
+.capacity-dash__disk-tick {
+  position: absolute;
+  top: -1px;
+  bottom: -1px;
+  width: 1px;
+  background: var(--cap-panel);
+  opacity: 0.85;
+}
+
+.capacity-dash__disk-tick--crit {
+  width: 2px;
+}
+
+.capacity-dash__disk-figures {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px 12px;
+  color: var(--cap-dim);
+  font-size: 11.5px;
+  font-variant-numeric: tabular-nums;
+}
+
+.capacity-dash__disk-figures strong {
+  color: var(--cap-text);
+  font-weight: 600;
+}
+
+.capacity-dash__disk-device {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding-top: 8px;
+  margin-top: auto;
+  border-top: 1px solid var(--cap-border);
+  color: var(--cap-dim);
+  font-size: 11px;
+  min-width: 0;
+}
+
+.capacity-dash__disk-device-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.capacity-dash__disk-fstype {
+  flex: 0 0 auto;
+  margin-left: auto;
+  padding: 1px 6px;
+  border: 1px solid var(--cap-border);
+  border-radius: 4px;
+  color: var(--cap-text);
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .capacity-dash__disk,
+  .capacity-dash__disk-meter-fill {
+    transition: none;
+  }
+
+  .capacity-dash__disk:hover {
+    transform: none;
+  }
+}
+
+@media (max-width: 520px) {
+  .capacity-dash__disk-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ── disk partitions, in the exported report ─────────────────
+   Scoped to .capacity-dash__print rather than @media print, because
+   the send-by-email path rasterises these pages on screen. */
+
+.capacity-dash__print-disk-table {
+  width: 100%;
+  margin: 0 0 4mm;
+  border-collapse: collapse;
+  font-size: 11px;
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+.capacity-dash__print-disk-table th {
+  padding: 6px 8px;
+  border-bottom: 1.5px solid #27384d;
+  color: #27384d;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-align: left;
+  text-transform: uppercase;
+}
+
+.capacity-dash__print-disk-table td {
+  padding: 6px 8px;
+  border-bottom: 1px solid #e6eaf0;
+  color: #3d4d61;
+  vertical-align: middle;
+}
+
+.capacity-dash__print-disk-table tr:nth-child(even) td {
+  background: #fafbfd;
+}
+
+.capacity-dash__print-disk-num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.capacity-dash__print-disk-mount {
+  color: #27384d;
+  font-weight: 600;
+}
+
+.capacity-dash__print-disk-pct {
+  font-weight: 700;
+}
+
+.capacity-dash__print-disk-pct--ok {
+  color: #1c7f57;
+}
+
+.capacity-dash__print-disk-pct--warn {
+  color: #9a6510;
+}
+
+.capacity-dash__print-disk-pct--critical {
+  color: #b42318;
+}
+
+/* The band tally above the table, so the page opens with the count. */
+.capacity-dash__print-disk-tally {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px 14px;
+  margin: 0 0 3mm;
+  font-size: 10.5px;
+}
+
+.capacity-dash__print-disk-tally-item {
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.capacity-dash__print-disk-tally-total {
+  margin-left: auto;
+  color: #6b7c93;
+  font-variant-numeric: tabular-nums;
+}
+
+/* What the volume is for, under its mount point. */
+.capacity-dash__print-disk-role {
+  display: block;
+  margin-top: 1px;
+  color: #6b7c93;
+  font-size: 9.5px;
+  font-weight: 400;
+}
+
+.capacity-dash__print-disk-status {
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.capacity-dash__print-disk-note {
+  max-width: 180mm;
+  margin: 0;
+  color: #6b7c93;
+  font-size: 10px;
+  line-height: 1.6;
+}

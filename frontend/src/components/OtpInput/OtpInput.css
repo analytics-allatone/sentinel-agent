@@ -1,0 +1,56 @@
+/* Six-box one-time-code field. Sized so the boxes stay tappable on a phone and
+   the whole row still fits at 360px. */
+.otp-input {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
+
+.otp-box {
+  width: 48px;
+  height: 56px;
+  padding: 0;
+  border: 1px solid #dfe4ec;
+  border-radius: 10px;
+  background: #fff;
+  color: #172033;
+  font-family: inherit;
+  font-size: 22px;
+  font-weight: 600;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.otp-box:focus {
+  border-color: #6654e8;
+  box-shadow: 0 0 0 3px rgba(102, 84, 232, 0.18);
+}
+
+.otp-box:disabled {
+  background: #f7f8fa;
+  color: #98a2b3;
+  cursor: not-allowed;
+}
+
+/* A wrong code marks every box, since the code is wrong as a whole. */
+.otp-input--invalid .otp-box {
+  border-color: #d64545;
+}
+
+.otp-input--invalid .otp-box:focus {
+  box-shadow: 0 0 0 3px rgba(214, 69, 69, 0.18);
+}
+
+@media (max-width: 400px) {
+  .otp-input {
+    gap: 7px;
+  }
+
+  .otp-box {
+    width: 44px;
+    height: 52px;
+    font-size: 20px;
+  }
+}

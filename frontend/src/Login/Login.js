@@ -1,7 +1,18 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import api from "../api/api";
+import { useEffect, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
+import { setCookie } from "../api/api";
+import {
+  errorMessage,
+  login as loginRequest,
+  readAccessToken,
+  readRefreshToken,
+  readTempToken,
+  readTwoFactorState,
+} from "../api/twoFactor";
+import { useTwoFactor } from "../TwoFactor/TwoFactorContext";
+import { rememberTwoFactorEnabled } from "../TwoFactor/twoFactorPreference";
 import Header from "../Header/Header";
+import PasswordField from "../components/PasswordField/PasswordField";
 import "./Login.css";
 
 function Login() {
@@ -9,7 +20,16 @@ function Login() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
   const navigate = useNavigate();
+  const location = useLocation();
+  const { begin } = useTwoFactor();
+
+  // A pre-auth token that ran out mid-flow sends the user back here with a
+  // reason, rather than to a login page that looks like nothing happened.
+  useEffect(() => {
+    if (location.state && location.state.notice) setNotice(location.state.notice);
+  }, [location.state]);
 
   const login = async (e) => {
     e.preventDefault();
@@ -21,32 +41,44 @@ function Login() {
     }
 
     setLoading(true);
+    setNotice("");
     try {
-      const response = await api.post("/login", {
-        email,
-        password,
-      });
-      console.log("[Login] Response:", response.data);
+      const address = email.trim().toLowerCase();
+      const response = await loginRequest(address, password);
 
-      // Extract tokens from response.data.data
-      const accessToken = response.data.data?.access_token;
-      const refreshToken = response.data.data?.refresh_token;
+      const challengeToken = readTempToken(response);
+      const { twoFactorEnabled } = readTwoFactorState(response);
 
-      // Second step: send the user to the QR + OTP verification page. The tokens
-      // are held in navigation state and only stored as cookies once they scan
-      // the QR with their authenticator app and enter the 6-digit code.
-      navigate("/app/verify-otp", {
-        state: {
-          email: email.trim().toLowerCase(),
-          pendingAccessToken: accessToken,
-          pendingRefreshToken: refreshToken,
-        },
-      });
+      // two_fa_enabled decides the path: an account with it on gets no session
+      // here, only the short-lived challenge token, kept in memory for the
+      // code page. Turning 2FA on is not offered at sign-in — that needs a
+      // real session, so it lives after signup and on the sidebar switch.
+      if (twoFactorEnabled || challengeToken) {
+        if (!challengeToken) {
+          setError("Two-step verification could not start. Please try again.");
+          return;
+        }
+        begin(challengeToken, address);
+        navigate("/app/2fa/verify");
+        return;
+      }
+
+      // two_fa_enabled false: the API signed the user straight in, and the
+      // tokens in this same answer are the session.
+      const accessToken = readAccessToken(response);
+      if (!accessToken) {
+        setError("Sign-in did not complete. Please try again.");
+        return;
+      }
+
+      setCookie("token", accessToken, 7);
+      const refreshToken = readRefreshToken(response);
+      if (refreshToken) setCookie("refresh_token", refreshToken, 30);
+      localStorage.setItem("auth_email", address);
+      rememberTwoFactorEnabled(twoFactorEnabled);
+      navigate("/app/dashboard", { replace: true });
     } catch (err) {
-      console.log("[Login] ❌ Error:", err.response?.data);
-      setError(
-        err.response?.data?.message || "Login failed. Please try again.",
-      );
+      setError(errorMessage(err, "Login failed. Please try again."));
     } finally {
       setLoading(false);
     }
@@ -78,6 +110,11 @@ function Login() {
           </div>
 
           <form onSubmit={login}>
+            {notice && (
+              <div className="notice-message" role="status">
+                {notice}
+              </div>
+            )}
             {error && <div className="error-message">{error}</div>}
 
             <div className="input-group">
@@ -94,10 +131,11 @@ function Login() {
 
             <div className="input-group">
               <label htmlFor="password">Password</label>
-              <input
+              <PasswordField
                 id="password"
-                type="password"
+                name="password"
                 placeholder="Enter your password"
+                autoComplete="current-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 disabled={loading}

@@ -1,5 +1,7 @@
 import axios from "axios";
 
+import { TWO_FACTOR_ENABLED_KEY } from "../TwoFactor/twoFactorPreference";
+
 // ========================
 // 🍪 COOKIE HELPERS
 // ========================
@@ -50,6 +52,7 @@ export const clearAuthCookies = () => {
   deleteCookie("refresh_token");
   localStorage.removeItem("token");
   localStorage.removeItem("auth_email");
+  localStorage.removeItem(TWO_FACTOR_ENABLED_KEY);
   console.log("[🗑️ COOKIE] Cleared all auth cookies");
 };
 
@@ -188,6 +191,13 @@ api.interceptors.request.use(
         token = storageToken;
         console.log("[📤 REQUEST] Token from localStorage");
       }
+    }
+
+    // A request that set its own Authorization header means it: the two-step
+    // verification calls carry a short-lived pre-auth token, and a leftover
+    // session cookie must not replace it.
+    if (config.skipAuthToken || (config.headers && config.headers.Authorization)) {
+      return config;
     }
 
     // CRITICAL: Add Authorization header if token exists
