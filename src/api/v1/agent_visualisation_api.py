@@ -63,7 +63,8 @@ async def capacityMonitoringOverview(agent_name: str = Query(..., description="A
             M.agent_cpu_percent,  
             M.agent_rss_mb,
             M.memory_percent,
-            M.bandwidth_mbps
+            M.bandwidth_mbps,
+            M.disk_partitions
         )
         .where(*base_filter)
         .order_by(M.timestamp.asc())
@@ -100,6 +101,8 @@ async def capacityMonitoringOverview(agent_name: str = Query(..., description="A
         {"t": row.timestamp, "value": r(row.bandwidth_mbps)} for row in rows
     ]
 
+    disk_partitions = rows[-1].disk_partitions if rows else []
+
     response = CapacityMonitoringOverviewResponse(
         agent_name = agent_name,
         from_dt = from_dt,
@@ -111,6 +114,7 @@ async def capacityMonitoringOverview(agent_name: str = Query(..., description="A
         storage_utilization_series = storage_utilization,
         agent_cpu_utilization_series = agent_cpu_utilization,
         agent_memory_utilization_series = agent_memory_utilization,
-        agent_bandwidth_mbps_series = agent_bandwidth_mbps
+        agent_bandwidth_mbps_series = agent_bandwidth_mbps,
+        disk_partitions=disk_partitions
     )
     return standard_success_response(data=response , message= "Capacity monitoring overview data get successfully" )

@@ -168,9 +168,10 @@ async def push_data_to_db(data_to_push):
                             cleaned_records
                         )
                         await session.commit()
-                        result = await run_sigma_on_batch(session, category=cat, rows=records)
-                        if result["findings"]:
-                            print(f"[sigma-batch] {cat}: {result['findings']} alert(s) "
-                                f"from {result['batch_size']} events")
+                        # result = await run_sigma_on_batch(session, category=cat, rows=records)
+                        # if result["findings"]:
+                        #     print(f"[sigma-batch] {cat}: {result['findings']} alert(s) "
+                        #         f"from {result['batch_size']} events")
     except Exception as e:
-        print(f"Failed to psuh data in db {str(e)}")
+        # print(f"Failed to psuh data in db {str(e)}")
+        print("err")

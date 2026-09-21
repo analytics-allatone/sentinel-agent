@@ -17,7 +17,7 @@ TOPIC = "agent/agent_events"
 
 
 
-BATCH_SIZE = 50
+BATCH_SIZE = 10
 
 
 
@@ -69,8 +69,6 @@ async def mqtt_background_consumer():
                     event_data = data_dict.get("event", {})
 
                     agent_name = machine_info.get("agent_name" , None)
-                    if agent_name == "AgentWithStatusAndThreads1":
-                        print(agent_name)
                     category = event_data.get("category" , None)
 
                     if not agent_name or not category:
@@ -87,7 +85,10 @@ async def mqtt_background_consumer():
                         master_dict[agent_name]["event_data"] = []
                     master_dict[agent_name]["event_data"].append(event_data)
                     if len(master_dict[agent_name]["event_data"]) >= BATCH_SIZE:
-                        await push_data_to_db(master_dict[agent_name])
+                        try:
+                            await push_data_to_db(master_dict[agent_name])
+                        except Exception as e:
+                            print(f"exception in pushing in db {str(e)}")
                         master_dict[agent_name]["event_data"] = []
 
 
