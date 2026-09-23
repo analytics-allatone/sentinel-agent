@@ -9,6 +9,7 @@ def inspect(params: Dict[str, Any]) -> Dict[str, Any]:
     r = redis.Redis(host=params.get("host", "127.0.0.1"), port=int(params.get("port", 6379)),
                     password=params.get("password") or None, socket_timeout=8,
                     socket_connect_timeout=8, decode_responses=True)
+    cur_db = params.get("db", params.get("database", 0))
     info = r.info()
     try: slow = r.slowlog_get(10)
     except Exception: slow = []
@@ -20,7 +21,7 @@ def inspect(params: Dict[str, Any]) -> Dict[str, Any]:
     total_keys = sum(d["keys"] for d in keyspace)
     hits, misses = g("keyspace_hits", 0), g("keyspace_misses", 0)
     out = {
-        "basic_connectivity": {"version": g("redis_version"), "current_database": "db0",
+        "basic_connectivity": {"version": g("redis_version"), "current_database": f"db{cur_db}",
                                "server_host": params.get("host", "127.0.0.1"), "server_port": g("tcp_port"),
                                "mode": g("redis_mode"), "os": g("os")},
         "database_size": {"used_memory_bytes": g("used_memory"), "used_memory_human": g("used_memory_human"),
@@ -48,5 +49,13 @@ def inspect(params: Dict[str, Any]) -> Dict[str, Any]:
                         "used_memory_rss_bytes": g("used_memory_rss"), "maxmemory_bytes": g("maxmemory")},
         "health_summary": {"connected_clients": g("connected_clients"), "total_keys": total_keys,
                            "used_memory_bytes": g("used_memory"), "uptime_seconds": g("uptime_in_seconds")},
+             "database_count": len(keyspace),          # logical DBs that hold keys (db0..dbN)
+        "total_size_bytes": g("used_memory"),      # in-memory footprint (bytes)
+        "databases": [                             # per-logical-DB breakdown
+            {"datname": d["db"], "keys": d["keys"], "expires": d["expires"]}
+            for d in keyspace
+        ],
     }
-    return {"db_version": g("redis_version"), "current_database": "db0", "points": out}
+    return {"db_version": g("redis_version"), "database_count": out.get('database_count'),
+            "total_size_bytes":  g("used_memory"),
+            "databases": out.get('databases'),"current_database": "db0", "points": out}
