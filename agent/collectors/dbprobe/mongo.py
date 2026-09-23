@@ -38,6 +38,10 @@ def inspect(params: Dict[str, Any]) -> Dict[str, Any]:
                             if primary_optime and m.get("optimeDate") and m.get("stateStr") == "SECONDARY" else None}
             for m in members]
     out = {
+        "database_count": len(databases),
+        "table_count": sum(d["collections"] for d in databases),   # "tables" == collections
+        "total_size_bytes": sum(d["size_bytes"] for d in databases),
+        "databases": sorted(databases, key=lambda d: d["size_bytes"], reverse=True),
         "basic_connectivity": {"version": ss.get("version"), "current_database": cur_db,
                                "server_host": ss.get("host"), "server_port": params.get("port", 27017),
                                "process": ss.get("process")},
@@ -64,4 +68,4 @@ def inspect(params: Dict[str, Any]) -> Dict[str, Any]:
                            "total_size_bytes": sum(d["size_bytes"] for d in databases),
                            "uptime_seconds": int(ss.get("uptime", 0))},
     }
-    return {"db_version": ss.get("version"), "current_database": cur_db, "points": out}
+    return {"db_version": ss.get("version"),"database_count": out.get('database_count'),"table_count": out.get('table_count') ,"total_size_bytes" : out.get('total_size_bytes') , "databases" : out.get('databases') , "current_database": cur_db, "points": out}
