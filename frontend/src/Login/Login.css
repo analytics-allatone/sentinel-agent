@@ -360,3 +360,14 @@ form {
     padding: 30px 20px;
   }
 }
+/* Why the user is back here: a pre-auth token that ran out mid sign-in. It is
+   information, not a failure, so it does not read as an error. */
+.notice-message {
+  margin-bottom: 12px;
+  padding: 10px 12px;
+  border: 1px solid #ffe08a;
+  border-radius: 8px;
+  background: #fffaeb;
+  color: #8a5a00;
+  font-size: 13px;
+}

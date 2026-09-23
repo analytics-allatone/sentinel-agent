@@ -32,6 +32,18 @@ import {
 } from "./capacityTransform";
 import { CHART_CHROME, GAP_COLOR, SERIES_COLORS } from "./colors";
 import { istInputToApi, lastHoursInputs } from "./timeRange";
+import {
+  DISK_CRITICAL,
+  DISK_LEVEL_LABEL,
+  DISK_WARN,
+  bandCounts,
+  diskLevel,
+  formatGb,
+  partitionRole,
+  readPartitions,
+  sumGb,
+} from "./diskPartitions";
+import DiskPartitionsPrint from "./DiskPartitionsPrint";
 import "./CapacityDashboard.css";
 
 // import {
@@ -937,9 +949,14 @@ function PrintReport({ payload, rows, gaps, stats, periodText, theme, hostName, 
   const summary = (payload && payload.summary) || {};
   const lastIndex = Math.max(0, rows.length - 1);
 
+  // The mounted volumes of the most recent sample, fullest first.
+  const partitions = readPartitions(payload);
+
   // Page 1 carries the cover and the executive summary together; each metric
-  // gets its own page after that.
-  const pageCount = PANES.length + 1;
+  // gets its own page after that, and the partitions table closes the report
+  // whenever the agent reported any.
+  const partitionsPage = PANES.length + 2;
+  const pageCount = PANES.length + 1 + (partitions.length > 0 ? 1 : 0);
 
   const sampleCount =
     payload && payload.sample_count != null
@@ -1289,7 +1306,172 @@ function PrintReport({ payload, rows, gaps, stats, periodText, theme, hostName, 
           </section>
         );
       })}
+
+      {/* The partitions page closes the report, in both export routes. */}
+      <DiskPartitionsPrint
+        partitions={partitions}
+        pageNumber={partitionsPage}
+        pageCount={pageCount}
+      />
+
     </div>
+  );
+}
+
+/* ── disk partitions ────────────────────────────
+   A snapshot of the mounted volumes from the most recent sample. Reading and
+   formatting them lives in ./diskPartitions, so it can be tested without the
+   charting and PDF libraries this file pulls in.
+
+   Each card answers the three questions someone opens a capacity report with:
+   how bad is it (band + words), how much room is left (free space, the figure
+   you act on), and what is this volume for (the mount point's role).
+   ────────────────────────────────────────────────────────── */
+function DiskPartitions({ partitions, loading }) {
+  const counts = bandCounts(partitions);
+  const totalGb = sumGb(partitions, "totalGb");
+  const freeGb = sumGb(partitions, "freeGb");
+  const usedShare = totalGb > 0 ? ((totalGb - freeGb) / totalGb) * 100 : 0;
+  const headline = counts.critical
+    ? "critical"
+    : counts.warn
+      ? "warn"
+      : "ok";
+
+  return (
+    <section className="capacity-dash__disks">
+      <header className="capacity-dash__pane-header">
+        <div className="capacity-dash__pane-titles">
+          <h2 className="capacity-dash__pane-title">Disk partitions</h2>
+          <span className="capacity-dash__pane-unit">
+            latest sample · {partitions.length}{" "}
+            {partitions.length === 1 ? "volume" : "volumes"} ·{" "}
+            {formatGb(freeGb)} free of {formatGb(totalGb)}
+            {totalGb > 0 && ` · ${usedShare.toFixed(0)}% used overall`}
+          </span>
+        </div>
+
+        {partitions.length > 0 && (
+          <div className="capacity-dash__disk-tally">
+            {counts.critical > 0 && (
+              <span className="capacity-dash__disk-flag capacity-dash__disk-flag--critical">
+                {counts.critical} critical
+              </span>
+            )}
+            {counts.warn > 0 && (
+              <span className="capacity-dash__disk-flag capacity-dash__disk-flag--warn">
+                {counts.warn} to watch
+              </span>
+            )}
+            {headline === "ok" && (
+              <span className="capacity-dash__disk-flag capacity-dash__disk-flag--ok">
+                All healthy
+              </span>
+            )}
+          </div>
+        )}
+      </header>
+
+      {partitions.length === 0 ? (
+        <p className="capacity-dash__disk-empty">
+          {loading
+            ? "Reading partitions…"
+            : "This sample carried no partition data. Older agents do not report it yet."}
+        </p>
+      ) : (
+        <div className="capacity-dash__disk-grid">
+          {partitions.map((part) => {
+            const level = diskLevel(part.percent);
+            const width = Math.max(0, Math.min(100, part.percent));
+            const role = partitionRole(part.mountpoint);
+
+            return (
+              <article
+                className={`capacity-dash__disk capacity-dash__disk--${level}`}
+                key={`${part.device}|${part.mountpoint}`}
+              >
+                <div className="capacity-dash__disk-head">
+                  <div className="capacity-dash__disk-id">
+                    <span
+                      className="capacity-dash__disk-mount"
+                      title={part.mountpoint}
+                    >
+                      {part.mountpoint}
+                    </span>
+                    {role && (
+                      <span className="capacity-dash__disk-role">{role}</span>
+                    )}
+                  </div>
+
+                  <span
+                    className={`capacity-dash__disk-badge capacity-dash__disk-badge--${level}`}
+                  >
+                    {DISK_LEVEL_LABEL[level]}
+                  </span>
+                </div>
+
+                <div className="capacity-dash__disk-readout">
+                  <span className="capacity-dash__disk-percent">
+                    {part.percent.toFixed(1)}
+                    <span className="capacity-dash__disk-percent-sign">%</span>
+                  </span>
+                  <span className="capacity-dash__disk-readout-label">used</span>
+
+                  <span className="capacity-dash__disk-free">
+                    <strong>{formatGb(part.freeGb)}</strong> free
+                  </span>
+                </div>
+
+                {/* The ticks are the warn and critical lines, so a volume can be
+                    read as "close to the line" rather than just "some number". */}
+                <div
+                  className="capacity-dash__disk-meter"
+                  role="img"
+                  aria-label={`${part.mountpoint} is ${part.percent.toFixed(
+                    1
+                  )} percent full — ${DISK_LEVEL_LABEL[level].toLowerCase()}`}
+                  title={`${part.percent.toFixed(1)}% used · warn at ${DISK_WARN}% · critical at ${DISK_CRITICAL}%`}
+                >
+                  <span
+                    className="capacity-dash__disk-meter-fill"
+                    style={{ width: `${width}%` }}
+                  />
+                  <i
+                    className="capacity-dash__disk-tick"
+                    style={{ left: `${DISK_WARN}%` }}
+                  />
+                  <i
+                    className="capacity-dash__disk-tick capacity-dash__disk-tick--crit"
+                    style={{ left: `${DISK_CRITICAL}%` }}
+                  />
+                </div>
+
+                <div className="capacity-dash__disk-figures">
+                  <span>
+                    <strong>{formatGb(part.usedGb)}</strong> used
+                  </span>
+                  <span>{formatGb(part.totalGb)} total</span>
+                </div>
+
+                <div
+                  className="capacity-dash__disk-device"
+                  title={`${part.device}${part.fstype ? ` · ${part.fstype}` : ""}`}
+                >
+                  <span className="capacity-dash__disk-device-name">
+                    {part.device}
+                  </span>
+                  {part.fstype && (
+                    <span className="capacity-dash__disk-fstype">
+                      {part.fstype}
+                    </span>
+                  )}
+                </div>
+              </article>
+            );
+          })}
+        </div>
+      )}
+    </section>
   );
 }
 
@@ -1372,6 +1554,8 @@ export default function CapacityDashboard() {
 
   const rows = useMemo(() => buildRows(payload), [payload]);
   const gaps = useMemo(() => findGaps(rows), [rows]);
+  // A snapshot, not a series: the mounted volumes of the most recent sample.
+  const partitions = useMemo(() => readPartitions(payload), [payload]);
   const lastIndex = Math.max(0, rows.length - 1);
 
   
@@ -2322,6 +2506,10 @@ const chartEndIndex = useMemo(() => {
           </span>
         </div>
       </div>
+
+      {/* The volumes of the latest sample sit above the charts: "what is
+          nearly full right now" is read before the trends behind it. */}
+      {!isEmpty && <DiskPartitions partitions={partitions} loading={loading} />}
 
       {isEmpty ? (
         <div className="capacity-dash__empty">

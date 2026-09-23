@@ -26,6 +26,15 @@ import AgentInfoDashboard from "./Reports/AgentInfoDashboard";
 import Unauthorized from "./pages/Unauthorized/Unauthorized";
 import NotFound from "./pages/NotFound/NotFound";
 import DbHealthPage from "./DbHealth/DbHealthPage";
+import {
+  RequireSession,
+  RequireTempToken,
+  TwoFactorProvider,
+} from "./TwoFactor/TwoFactorContext";
+import EnableTwoFactorPrompt from "./TwoFactor/EnableTwoFactorPrompt";
+import TwoFactorSetup from "./TwoFactor/TwoFactorSetup";
+import TwoFactorVerify from "./TwoFactor/TwoFactorVerify";
+import EmailOtpVerify from "./TwoFactor/EmailOtpVerify";
 import Messaging from "./Messaging/Messaging";
 import ChannelsManager from "./Channels/ChannelsManager";
 
@@ -45,6 +54,9 @@ function AppContent() {
       <Loader isVisible={isLoading} />
       <BrowserRouter>
         <ErrorBoundary>
+          {/* The pre-auth token lives here, in memory, for the length of one
+              sign-in attempt. */}
+          <TwoFactorProvider>
           <Routes>
           {/* Root → send users into the /app-prefixed app */}
           <Route path="/" element={<Navigate to="/app/login" replace />} />
@@ -59,6 +71,42 @@ function AppContent() {
           <Route path="/app/verify-otp" element={<VerifyOtp />} />
           {/* 403 — full-screen, no app chrome; the guard redirects here */}
           <Route path="/app/unauthorized" element={<Unauthorized />} />
+
+          {/* Two-step verification. Turning it on runs on a real session —
+              that is what the API requires — so those two pages need a token;
+              the challenge step needs a sign-in attempt in progress. */}
+          <Route
+            path="/app/2fa/enable"
+            element={
+              <RequireSession>
+                <EnableTwoFactorPrompt />
+              </RequireSession>
+            }
+          />
+          <Route
+            path="/app/2fa/setup"
+            element={
+              <RequireSession>
+                <TwoFactorSetup />
+              </RequireSession>
+            }
+          />
+          <Route
+            path="/app/2fa/verify"
+            element={
+              <RequireTempToken>
+                <TwoFactorVerify />
+              </RequireTempToken>
+            }
+          />
+          <Route
+            path="/app/2fa/email-otp"
+            element={
+              <RequireTempToken>
+                <EmailOtpVerify />
+              </RequireTempToken>
+            }
+          />
 
           {/* Protected Routes - Authentication required */}
           <Route
@@ -146,6 +194,7 @@ function AppContent() {
               stale address. Must stay last: it matches everything. */}
           <Route path="*" element={<NotFound />} />
           </Routes>
+          </TwoFactorProvider>
         </ErrorBoundary>
       </BrowserRouter>
     </div>

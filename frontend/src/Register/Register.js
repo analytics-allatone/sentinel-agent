@@ -1,17 +1,19 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import api from "../api/api";
+import api, { setCookie } from "../api/api";
+import { readAccessToken, readRefreshToken } from "../api/twoFactor";
+import PasswordField from "../components/PasswordField/PasswordField";
 import "./Register.css";
 import Header from "../Header/Header";
 
+
 function Register() {
+  // Signup sends only what a person types. The role is assigned by the
+  // backend, so it is neither asked for here nor put in the request body.
   const [form, setForm] = useState({
-    first_name: "",
-    last_name: "",
+    name: "",
     email: "",
-    mobile: "",
     password: "",
-    confirmPassword: "",
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -24,14 +26,7 @@ function Register() {
   };
 
   const validateForm = () => {
-    if (
-      !form.first_name ||
-      !form.last_name ||
-      !form.email ||
-      !form.mobile ||
-      !form.password ||
-      !form.confirmPassword
-    ) {
+    if (!form.name.trim() || !form.email || !form.password) {
       setError("Please fill in all fields");
       return false;
     }
@@ -41,18 +36,8 @@ function Register() {
       return false;
     }
 
-    if (!/^\d{10}$/.test(form.mobile.replace(/\D/g, ""))) {
-      setError("Please enter a valid 10-digit phone number");
-      return false;
-    }
-
     if (form.password.length < 6) {
       setError("Password must be at least 6 characters long");
-      return false;
-    }
-
-    if (form.password !== form.confirmPassword) {
-      setError("Passwords do not match");
       return false;
     }
 
@@ -70,32 +55,33 @@ function Register() {
 
     setLoading(true);
     try {
+      const address = form.email.trim().toLowerCase();
       const response = await api.post("/signup", {
-        first_name: form.first_name,
-        last_name: form.last_name,
-        email: form.email,
-        phone_number: form.mobile,
+        name: form.name.trim(),
+        email: address,
         password: form.password,
-        country_code: "+91",
       });
 
       // Remember the registered email so the RBAC layer can identify the
       // user (the first registered user becomes the Super Admin).
-      localStorage.setItem("auth_email", form.email.trim().toLowerCase());
+      localStorage.setItem("auth_email", address);
 
-      setSuccess("Account created successfully! Redirecting to login...");
-      setForm({
-        first_name: "",
-        last_name: "",
-        email: "",
-        mobile: "",
-        password: "",
-        confirmPassword: "",
-      });
+      // Signup hands back a real session, so the new account is already
+      // signed in. That session is what lets the next page offer two-step
+      // verification: /2fa/setup needs a token, not a half-signed-in state.
+      const accessToken = readAccessToken(response);
+      if (!accessToken) {
+        setError("Account created, but sign-in did not complete. Please log in.");
+        return;
+      }
 
-      setTimeout(() => {
-        navigate("/app/login");
-      }, 2000);
+      setCookie("token", accessToken, 7);
+      const refreshToken = readRefreshToken(response);
+      if (refreshToken) setCookie("refresh_token", refreshToken, 30);
+
+      setSuccess("Account created successfully!");
+      setForm({ name: "", email: "", password: "" });
+      navigate("/app/2fa/enable", { replace: true });
     } catch (err) {
       setError(
         err.response?.data?.message || "Registration failed. Please try again.",
@@ -120,26 +106,14 @@ function Register() {
             {success && <div className="success-message">{success}</div>}
 
             <div className="input-group">
-              <label htmlFor="firstname">First Name</label>
+              <label htmlFor="name">Name</label>
               <input
-                id="firstname"
+                id="name"
                 type="text"
-                name="first_name"
-                placeholder="Enter your first name"
-                value={form.first_name}
-                onChange={handleChange}
-                disabled={loading}
-              />
-            </div>
-
-            <div className="input-group">
-              <label htmlFor="last_name">Last Name</label>
-              <input
-                id="lastname"
-                type="text"
-                name="last_name"
-                placeholder="Enter your last name"
-                value={form.last_name}
+                name="name"
+                placeholder="Enter your full name"
+                autoComplete="name"
+                value={form.name}
                 onChange={handleChange}
                 disabled={loading}
               />
@@ -152,6 +126,7 @@ function Register() {
                 type="email"
                 name="email"
                 placeholder="Enter your email"
+                autoComplete="email"
                 value={form.email}
                 onChange={handleChange}
                 disabled={loading}
@@ -159,39 +134,13 @@ function Register() {
             </div>
 
             <div className="input-group">
-              <label htmlFor="mobile">Phone Number</label>
-              <input
-                id="mobile"
-                type="tel"
-                name="mobile"
-                placeholder="Enter your phone number"
-                value={form.mobile}
-                onChange={handleChange}
-                disabled={loading}
-              />
-            </div>
-
-            <div className="input-group">
               <label htmlFor="password">Password</label>
-              <input
+              <PasswordField
                 id="password"
-                type="password"
                 name="password"
                 placeholder="Create a password"
+                autoComplete="new-password"
                 value={form.password}
-                onChange={handleChange}
-                disabled={loading}
-              />
-            </div>
-
-            <div className="input-group">
-              <label htmlFor="confirmPassword">Confirm Password</label>
-              <input
-                id="confirmPassword"
-                type="password"
-                name="confirmPassword"
-                placeholder="Confirm your password"
-                value={form.confirmPassword}
                 onChange={handleChange}
                 disabled={loading}
               />

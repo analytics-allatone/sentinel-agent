@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import TwoFactorToggle from "../TwoFactor/TwoFactorToggle";
 import "./Sidebar.css";
 
 import {
@@ -246,6 +247,12 @@ const Sidebar = ({ isOpen, onClose }) => {
             </button>
 
           </div>
+
+
+          {/* =================================
+              ACCOUNT SECURITY
+              ================================= */}
+          <TwoFactorToggle />
 
 
           {/* =================================

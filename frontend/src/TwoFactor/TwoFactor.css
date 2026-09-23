@@ -1,0 +1,304 @@
+/* ─────────────────────────────────────────────────────────────
+   Two-step verification — the shared shell for all four steps.
+   Matches the app's existing look: white card, purple accent, 8px radii.
+   ───────────────────────────────────────────────────────────── */
+
+.tf-page {
+  min-height: 100vh;
+  background: #f7f8fa;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  color: #172033;
+}
+
+.tf-main {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 40px 16px 64px;
+}
+
+.tf-card {
+  width: 100%;
+  max-width: 420px;
+  padding: 32px 28px;
+  border: 1px solid #e4e7ec;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 10px 30px rgba(23, 32, 51, 0.06);
+  text-align: center;
+}
+
+.tf-title {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.tf-lead {
+  margin: 10px auto 0;
+  max-width: 34ch;
+  color: #667085;
+  font-size: 13.5px;
+  line-height: 1.6;
+}
+
+.tf-error {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin: 18px 0 0;
+  padding: 10px 12px;
+  border: 1px solid #f4c7c7;
+  border-radius: 8px;
+  background: #fef4f4;
+  color: #b42318;
+  font-size: 12.5px;
+  text-align: left;
+}
+
+.tf-error::before {
+  content: "⚠";
+}
+
+.tf-form {
+  margin-top: 22px;
+}
+
+.tf-actions {
+  display: grid;
+  gap: 10px;
+  margin-top: 22px;
+}
+
+/* ── buttons ────────────────────────────────────────────────── */
+.tf-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 44px;
+  padding: 0 18px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.18s ease, border-color 0.18s ease, color 0.18s ease;
+}
+
+.tf-btn-primary {
+  border-color: #6654e8;
+  background: #6654e8;
+  color: #fff;
+}
+
+.tf-btn-primary:hover:not(:disabled) {
+  background: #5746d5;
+  border-color: #5746d5;
+}
+
+.tf-btn-secondary {
+  border-color: #dfe4ec;
+  background: #fff;
+  color: #475467;
+}
+
+.tf-btn-secondary:hover:not(:disabled) {
+  border-color: #6654e8;
+  color: #6654e8;
+  background: #f6f4ff;
+}
+
+.tf-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* A button keeps its width while working, so the card does not jump. */
+.tf-spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: tf-spin 0.7s linear infinite;
+}
+
+@keyframes tf-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ── link-style action ──────────────────────────────────────── */
+.tf-link {
+  display: inline-block;
+  min-height: 44px;
+  padding: 12px 8px;
+  border: 0;
+  background: none;
+  color: #6654e8;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.tf-link:hover:not(:disabled) {
+  text-decoration: underline;
+}
+
+.tf-link:disabled {
+  color: #98a2b3;
+  cursor: not-allowed;
+}
+
+.tf-footer {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid #eef0f4;
+}
+
+.tf-note {
+  margin: 0;
+  color: #98a2b3;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+/* ── QR code ────────────────────────────────────────────────── */
+.tf-qr {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* 220px of QR plus the padding either side — the size the app renders it at */
+  width: 240px;
+  height: 240px;
+  margin: 22px auto 0;
+  max-width: 100%;
+  padding: 10px;
+  border: 1px solid #e4e7ec;
+  border-radius: 12px;
+  background: #fff;
+  box-sizing: border-box;
+}
+
+.tf-qr img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  /* the QR is never cached or saved: it is a one-time secret in picture form */
+  -webkit-user-drag: none;
+}
+
+.tf-qr-loading {
+  flex-direction: column;
+  gap: 10px;
+  color: #98a2b3;
+  font-size: 12px;
+  background: #f7f8fa;
+}
+
+.tf-qr-spinner {
+  width: 24px;
+  height: 24px;
+  border: 2px solid #d0d5dd;
+  border-top-color: #6654e8;
+  border-radius: 50%;
+  animation: tf-spin 0.8s linear infinite;
+}
+
+/* The secret in text, for a camera that will not scan. */
+.tf-setup-key {
+  margin: 12px auto 0;
+  max-width: 34ch;
+  color: #667085;
+  font-size: 12px;
+  line-height: 1.7;
+}
+
+.tf-setup-key code {
+  display: block;
+  margin-top: 5px;
+  padding: 7px 9px;
+  border: 1px solid #e4e7ec;
+  border-radius: 8px;
+  background: #f7f8fa;
+  color: #172033;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12.5px;
+  letter-spacing: 0.06em;
+  word-break: break-all;
+  user-select: all;
+}
+
+/* On a phone this hands the secret straight to the authenticator app. */
+.tf-setup-link {
+  display: inline-block;
+  margin-top: 8px;
+  color: #6654e8;
+  font-size: 12px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.tf-setup-link:hover {
+  text-decoration: underline;
+}
+
+/* ── prompt page ────────────────────────────────────────────── */
+.tf-shield {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  margin: 0 auto 16px;
+  border-radius: 50%;
+  background: #f4f2ff;
+  color: #6654e8;
+}
+
+.tf-points {
+  margin: 20px 0 0;
+  padding: 0;
+  list-style: none;
+  text-align: left;
+}
+
+.tf-points li {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 7px 0;
+  color: #475467;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.tf-points li::before {
+  content: "✓";
+  color: #067647;
+  font-weight: 700;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tf-spinner,
+  .tf-qr-spinner {
+    animation: none;
+  }
+}
+
+@media (max-width: 480px) {
+  .tf-main {
+    padding: 24px 12px 48px;
+  }
+
+  .tf-card {
+    padding: 26px 18px;
+  }
+}
