@@ -127,6 +127,122 @@ export function splitRecord(record) {
   return { checks, fields };
 }
 
+/**
+ * The headline figures this record actually carries.
+ *
+ * Engines put the same figure in different places — MySQL nests the summary
+ * under `health_summary`, Oracle puts sessions and cache at the top level — so
+ * each stat names every place it can live and takes the first that is there.
+ *
+ * A figure that is absent is left out rather than shown as a dash: a row of
+ * dashes says "this page is broken", when the truth is "nothing was measured".
+ */
+const STAT_SOURCES = [
+  { label: "Database size", keys: ["db_size_bytes", "total_size_bytes"], as: "bytes" },
+  { label: "Sessions", keys: ["total_connections", "sessions_current"] },
+  { label: "Active", keys: ["active_queries", "sessions_active"] },
+  { label: "Blocked", keys: ["sessions_blocked"], badWhenPositive: true },
+  { label: "Uptime", keys: ["uptime_seconds"], as: "duration" },
+  { label: "Tables", keys: ["table_count"] },
+  { label: "Databases", keys: ["database_count"] },
+  { label: "Role", keys: ["database_role"] },
+  { label: "Open mode", keys: ["open_mode"] },
+];
+
+function firstPresent(sources, keys) {
+  for (const key of keys) {
+    for (const source of sources) {
+      const value = source && source[key];
+      if (value !== null && value !== undefined && value !== "") return value;
+    }
+  }
+  return undefined;
+}
+
+export function pickStats(record) {
+  if (!record) return [];
+
+  const summary = record.health_summary || {};
+  const sources = [summary, record];
+  const stats = [];
+
+  STAT_SOURCES.forEach((stat) => {
+    const value = firstPresent(sources, stat.keys);
+    if (value === undefined) return;
+
+    stats.push({
+      label: stat.label,
+      value:
+        stat.as === "bytes"
+          ? formatBytes(value)
+          : stat.as === "duration"
+            ? formatDuration(value)
+            : formatValue(stat.keys[0], value),
+      sub: stat.label === "Database size" ? summary.current_database : undefined,
+      tone: stat.badWhenPositive && Number(value) > 0 ? "bad" : undefined,
+    });
+  });
+
+  // Cache hit lives in its own check on MySQL and at the top level on Oracle.
+  const cache = record.cache_hit_ratio || {};
+  const cacheHit =
+    cache.buffer_pool_hit_pct != null ? cache.buffer_pool_hit_pct : record.cache_hit_pct;
+  if (cacheHit != null) {
+    stats.push({
+      label: "Cache hit",
+      value: `${cacheHit}%`,
+      sub: cache.read_requests != null
+        ? `${Number(cache.read_requests).toLocaleString()} reads`
+        : undefined,
+      tone: Number(cacheHit) >= 95 ? "ok" : "warn",
+    });
+  }
+
+  // "0 issues" is only good news when something was actually checked; on a
+  // record that was never inspected it is a claim nobody made.
+  if (Array.isArray(record.issues) && (record.issues.length > 0 || record.inspected !== false)) {
+    stats.push({
+      label: "Issues",
+      value: record.issues.length,
+      tone: record.issues.length ? "bad" : "ok",
+    });
+  }
+
+  return stats;
+}
+
+/**
+ * The one thing worth saying at the top when a record carries no measurements.
+ *
+ * `inspected: false` means the agent found the database and wrote it down, but
+ * never connected to it — every check is null for a reason, and `notes` is that
+ * reason. Without this the page reads as broken instead of as "not collected".
+ */
+export function inspectionNotice(record) {
+  if (!record || record.inspected !== false) return null;
+
+  return {
+    title: "Detected, but not inspected",
+    detail:
+      record.notes ||
+      "The agent recorded this database but did not collect health data from it.",
+    target: record.target_name || "",
+  };
+}
+
+/** Fields worth reading, and the ones that only say "nothing here". */
+export function partitionFields(fields) {
+  const present = [];
+  const empty = [];
+
+  (fields || []).forEach((entry) => {
+    const value = entry[1];
+    (value === null || value === undefined || value === "" ? empty : present).push(entry);
+  });
+
+  return { present, empty };
+}
+
 /** Health wording -> the tone it should be shown in. */
 export function healthTone(status) {
   const value = String(status || "").toLowerCase();

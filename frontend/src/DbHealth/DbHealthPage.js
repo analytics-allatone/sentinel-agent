@@ -4,12 +4,13 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import api from "../api/api";
 import {
   columnsOf,
-  formatBytes,
-  formatDuration,
   formatTimestamp,
   formatValue,
   healthTone,
+  inspectionNotice,
   isRowArray,
+  partitionFields,
+  pickStats,
   splitRecord,
   titleOf,
 } from "./dbHealthFormat";
@@ -94,6 +95,45 @@ function FieldList({ entries }) {
   );
 }
 
+/**
+ * The record's own fields, as a table.
+ *
+ * A row that carries nothing is marked rather than dropped: "this was not
+ * measured" is an answer, and one the reader should be able to see at a glance
+ * without comparing against a list of what the engine could have sent.
+ */
+function RecordTable({ entries }) {
+  if (entries.length === 0) {
+    return <p className="dbh-empty">No field matches that filter.</p>;
+  }
+
+  return (
+    <div className="dbh-kv-wrap">
+      <table className="dbh-table dbh-kv">
+        <thead>
+          <tr>
+            <th>Field</th>
+            <th>Value</th>
+          </tr>
+        </thead>
+        <tbody>
+          {entries.map(([key, value]) => {
+            const empty = value === null || value === undefined || value === "";
+            return (
+              <tr key={key} className={empty ? "dbh-kv-row--empty" : ""}>
+                <td className="dbh-kv-key">{titleOf(key)}</td>
+                <td className="dbh-kv-value" title={String(value ?? "")}>
+                  {formatValue(key, value)}
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 /** One check: its scalars first, then each nested list as its own table. */
 function CheckCard({ name, value }) {
   if (isRowArray(value)) {
@@ -169,6 +209,8 @@ export default function DbHealthPage() {
   const [payload, setPayload] = useState(null);
   const [selected, setSelected] = useState(0);
   const [showRaw, setShowRaw] = useState(false);
+  const [showEmptyFields, setShowEmptyFields] = useState(false);
+  const [fieldFilter, setFieldFilter] = useState("");
 
   const load = useCallback(
     async (nextLimit, nextCompact) => {
@@ -230,8 +272,31 @@ export default function DbHealthPage() {
     return [...lead, ...rest];
   }, [checks]);
 
-  const summary = (record && record.health_summary) || {};
-  const cache = (record && record.cache_hit_ratio) || {};
+  // Only the figures this record actually carries, and the reason there are
+  // none when a database was detected but never connected to.
+  const stats = useMemo(() => pickStats(record), [record]);
+  const notice = useMemo(() => inspectionNotice(record), [record]);
+  const { present: liveFields, empty: emptyFields } = useMemo(
+    () => partitionFields(fields),
+    [fields]
+  );
+
+  // What the record table shows: the fields that carry something, the empty
+  // ones when asked for, and only what matches the filter.
+  const recordFields = useMemo(
+    () => (showEmptyFields ? [...liveFields, ...emptyFields] : liveFields),
+    [showEmptyFields, liveFields, emptyFields]
+  );
+
+  const visibleFields = useMemo(() => {
+    const needle = fieldFilter.trim().toLowerCase();
+    if (!needle) return recordFields;
+    return recordFields.filter(
+      ([key, value]) =>
+        titleOf(key).toLowerCase().includes(needle) ||
+        String(value == null ? "" : value).toLowerCase().includes(needle)
+    );
+  }, [recordFields, fieldFilter]);
 
   const onSubmit = (e) => {
     e.preventDefault();
@@ -254,30 +319,60 @@ export default function DbHealthPage() {
           </button>
 
           <h1 className="dbh-title">
-            {serviceName || "Database"}
-            {record && record.health_status && (
+            {serviceName || (payload && payload.service_name) || "Database"}
+            {record && record.health_status ? (
               <span className={`dbh-badge dbh-badge--${healthTone(record.health_status)}`}>
                 {record.health_status}
               </span>
+            ) : (
+              // No health status is not the same as unhealthy — say which it is.
+              record &&
+              record.inspected === false && (
+                <span className="dbh-badge dbh-badge--muted">Not inspected</span>
+              )
             )}
           </h1>
 
-          <p className="dbh-sub">
+          {/* Facts as separate pills rather than one dot-separated sentence —
+              each one is looked up on its own, not read start to finish. */}
+          <div className="dbh-sub">
             <span className="dbh-engine">{engine || "—"}</span>
-            {" · "}
-            {agentName || "—"}
+
+            <span className="dbh-meta">
+              <span className="dbh-meta-key">agent</span>
+              {agentName || "—"}
+            </span>
+
             {record && record.db_host && (
-              <>
-                {" · "}
+              <span className="dbh-meta">
+                <span className="dbh-meta-key">host</span>
                 <span className="dbh-mono">
                   {record.db_host}
                   {record.db_port ? `:${record.db_port}` : ""}
                 </span>
-              </>
+              </span>
             )}
-            {record && record.db_version && <> · v{record.db_version}</>}
-            {record && record.timestamp && <> · {formatTimestamp(record.timestamp)}</>}
-          </p>
+
+            {record && record.db_version && (
+              <span className="dbh-meta">
+                <span className="dbh-meta-key">version</span>
+                {record.db_version}
+              </span>
+            )}
+
+            {record && record.timestamp && (
+              <span className="dbh-meta">
+                <span className="dbh-meta-key">read</span>
+                {formatTimestamp(record.timestamp)}
+              </span>
+            )}
+
+            {payload && payload.matched_on && (
+              <span className="dbh-meta dbh-meta--soft">
+                matched on {titleOf(payload.matched_on).toLowerCase()}
+              </span>
+            )}
+          </div>
         </div>
 
         <form className="dbh-controls" onSubmit={onSubmit}>
@@ -343,34 +438,89 @@ export default function DbHealthPage() {
             </div>
           )}
 
-          <div className="dbh-stats">
-            <Stat
-              label="Database size"
-              value={formatBytes(summary.db_size_bytes)}
-              sub={summary.current_database}
-            />
-            <Stat label="Active queries" value={formatValue("active_queries", summary.active_queries)} />
-            <Stat
-              label="Connections"
-              value={formatValue("total_connections", summary.total_connections)}
-            />
-            <Stat label="Uptime" value={formatDuration(summary.uptime_seconds)} />
-            {cache.buffer_pool_hit_pct != null && (
-              <Stat
-                label="Cache hit"
-                value={`${cache.buffer_pool_hit_pct}%`}
-                sub={`${Number(cache.read_requests || 0).toLocaleString()} reads`}
-                tone={Number(cache.buffer_pool_hit_pct) >= 95 ? "ok" : "warn"}
-              />
+          {/* Why every figure is missing, said once and at the top, rather
+              than left for the reader to infer from a page of dashes. */}
+          {notice && (
+            <section className="dbh-notice" role="status">
+              <span className="dbh-notice-icon" aria-hidden="true">
+                !
+              </span>
+
+              <div className="dbh-notice-body">
+                <h2 className="dbh-notice-title">{notice.title}</h2>
+
+                <p className="dbh-notice-detail">{notice.detail}</p>
+
+                {notice.target && (
+                  <p className="dbh-notice-target">
+                    Target <span className="dbh-mono">{notice.target}</span>
+                    {record.db_host && (
+                      <>
+                        {" · "}
+                        <span className="dbh-mono">
+                          {record.db_host}
+                          {record.db_port ? `:${record.db_port}` : ""}
+                        </span>
+                      </>
+                    )}
+                  </p>
+                )}
+              </div>
+            </section>
+          )}
+
+          {/* What the agent did, in its own words: the four fields that say
+              which collector ran, what it did and how it turned out. */}
+          <div className="dbh-chips">
+            {record.action && (
+              <span className="dbh-chip">
+                <span className="dbh-chip-key">action</span>
+                {record.action}
+              </span>
             )}
-            {record.issues && (
-              <Stat
-                label="Issues"
-                value={record.issues.length}
-                tone={record.issues.length ? "bad" : "ok"}
-              />
+            {record.outcome && (
+              <span
+                className={`dbh-chip dbh-chip--${
+                  record.outcome === "success" ? "ok" : "bad"
+                }`}
+              >
+                <span className="dbh-chip-key">outcome</span>
+                {record.outcome}
+              </span>
+            )}
+            {record.severity && (
+              <span className={`dbh-chip dbh-chip--${healthTone(record.severity)}`}>
+                <span className="dbh-chip-key">severity</span>
+                {record.severity}
+              </span>
+            )}
+            {record.collector && (
+              <span className="dbh-chip">
+                <span className="dbh-chip-key">collector</span>
+                {record.collector}
+              </span>
+            )}
+            {record.inspected != null && (
+              <span className="dbh-chip">
+                <span className="dbh-chip-key">inspected</span>
+                {record.inspected ? "yes" : "no"}
+              </span>
             )}
           </div>
+
+          {stats.length > 0 && (
+            <div className="dbh-stats">
+              {stats.map((stat) => (
+                <Stat
+                  key={stat.label}
+                  label={stat.label}
+                  value={stat.value}
+                  sub={stat.sub}
+                  tone={stat.tone}
+                />
+              ))}
+            </div>
+          )}
 
           <div className="dbh-cards">
             {orderedChecks.map(([name, value]) => (
@@ -378,9 +528,44 @@ export default function DbHealthPage() {
             ))}
           </div>
 
-          <section className="dbh-card">
-            <h3 className="dbh-card-title">Record</h3>
-            <FieldList entries={fields} />
+          {/* The record itself is a flat list of ~50 named values, which is
+              what a table is for: one row each, one column of names to scan
+              down, and a filter for when the name is already known. */}
+          <section className="dbh-card dbh-card--record">
+            <h3 className="dbh-card-title">
+              Record
+              <span className="dbh-card-count">
+                {visibleFields.length}
+                {visibleFields.length !== recordFields.length &&
+                  ` of ${recordFields.length}`}
+              </span>
+
+              <input
+                type="search"
+                className="dbh-filter"
+                placeholder="Filter fields…"
+                aria-label="Filter record fields"
+                value={fieldFilter}
+                onChange={(e) => setFieldFilter(e.target.value)}
+              />
+            </h3>
+
+            <RecordTable entries={visibleFields} />
+
+            {/* The nulls are kept, not hidden for good: which checks came back
+                empty is itself an answer, just not the first one to show. */}
+            {emptyFields.length > 0 && (
+              <button
+                type="button"
+                className="dbh-empty-toggle"
+                onClick={() => setShowEmptyFields((v) => !v)}
+                aria-expanded={showEmptyFields}
+              >
+                {showEmptyFields
+                  ? `Hide ${emptyFields.length} empty fields`
+                  : `Show ${emptyFields.length} empty fields`}
+              </button>
+            )}
           </section>
 
           <div className="dbh-raw">
