@@ -9,6 +9,7 @@ from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
 from pydantic import BaseModel
 from sqlalchemy.future import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from recipient_validation import validate_recipient_for_channel
 
 from db.db import get_async_db
 from models.channel_account_model import ChannelAccount
@@ -116,6 +117,7 @@ async def send_via_account(account_id: int, req: SendRequest,
         raise HTTPException(status_code=404, detail="Account not found or inactive.")
 
     recipient = await _resolve_recipient(db, req.recipient, req.communication_channel_id)
+    validate_recipient_for_channel(account.channel_type, recipient)
     creds = _decrypt(account.credentials_enc)
     send_fn = providers.SEND[account.channel_type]
     try:

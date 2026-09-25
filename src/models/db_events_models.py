@@ -151,9 +151,8 @@ class RedisDbEvents(DbEventCommon, Base):
     health_summary = Column(JSONB)
 
 
-class MongoDbEvents(DbEventCommon, Base):
+class MongoDbEvents(DbEventCommon, Base):    
     __tablename__ = "mongo_db_events"
-    
     connectivity_version = Column(JSONB)
     database_sizes = Column(JSONB)
     active_connections = Column(JSONB)
