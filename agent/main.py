@@ -24,3 +24,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+# pyinstaller --hidden-import="cryptography" --collect-all="cryptography"  .\main.py
