@@ -9,7 +9,7 @@ from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
 from pydantic import BaseModel
 from sqlalchemy.future import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from recipient_validation import validate_recipient_for_channel
+from .recipient_validation import validate_recipient_for_channel
 
 from db.db import get_async_db
 from models.channel_account_model import ChannelAccount
