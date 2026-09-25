@@ -8,7 +8,8 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from email.mime.application import MIMEApplication
 from urllib.parse import urlparse, parse_qs, unquote
-
+# import logging
+# logger = logging.getLogger("uvicorn.error")
 import httpx
 
 
@@ -32,6 +33,14 @@ def _smtp_send_sync(host, port, user, password, sender, recipient, subject, body
 
 def _smtp_send_with_attachment_sync(host, port, user, password, sender, recipient,
                                     subject, body, attachment_bytes, attachment_filename):
+    # size_mb = len(attachment_bytes) / (1024 * 1024)
+    # logger.info(
+        # f"Preparing email with attachment: {attachment_filename} ({size_mb:.2f} MB)"
+    # )
+    print(
+        f"[GMAIL] Attachment: {attachment_filename}, "
+        f"size={len(attachment_bytes)} bytes "
+        f"({len(attachment_bytes) / (1024 * 1024):.2f} MB)")                                   
     msg = MIMEMultipart()
     msg["Subject"] = subject
     msg["From"] = sender
@@ -40,11 +49,25 @@ def _smtp_send_with_attachment_sync(host, port, user, password, sender, recipien
     part = MIMEApplication(attachment_bytes, _subtype="pdf")
     part.add_header("Content-Disposition", "attachment", filename=attachment_filename)
     msg.attach(part)
-    with smtplib.SMTP(host, port, timeout=30) as s:
-        s.starttls(context=ssl.create_default_context())
-        s.login(user, password)
-        s.send_message(msg)
+    print("[GMAIL] Connecting to smtp.gmail.com:587")
+                                        
+    # logger.info(f"Connecting to SMTP server at {host}:{port}")
+    try:
+        
+        with smtplib.SMTP(host, port, timeout=120) as s:
+            s.starttls(context=ssl.create_default_context())
+            s.login(user, password)
+            print("[GMAIL] SMTP login successful")
+            print("[GMAIL] Sending message with attachment...")
 
+            # logger.info(f"Sending email to {recipient}...")
+            s.send_message(msg)
+            print("[GMAIL] Message sent successfully")
+            # logger.info("Email sent successfully")
+
+    except smtplib.SMTPException as e:
+        logger.error(f"Failed to send email via SMTP: {str(e)}")
+        raise
 
 async def verify_gmail(creds: dict) -> str:
     await asyncio.to_thread(_smtp_login_sync, "smtp.gmail.com", 587,
