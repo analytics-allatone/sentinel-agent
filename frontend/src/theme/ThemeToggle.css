@@ -1,0 +1,19 @@
+/* The toggle sits in app chrome that is not always on the Phi palette yet,
+   so it carries its own surface rather than inheriting a legacy one. */
+.phi-theme-toggle {
+  flex: none;
+  border-color: var(--border);
+  background: var(--surface);
+  color: var(--text);
+}
+
+.phi-theme-toggle:hover:not(:disabled) {
+  border-color: var(--border-strong);
+  background: var(--wash);
+  color: var(--accent);
+}
+
+.phi-theme-toggle svg {
+  width: 16px;
+  height: 16px;
+}

@@ -141,12 +141,12 @@ export default function EmailOtpVerify() {
         <div className="tf-actions">
           <button
             type="submit"
-            className="tf-btn tf-btn-primary"
+            className="tf-btn phi-btn"
             disabled={otp.length !== OTP_LENGTH || verifying}
           >
             {verifying ? (
               <>
-                <span className="tf-spinner" aria-hidden="true" />
+                <span className="phi-spinner" aria-hidden="true" />
                 Verifying…
               </>
             ) : (

@@ -6,17 +6,12 @@
    ───────────────────────────────────────────────────────────── */
 
 .nf {
-  --nf-bg-1: #0b1020;
-  --nf-bg-2: #131a33;
-  --nf-bg-3: #1b2145;
+  --nf-accent-1: var(--accent);
+  --nf-accent-2: var(--accent-hover);
   --nf-card: rgba(24, 30, 54, 0.55);
   --nf-card-border: rgba(255, 255, 255, 0.12);
   --nf-text: #eef1f8;
   --nf-text-dim: #9aa4bf;
-  --nf-accent-1: #29b6a6;
-  --nf-accent-2: #5b8cff;
-  --nf-mark-1: #29b6a6;
-  --nf-mark-2: #5b8cff;
   --nf-scope-fill: rgba(41, 182, 166, 0.07);
   --nf-scope-ring: rgba(255, 255, 255, 0.22);
   --nf-trail: rgba(255, 255, 255, 0.42);
@@ -38,27 +33,17 @@
   justify-content: center;
   padding: 24px;
   box-sizing: border-box;
-  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-family: var(--font-body);
   color: var(--nf-text);
   text-align: center;
-  background:
-    radial-gradient(1200px 700px at 15% 10%, var(--nf-bg-3), transparent 60%),
-    radial-gradient(1000px 600px at 85% 90%, var(--nf-bg-2), transparent 55%),
-    linear-gradient(140deg, var(--nf-bg-1), var(--nf-bg-2));
+  background: var(--surface);
 }
 
 .nf[data-theme="light"] {
-  --nf-bg-1: #eef6f5;
-  --nf-bg-2: #e6eefc;
-  --nf-bg-3: #dfeaff;
   --nf-card: rgba(255, 255, 255, 0.74);
   --nf-card-border: rgba(15, 23, 42, 0.1);
   --nf-text: #16203a;
-  --nf-text-dim: #5c6a86;
-  --nf-accent-1: #10897b;
-  --nf-accent-2: #2f6bff;
-  --nf-mark-1: #10897b;
-  --nf-mark-2: #2f6bff;
+  --nf-text-dim: var(--muted);
   --nf-scope-fill: rgba(16, 137, 123, 0.08);
   --nf-scope-ring: rgba(15, 23, 42, 0.18);
   --nf-trail: rgba(15, 23, 42, 0.35);
@@ -80,9 +65,7 @@
   inset: 0;
   z-index: 0;
   pointer-events: none;
-  background-image:
-    linear-gradient(var(--nf-grid) 1px, transparent 1px),
-    linear-gradient(90deg, var(--nf-grid) 1px, transparent 1px);
+  background-image: none;
   background-size: 46px 46px;
   mask-image: radial-gradient(circle at 50% 42%, #000 0%, transparent 72%);
   -webkit-mask-image: radial-gradient(circle at 50% 42%, #000 0%, transparent 72%);
@@ -287,7 +270,7 @@
   border-radius: 10px;
   background: var(--nf-chip);
   border: 1px solid var(--nf-chip-border);
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-family: var(--font-mono);
   font-size: 13px;
   color: var(--nf-text);
   overflow-wrap: anywhere;
@@ -440,16 +423,10 @@
 
 /* ── motion preferences ─────────────────────────────────────── */
 @media (prefers-reduced-motion: reduce) {
-  .nf__card,
-  .nf__radar,
-  .nf__radar-sweep,
-  .nf__radar-miss,
   .nf__shape {
     animation: none !important;
   }
 
-  .nf__btn,
-  .nf__link,
   .nf__theme {
     transition: none;
   }
@@ -457,8 +434,6 @@
 
 /* nobody prints a 404, but if they do, drop the decoration */
 @media print {
-  .nf__shapes,
-  .nf__theme,
   .nf::before {
     display: none;
   }
@@ -466,7 +441,7 @@
   .nf {
     min-height: auto;
     background: none;
-    color: #000;
+    color: var(--text);
   }
 
   .nf__card {

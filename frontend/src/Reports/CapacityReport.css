@@ -1,14 +1,9 @@
 .cap-page {
   /* theme tokens — green accent distinguishes it from the blue SOC2 report */
-  --surface-0: #f7f7f5;
-  --surface-1: #f5f5f3;
-  --card: #ffffff;
-  --border: rgba(11, 11, 11, 0.09);
-  --border-strong: rgba(11, 11, 11, 0.16);
-  --text-primary: #0b0b0b;
-  --text-secondary: #52514e;
-  --text-muted: #898781;
-  --accent: #0f6e56;
+  --card: var(--surface);
+  --text-primary: var(--text);
+  --text-secondary: var(--muted);
+  --text-muted: var(--muted);
   --accent-wash: rgba(15, 110, 86, 0.08);
   --radius: 10px;
   --shadow-sm: 0 1px 2px rgba(11, 11, 11, 0.04);
@@ -97,9 +92,9 @@
 .cap-date,
 .cap-input {
   height: 36px;
-  border: 1px solid #dededa;
+  border: 1px solid var(--border);
   border-radius: 8px;
-  background: #fff;
+  background: var(--surface);
   padding: 0 10px;
   font-size: 13px;
   color: var(--text-primary);
@@ -119,7 +114,7 @@
 }
 .cap-input:hover,
 .cap-date:hover {
-  border-color: #c9c8c2;
+  border-color: var(--border-strong);
 }
 .cap-input:focus,
 .cap-date:focus,
@@ -151,9 +146,9 @@
 
 .cap-btn {
   height: 36px;
-  border: 1px solid #dededa;
+  border: 1px solid var(--border);
   border-radius: 8px;
-  background: #fff;
+  background: var(--surface);
   padding: 0 14px;
   font-size: 13px;
   font-weight: 500;
@@ -168,8 +163,8 @@
   transition: background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
 }
 .cap-btn:hover:not(:disabled) {
-  background: #f4f4f1;
-  border-color: #c9c8c2;
+  background: var(--surface);
+  border-color: var(--border-strong);
 }
 .cap-btn:focus-visible {
   outline: none;
@@ -182,7 +177,7 @@
 .cap-btn-primary {
   background: var(--accent);
   border-color: var(--accent);
-  color: #fff;
+  color: var(--on-primary);
   box-shadow: 0 1px 2px rgba(15, 110, 86, 0.18);
 }
 .cap-btn-primary:hover:not(:disabled) {
@@ -203,7 +198,7 @@
   height: 12px;
   border-radius: 50%;
   border: 2px solid rgba(255, 255, 255, 0.4);
-  border-top-color: #fff;
+  border-top-color: var(--border);
   animation: cap-spin 0.7s linear infinite;
   flex-shrink: 0;
 }
@@ -227,16 +222,16 @@
   white-space: nowrap;
 }
 .cap-pill-agents {
-  background: #eaf3de;
-  color: #27500a;
+  background: var(--success-soft);
+  color: var(--success);
 }
 .cap-pill-degraded {
-  background: #faeeda;
-  color: #854f0b;
+  background: var(--warning-soft);
+  color: var(--warning);
 }
 .cap-pill-offline {
-  background: #fcebeb;
-  color: #a32d2d;
+  background: var(--danger-soft);
+  color: var(--danger);
 }
 
 /* ── tab bar — segmented control ───────────────────────── */
@@ -408,7 +403,7 @@
   align-items: center;
   gap: 8px;
   padding: 9px 0;
-  border-bottom: 0.5px solid #f0f0ee;
+  border-bottom: 0.5px solid var(--border);
   font-size: 13px;
 }
 .evt-item:last-child {
@@ -422,19 +417,19 @@
 }
 .evt-msg {
   flex: 1;
-  color: #333;
+  color: var(--text);
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 .evt-time {
-  color: #999;
+  color: var(--muted);
   font-size: 12px;
   flex-shrink: 0;
 }
 .evt-empty {
-  color: #999;
+  color: var(--muted);
   font-size: 13px;
   padding: 12px 0;
 }
@@ -482,7 +477,7 @@
   align-items: center;
   gap: 10px;
   padding: 10px 0;
-  border-bottom: 0.5px solid #f0f0ee;
+  border-bottom: 0.5px solid var(--border);
   font-size: 13px;
 }
 .cap-health-row:last-child {
@@ -495,16 +490,16 @@
   display: inline-block;
 }
 .cap-health-name {
-  color: #333;
+  color: var(--text);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 .cap-health-host {
-  color: #999;
+  color: var(--muted);
 }
 .cap-health-seen {
-  color: #999;
+  color: var(--muted);
   font-size: 12px;
   min-width: 48px;
   text-align: right;
@@ -519,16 +514,16 @@
   white-space: nowrap;
 }
 .cap-badge-online {
-  background: #eaf3de;
-  color: #27500a;
+  background: var(--success-soft);
+  color: var(--success);
 }
 .cap-badge-degraded {
-  background: #faeeda;
-  color: #854f0b;
+  background: var(--warning-soft);
+  color: var(--warning);
 }
 .cap-badge-offline {
-  background: #fcebeb;
-  color: #a32d2d;
+  background: var(--danger-soft);
+  color: var(--danger);
 }
 
 /* offline row inside per-agent bar lists */
@@ -540,10 +535,10 @@
   font-size: 13px;
 }
 .cap-offline-name {
-  color: #777;
+  color: var(--muted);
 }
 .cap-offline-tag {
-  color: #a32d2d;
+  color: var(--danger);
   font-size: 12px;
 }
 
@@ -573,7 +568,7 @@
   white-space: nowrap;
 }
 .cap-table th:hover {
-  color: #333;
+  color: var(--text);
 }
 .cap-table th.sorted {
   color: var(--accent);
@@ -590,8 +585,8 @@
 }
 .cap-table td {
   padding: 10px 10px;
-  border-bottom: 0.5px solid #f2f2f0;
-  color: #333;
+  border-bottom: 0.5px solid var(--border);
+  color: var(--text);
   vertical-align: middle;
 }
 .cap-table td.num {
@@ -603,12 +598,12 @@
 }
 .cap-cell-name {
   font-weight: 500;
-  color: #1a1a1a;
+  color: var(--text);
 }
 
 /* metric cell colours */
 .cap-metric-red {
-  color: #a32d2d;
+  color: var(--danger);
 }
 .cap-metric-amber {
   color: #854f0b;
@@ -628,7 +623,7 @@
   color: #854f0b;
 }
 .cap-seen-red {
-  color: #a32d2d;
+  color: var(--danger);
 }
 
 /* ── alert list ────────────────────────────────────────── */
@@ -645,7 +640,7 @@
   gap: 12px;
   padding: 12px 14px;
   border-radius: 8px;
-  border-left: 3px solid #ccc;
+  border-left: 3px solid var(--border-strong);
   font-size: 13px;
   line-height: 1.5;
 }
@@ -669,21 +664,21 @@
   white-space: nowrap;
 }
 .cap-alert-critical {
-  background: #fcebeb;
+  background: var(--danger-soft);
   border-left-color: #e24b4a;
 }
 .cap-alert-critical .cap-alert-desc {
   color: #7a2222;
 }
 .cap-alert-warning {
-  background: #faeeda;
+  background: var(--warning-soft);
   border-left-color: #ef9f27;
 }
 .cap-alert-warning .cap-alert-desc {
   color: #7a4e0b;
 }
 .cap-alert-resolved {
-  background: #eaf3de;
+  background: var(--success-soft);
   border-left-color: #639922;
 }
 .cap-alert-resolved .cap-alert-desc {
@@ -709,7 +704,7 @@
 }
 .cap-period {
   font-size: 13px;
-  color: #666;
+  color: var(--muted);
   margin-left: auto;
 }
 .cap-regen {
@@ -736,22 +731,22 @@
 .cap-empty-title {
   font-size: 15px;
   font-weight: 600;
-  color: #444;
+  color: var(--text);
 }
 .cap-empty-sub {
   font-size: 13px;
-  color: #999;
+  color: var(--muted);
 }
 .cap-empty-row {
-  color: #999;
+  color: var(--muted);
   font-size: 13px;
   padding: 12px 0;
 }
 .cap-error-banner {
-  background: #fcebeb;
+  background: var(--danger-soft);
   border: 1px solid #f1c9c9;
   border-left: 3px solid #d03b3b;
-  color: #a32d2d;
+  color: var(--danger);
   border-radius: var(--radius);
   padding: 14px 16px;
   display: flex;
@@ -762,7 +757,7 @@
 }
 
 .cap-skel {
-  background: linear-gradient(90deg, #ececea 25%, #f3f3f1 50%, #ececea 75%);
+  background: linear-gradient(90deg, var(--bg) 25%, var(--surface) 50%, var(--bg) 75%);
   background-size: 200% 100%;
   animation: cap-shimmer 1.2s ease-in-out infinite;
   border-radius: 4px;
@@ -820,7 +815,6 @@
   body * {
     visibility: hidden;
   }
-  .cap-print-root,
   .cap-print-root * {
     visibility: visible;
   }
@@ -842,14 +836,10 @@
   .cap-print-root .cap-three-col {
     grid-template-columns: 1fr 1fr 1fr;
   }
-  .cap-print-section,
-  .cap-print-root .cap-card,
-  .cap-print-root .cap-table-wrap,
   .cap-print-root .cap-alert {
     break-inside: avoid;
     page-break-inside: avoid;
   }
-  .cap-print-root .evt-msg,
   .cap-print-root .cap-health-name {
     overflow: visible;
     white-space: normal;
@@ -873,7 +863,6 @@
   .cap-statrow {
     grid-template-columns: repeat(2, 1fr);
   }
-  .cap-two-col,
   .cap-proto-grid {
     grid-template-columns: 1fr;
   }

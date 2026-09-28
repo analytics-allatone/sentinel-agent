@@ -1,12 +1,7 @@
 .rbac-page {
   --indigo: #4f46e5;
   --indigo-dark: #4338ca;
-  --ink: #1f2330;
-  --muted: #6b7280;
-  --border: #e6e6ef;
-  --surface: #ffffff;
-  --bg: #f6f7fb;
-  --danger: #dc2626;
+  --ink: var(--text);
   --danger-bg: #fef2f2;
 
   background: var(--bg);
@@ -58,7 +53,7 @@
 
 /* ── flash / notice ─────────────────────────────────────── */
 .rbac-flash {
-  background: #eef2ff;
+  background: var(--accent-soft);
   border: 1px solid #d9defb;
   color: var(--indigo-dark);
   border-radius: 10px;
@@ -68,9 +63,9 @@
   animation: rbac-fade 0.2s ease;
 }
 .rbac-notice {
-  background: #fff8eb;
+  background: var(--warning-soft);
   border: 1px solid #fbe6bd;
-  color: #8a5a00;
+  color: var(--warning);
   border-radius: 10px;
   padding: 10px 14px;
   font-size: 13px;
@@ -108,7 +103,7 @@
 }
 .rbac-stat-indigo .rbac-stat-value { color: var(--indigo); }
 .rbac-stat-red .rbac-stat-value { color: var(--danger); }
-.rbac-stat-slate .rbac-stat-value { color: #475569; }
+.rbac-stat-slate .rbac-stat-value { color: var(--muted); }
 
 /* ── toolbar / search ───────────────────────────────────── */
 .rbac-toolbar {
@@ -166,7 +161,7 @@
 .rbac-readonly-tag {
   font-size: 12px;
   color: var(--muted);
-  background: #f1f1f6;
+  background: var(--surface);
   border-radius: 8px;
   padding: 8px 12px;
 }
@@ -174,19 +169,11 @@
 /* ── buttons ────────────────────────────────────────────── */
 .rbac-btn {
   height: 40px;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  background: var(--surface);
   padding: 0 16px;
   font-size: 14px;
-  font-weight: 500;
-  color: var(--ink);
-  cursor: pointer;
-  font-family: inherit;
   white-space: nowrap;
-  transition: background 0.15s, border-color 0.15s;
 }
-.rbac-btn:hover:not(:disabled) { background: #f3f3f8; }
+.rbac-btn:hover:not(:disabled) { background: var(--surface); }
 .rbac-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 .rbac-btn-primary {
   background: var(--indigo);
@@ -195,9 +182,6 @@
 }
 .rbac-btn-primary:hover:not(:disabled) { background: var(--indigo-dark); }
 .rbac-btn-danger {
-  background: var(--danger);
-  border-color: var(--danger);
-  color: #fff;
 }
 .rbac-btn-danger:hover:not(:disabled) { background: #b91c1c; }
 .rbac-btn-ghost {
@@ -205,7 +189,7 @@
   border-color: transparent;
   color: var(--muted);
 }
-.rbac-btn-ghost:hover:not(:disabled) { background: #eeeef4; }
+.rbac-btn-ghost:hover:not(:disabled) { background: var(--surface); }
 
 /* ── table ──────────────────────────────────────────────── */
 .rbac-table-wrap {
@@ -229,17 +213,17 @@
   color: var(--muted);
   font-weight: 600;
   padding: 12px 16px;
-  background: #fafafd;
+  background: var(--accent-soft);
   border-bottom: 1px solid var(--border);
 }
 .rbac-th-actions { text-align: right; }
 .rbac-table tbody td {
   padding: 12px 16px;
-  border-bottom: 1px solid #f1f1f6;
+  border-bottom: 1px solid var(--border);
   vertical-align: middle;
 }
 .rbac-table tbody tr:last-child td { border-bottom: none; }
-.rbac-table tbody tr:hover { background: #fafafe; }
+.rbac-table tbody tr:hover { background: var(--surface); }
 .rbac-row-disabled { opacity: 0.62; }
 
 /* user cell */
@@ -260,15 +244,15 @@
   flex-shrink: 0;
   background: #6b7280;
 }
-.rbac-avatar-super_admin { background: linear-gradient(135deg, #4f46e5, #7c3aed); }
-.rbac-avatar-admin { background: linear-gradient(135deg, #2563eb, #4f46e5); }
+.rbac-avatar-super_admin { background: linear-gradient(135deg, var(--accent), #7c3aed); }
+.rbac-avatar-admin { background: linear-gradient(135deg, var(--accent), var(--accent)); }
 .rbac-avatar-view_only { background: linear-gradient(135deg, #64748b, #94a3b8); }
 .rbac-user-meta { display: flex; flex-direction: column; }
 .rbac-user-name { font-weight: 600; font-size: 14px; }
 .rbac-user-email { font-size: 12px; color: var(--muted); }
 .rbac-you {
   font-size: 10px;
-  background: #eef2ff;
+  background: var(--accent-soft);
   color: var(--indigo);
   border-radius: 5px;
   padding: 1px 5px;
@@ -286,9 +270,9 @@
   font-size: 12px;
   font-weight: 600;
 }
-.rbac-role-super { background: #ede9fe; color: #5b21b6; }
-.rbac-role-admin { background: #e0e7ff; color: #3730a3; }
-.rbac-role-view { background: #f1f5f9; color: #475569; }
+.rbac-role-super { background: var(--accent-soft); color: var(--accent); }
+.rbac-role-admin { background: var(--sunken); color: var(--text); }
+.rbac-role-view { background: var(--surface); color: var(--muted); }
 
 /* status */
 .rbac-status {
@@ -302,7 +286,7 @@
 .rbac-status-active { color: #15803d; }
 .rbac-status-active .rbac-status-dot { background: #22c55e; }
 .rbac-status-disabled { color: var(--danger); }
-.rbac-status-disabled .rbac-status-dot { background: #ef4444; }
+.rbac-status-disabled .rbac-status-dot { background: var(--danger); }
 
 /* actions */
 .rbac-actions {
@@ -321,7 +305,7 @@
   color: var(--ink);
   font-family: inherit;
 }
-.rbac-action:hover:not(:disabled) { background: #f3f3f8; }
+.rbac-action:hover:not(:disabled) { background: var(--surface); }
 .rbac-action:disabled { opacity: 0.4; cursor: not-allowed; }
 .rbac-action-danger { color: var(--danger); border-color: #f3d0d0; }
 .rbac-action-danger:hover:not(:disabled) { background: var(--danger-bg); }
@@ -377,7 +361,7 @@
   padding: 4px 8px;
   border-radius: 8px;
 }
-.rbac-modal-close:hover { background: #f1f1f6; }
+.rbac-modal-close:hover { background: var(--surface); }
 .rbac-modal-body { padding: 20px; }
 .rbac-modal-foot {
   display: flex;
@@ -386,12 +370,12 @@
   padding: 16px 20px;
   border-top: 1px solid var(--border);
 }
-.rbac-confirm-msg { margin: 0; font-size: 14px; color: #374151; line-height: 1.55; }
+.rbac-confirm-msg { margin: 0; font-size: 14px; color: var(--text); line-height: 1.55; }
 
 /* ── forms ──────────────────────────────────────────────── */
 .rbac-form { display: flex; flex-direction: column; gap: 16px; }
 .rbac-field { display: flex; flex-direction: column; gap: 6px; }
-.rbac-label { font-size: 13px; font-weight: 600; color: #374151; }
+.rbac-label { font-size: 13px; font-weight: 600; color: var(--text); }
 .rbac-input {
   height: 40px;
   border: 1px solid var(--border);
@@ -432,10 +416,10 @@
   font-family: inherit;
   transition: border-color 0.15s, background 0.15s;
 }
-.rbac-role-option:hover { border-color: #c7c7d9; }
+.rbac-role-option:hover { border-color: var(--border-strong); }
 .rbac-role-option.selected {
   border-color: var(--indigo);
-  background: #f5f5ff;
+  background: var(--accent-soft);
 }
 .rbac-role-option-title { font-size: 14px; font-weight: 600; }
 .rbac-role-option-desc { font-size: 12px; color: var(--muted); }
@@ -490,7 +474,7 @@
   width: 52px;
   height: 52px;
   border-radius: 14px;
-  background: #eef2ff;
+  background: var(--accent-soft);
   display: grid;
   place-items: center;
   margin: 0 auto 14px;

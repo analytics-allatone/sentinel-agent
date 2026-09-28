@@ -1,15 +1,15 @@
 /* ===== THEME VARIABLES ===== */
 :root {
-  --bg-primary: #111217;
-  --bg-secondary: #181b1f;
-  --bg-card: #1a1d23;
-  --bg-table-row: #1e2128;
-  --bg-table-alt: #181b1f;
-  --bg-header: #111217;
-  --border-color: #2a2d35;
-  --text-primary: #d9d9d9;
+  --bg-primary: var(--text);
+  --bg-secondary: var(--text);
+  --bg-card: var(--text);
+  --bg-table-row: var(--text);
+  --bg-table-alt: var(--text);
+  --bg-header: var(--text);
+  --border-color: var(--text);
+  --text-primary: var(--sunken);
   --text-secondary: #9ca3af;
-  --text-muted: #6b7280;
+  --text-muted: var(--muted);
   --text-label: #b0b7c3;
   --accent-red: #f4516c;
   --accent-orange: #fa8231;
@@ -18,54 +18,54 @@
   --gauge-track: #2a2d35;
   --scrollbar-thumb: #3a3d45;
   --shadow: 0 2px 12px rgba(0, 0, 0, 0.4);
-  --topbar-bg: #0f1117;
-  --topbar-border: #23262e;
-  --badge-bg: #23262e;
+  --topbar-bg: var(--text);
+  --topbar-border: var(--text);
+  --badge-bg: var(--text);
   --badge-text: #9ca3af;
   --btn-blue: #1f6feb;
   --btn-blue-hover: #388bfd;
-  --input-bg: #1a1d23;
-  --input-border: #2a2d35;
+  --input-bg: var(--text);
+  --input-border: var(--text);
 }
 
 .light-mode {
-  --bg-primary: #f0f2f5;
+  --bg-primary: var(--surface);
   --bg-secondary: #f7f8fa;
-  --bg-card: #ffffff;
-  --bg-table-row: #ffffff;
+  --bg-card: var(--surface);
+  --bg-table-row: var(--surface);
   --bg-table-alt: #f7f8fa;
-  --bg-header: #ffffff;
-  --border-color: #e2e6ea;
-  --text-primary: #1a1d23;
-  --text-secondary: #4b5563;
+  --bg-header: var(--surface);
+  --border-color: var(--border);
+  --text-primary: var(--text);
+  --text-secondary: var(--muted);
   --text-muted: #9ca3af;
-  --text-label: #374151;
+  --text-label: var(--text);
   --accent-red: #e53e3e;
   --accent-orange: #dd6b20;
   --gauge-track: #d1d5db;
   --scrollbar-thumb: #cbd5e0;
   --shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
-  --topbar-bg: #ffffff;
-  --topbar-border: #e2e6ea;
-  --badge-bg: #e2e6ea;
-  --badge-text: #4b5563;
+  --topbar-bg: var(--surface);
+  --topbar-border: var(--border);
+  --badge-bg: var(--bg);
+  --badge-text: var(--muted);
   --btn-blue: #2563eb;
   --btn-blue-hover: #1d4ed8;
   --input-bg: #f7f8fa;
-  --input-border: #e2e6ea;
+  --input-border: var(--border);
 }
 
 .light-mode .gauge-value {
-  color: #1a1d23;
+  color: var(--text);
 }
 .light-mode .gauge-sublabel {
-  color: #4b5563;
+  color: var(--muted);
 }
 .light-mode ::-webkit-scrollbar-thumb {
-  background: #cbd5e0;
+  background: var(--accent-soft);
 }
 .light-mode ::-webkit-scrollbar-track {
-  background: #f0f2f5;
+  background: var(--surface);
 }
 
 /* ===== RESET & BASE ===== */
@@ -78,7 +78,7 @@
 }
 
 body {
-  font-family: "Inter", "Roboto", system-ui, -apple-system, sans-serif;
+  font-family: var(--font-body);
   background: var(--bg-primary);
   color: var(--text-primary);
   min-height: 100vh;
@@ -664,7 +664,6 @@ body {
 
 /* ===== RESPONSIVE ===== */
 @media (max-width: 900px) {
-  .top-row,
   .bottom-row {
     grid-template-columns: 1fr;
   }

@@ -95,19 +95,30 @@ function Register() {
     <div className="register-page">
       <Header />
       <div className="register-container">
-        <div className="card">
+        <div className="card phi-card">
           <div className="card-header">
-            <h1>Create Account</h1>
-            <p>Join us today</p>
+            <h1>Create an account</h1>
+            <p>Set up your Guardlynx account</p>
           </div>
 
           <form onSubmit={register}>
-            {error && <div className="error-message">{error}</div>}
-            {success && <div className="success-message">{success}</div>}
+            {error && (
+              <div className="error-message phi-alert phi-alert--danger" role="alert">
+                {error}
+              </div>
+            )}
+            {success && (
+              <div className="success-message phi-alert phi-alert--success" role="status">
+                {success}
+              </div>
+            )}
 
-            <div className="input-group">
-              <label htmlFor="name">Name</label>
+            <div className="input-group phi-field">
+              <label className="phi-label" htmlFor="name">
+                Name
+              </label>
               <input
+                className="phi-input"
                 id="name"
                 type="text"
                 name="name"
@@ -119,9 +130,12 @@ function Register() {
               />
             </div>
 
-            <div className="input-group">
-              <label htmlFor="email">Email</label>
+            <div className="input-group phi-field">
+              <label className="phi-label" htmlFor="email">
+                Email
+              </label>
               <input
+                className="phi-input"
                 id="email"
                 type="email"
                 name="email"
@@ -133,8 +147,10 @@ function Register() {
               />
             </div>
 
-            <div className="input-group">
-              <label htmlFor="password">Password</label>
+            <div className="input-group phi-field">
+              <label className="phi-label" htmlFor="password">
+                Password
+              </label>
               <PasswordField
                 id="password"
                 name="password"
@@ -148,10 +164,12 @@ function Register() {
 
             <button
               type="submit"
-              className={`register-btn ${loading ? "loading" : ""}`}
+              className={`register-btn phi-btn phi-btn--lg ${loading ? "loading" : ""}`}
               disabled={loading}
+              aria-busy={loading}
             >
-              {loading ? "Creating Account..." : "Sign Up"}
+              {loading && <span className="phi-spinner" aria-hidden="true" />}
+              {loading ? "Creating account…" : "Create account"}
             </button>
           </form>
 

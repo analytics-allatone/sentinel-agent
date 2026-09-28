@@ -19,7 +19,7 @@
 .agent-info-page__head p {
   margin: 0;
   font-size: 13px;
-  color: #6b7684;
+  color: var(--muted);
 }
 
 /* `flex-direction` is stated explicitly because Login.css declares an unscoped
@@ -38,17 +38,17 @@
   flex-direction: column;
   gap: 4px;
   font-size: 12px;
-  color: #6b7684;
+  color: var(--muted);
 }
 
 .agent-info-page__controls input,
 .agent-info-page__controls select {
   min-width: 150px;
   padding: 7px 10px;
-  border: 1px solid #d6dbe1;
+  border: 1px solid var(--border);
   border-radius: 6px;
-  background: #fff;
-  color: #1c2530;
+  background: var(--surface);
+  color: var(--text);
   font: inherit;
   font-size: 13px;
 }
@@ -89,9 +89,6 @@
     align-items: stretch;
   }
 
-  .agent-info-page__controls label,
-  .agent-info-page__controls input,
-  .agent-info-page__controls select,
   .agent-info-page__controls button {
     width: 100%;
     min-width: 0;

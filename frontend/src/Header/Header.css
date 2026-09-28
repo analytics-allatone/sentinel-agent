@@ -1,6 +1,6 @@
 .header {
-  background-color: #fff;
-  color: white;
+  background-color: var(--surface);
+  color: var(--text);
   padding: 0;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   position: sticky;
@@ -20,8 +20,6 @@
 .header-logo h1 {
   margin: 0;
   font-size: 1.5rem;
-  font-weight: 700;
-  color: #333;
   a{
     text-decoration: none;
   }
@@ -31,7 +29,7 @@
   display: none;
   background: none;
   border: none;
-  color: #333;
+  color: var(--text);
   font-size: 1.5rem;
   cursor: pointer;
 }
@@ -45,7 +43,7 @@
 }
 
 .nav-menu a {
-  color: #333;
+  color: var(--text);
   text-decoration: none;
   font-weight: 500;
   transition: color 0.3s ease;
@@ -55,11 +53,7 @@
   color: #3498db;
 }
 .nav-link-btn {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     padding: 8px 20px;
-    border-radius: 50px;
-    color: #fff!important;
-    font-weight: 600;
 }
 
 /* Mobile responsive */
@@ -73,7 +67,7 @@
     top: 100%;
     left: 0;
     right: 0;
-    background-color: #fff;
+    background-color: var(--surface);
     max-height: 0;
     overflow: hidden;
     transition: max-height 0.3s ease;

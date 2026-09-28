@@ -3,12 +3,12 @@
 .grafana-embed {
   /* Light theme palette; the dark block below overrides it. */
   --ge-bg: #f4f6f8;
-  --ge-surface: #ffffff;
-  --ge-border: #dfe3e8;
+  --ge-surface: var(--surface);
+  --ge-border: var(--border);
   --ge-text: #1c2530;
-  --ge-muted: #5a6875;
+  --ge-muted: var(--muted);
   --ge-accent: #2a6fdb;
-  --ge-code-bg: #f0f2f5;
+  --ge-code-bg: var(--surface);
   --ge-danger: #c0392b;
 
   position: relative;
@@ -29,13 +29,13 @@
 }
 
 .grafana-embed[data-theme="dark"] {
-  --ge-bg: #111217;
-  --ge-surface: #181b1f;
-  --ge-border: #2c3235;
-  --ge-text: #e8eaed;
+  --ge-bg: var(--text);
+  --ge-surface: var(--text);
+  --ge-border: var(--text);
+  --ge-text: var(--bg);
   --ge-muted: #9aa3ad;
   --ge-accent: #6ea8fe;
-  --ge-code-bg: #0f1215;
+  --ge-code-bg: var(--text);
   --ge-danger: #ff7b72;
 }
 
@@ -148,7 +148,7 @@
   border-radius: 8px;
   background: var(--ge-code-bg);
   border: 1px solid var(--ge-border);
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-family: var(--font-mono);
   font-size: 12.5px;
   line-height: 1.55;
   white-space: pre;
@@ -167,7 +167,7 @@
   padding: 1px 5px;
   border-radius: 4px;
   background: var(--ge-code-bg);
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-family: var(--font-mono);
   font-size: 0.92em;
 }
 

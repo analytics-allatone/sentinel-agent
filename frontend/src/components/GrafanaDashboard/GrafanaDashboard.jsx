@@ -151,7 +151,7 @@ export default function GrafanaDashboard({
   kiosk = true,
   theme = "auto",
   height = "100%",
-  minHeight = 480,
+  minHeight = 580,
   title = "Grafana dashboard",
   timeoutMs = DEFAULT_TIMEOUT_MS,
   helpFooter = true,

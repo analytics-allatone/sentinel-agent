@@ -3,8 +3,8 @@
   display: flex;
   flex-direction: column;
   min-height: 100vh;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background: var(--bg);
+  font-family: var(--font-body);
 }
 
 .votp-container {
@@ -16,7 +16,7 @@
 }
 
 .votp-page .card {
-  background: white;
+  background: var(--surface);
   padding: 40px;
   border-radius: 16px;
   width: 100%;
@@ -44,29 +44,29 @@
   justify-content: center;
   font-size: 26px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: var(--accent);
   box-shadow: 0 8px 20px rgba(102, 126, 234, 0.35);
 }
 
 .votp-page .card-header h1 {
   margin: 0 0 8px 0;
   font-size: 24px;
-  color: #333;
+  color: var(--text);
   font-weight: 700;
 }
 
 .votp-page .card-header p {
   margin: 0;
   font-size: 14px;
-  color: #666;
+  color: var(--muted);
   line-height: 1.6;
 }
 
 /* Messages */
 .votp-page .error-message {
-  background: #fee;
-  border: 1px solid #fcc;
-  color: #c33;
+  background: var(--danger-soft);
+  border: 1px solid var(--danger);
+  color: var(--danger);
   padding: 12px;
   border-radius: 8px;
   margin-bottom: 18px;
@@ -75,9 +75,9 @@
 }
 
 .votp-page .success-message {
-  background: #efe;
+  background: var(--success-soft);
   border: 1px solid #cfc;
-  color: #3c3;
+  color: var(--success);
   padding: 12px;
   border-radius: 8px;
   margin-bottom: 18px;
@@ -90,7 +90,7 @@
   display: flex;
   gap: 18px;
   align-items: center;
-  background: #fafbff;
+  background: var(--accent-soft);
   border: 1px solid #eceef3;
   border-radius: 12px;
   padding: 16px;
@@ -99,7 +99,7 @@
 
 .qr-box {
   flex-shrink: 0;
-  background: #fff;
+  background: var(--surface);
   padding: 8px;
   border-radius: 10px;
   border: 1px solid #eceef3;
@@ -110,12 +110,12 @@
   margin: 0;
   padding-left: 18px;
   font-size: 13px;
-  color: #4b5563;
+  color: var(--muted);
   line-height: 1.7;
 }
 
 .qr-steps strong {
-  color: #333;
+  color: var(--text);
 }
 
 /* Manual key */
@@ -126,7 +126,7 @@
 
 .manual-key summary {
   cursor: pointer;
-  color: #667eea;
+  color: var(--accent);
   font-weight: 600;
   user-select: none;
 }
@@ -134,12 +134,12 @@
 .manual-key code {
   display: block;
   margin-top: 10px;
-  font-family: 'Courier New', monospace;
+  font-family: var(--font-mono);
   font-size: 14px;
   font-weight: 700;
   letter-spacing: 2px;
-  color: #1f2333;
-  background: #f1f2f6;
+  color: var(--text);
+  background: var(--surface);
   padding: 10px 12px;
   border-radius: 8px;
   word-break: break-all;
@@ -160,27 +160,27 @@
   text-align: center;
   font-size: 24px;
   font-weight: 700;
-  color: #333;
-  border: 2px solid #e0e0e0;
+  color: var(--text);
+  border: 2px solid var(--border);
   border-radius: 10px;
   outline: none;
   transition: all 0.2s ease;
-  background: #fafafe;
+  background: var(--accent-soft);
 }
 
 .otp-box:focus {
-  border-color: #667eea;
+  border-color: var(--accent);
   box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.15);
-  background: #f8f9ff;
+  background: var(--wash);
 }
 
 .otp-box.filled {
-  border-color: #667eea;
-  background: #f8f9ff;
+  border-color: var(--accent);
+  background: var(--wash);
 }
 
 .otp-box:disabled {
-  background: #f5f5f5;
+  background: var(--sunken);
   cursor: not-allowed;
 }
 
@@ -188,16 +188,7 @@
 .verify-btn {
   width: 100%;
   padding: 14px;
-  border: none;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  font-weight: 600;
   font-size: 15px;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  text-transform: uppercase;
-  letter-spacing: 1px;
 }
 
 .verify-btn:hover:not(:disabled) {
@@ -206,8 +197,6 @@
 }
 
 .verify-btn:disabled {
-  opacity: 0.7;
-  cursor: not-allowed;
 }
 
 .verify-btn.loading {
@@ -235,12 +224,12 @@
 .votp-signin-as {
   text-align: center;
   font-size: 13px;
-  color: #666;
+  color: var(--muted);
   margin: 18px 0 6px;
 }
 
 .votp-signin-as strong {
-  color: #333;
+  color: var(--text);
 }
 
 /* Back link */
@@ -251,13 +240,13 @@
 }
 
 .votp-page .login-link a {
-  color: #667eea;
+  color: var(--accent);
   text-decoration: none;
   font-weight: 600;
 }
 
 .votp-page .login-link a:hover {
-  color: #764ba2;
+  color: var(--accent-hover);
   text-decoration: underline;
 }
 

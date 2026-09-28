@@ -14,6 +14,14 @@ import { MemoryRouter } from "react-router-dom";
 import Dashboard from "./Dashboard";
 import api from "../api/api";
 
+/**
+ * This suite mounts the whole dashboard — charts, tables and the services
+ * panel — twenty-six times, and each mount is seconds of work. Under a full
+ * parallel run the 5s default expires while the assertion itself is fine, so
+ * the budget is set to match what the suite actually costs.
+ */
+jest.setTimeout(20000);
+
 const mockAgents = [
   { id: 1, agent_name: "UpdatedWindowAgent", host_name: "WIN", main_ip: "10.0.0.1", os: "Windows", release: "10", status: "active", group_name: "default", machine_architecture: "x64" },
 ];

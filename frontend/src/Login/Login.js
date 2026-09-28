@@ -103,23 +103,30 @@ function Login() {
       </header> */}
 
       <div className="login-container">
-        <div className="card">
+        <div className="card phi-card">
           <div className="card-header">
-            <h1>Welcome Back</h1>
+            <h1>Welcome back</h1>
             <p>Sign in to your account</p>
           </div>
 
           <form onSubmit={login}>
             {notice && (
-              <div className="notice-message" role="status">
+              <div className="notice-message phi-alert" role="status">
                 {notice}
               </div>
             )}
-            {error && <div className="error-message">{error}</div>}
+            {error && (
+              <div className="error-message phi-alert phi-alert--danger" role="alert">
+                {error}
+              </div>
+            )}
 
-            <div className="input-group">
-              <label htmlFor="email">Email</label>
+            <div className="input-group phi-field">
+              <label className="phi-label" htmlFor="email">
+                Email
+              </label>
               <input
+                className="phi-input"
                 id="email"
                 type="email"
                 placeholder="Enter your email"
@@ -129,8 +136,10 @@ function Login() {
               />
             </div>
 
-            <div className="input-group">
-              <label htmlFor="password">Password</label>
+            <div className="input-group phi-field">
+              <label className="phi-label" htmlFor="password">
+                Password
+              </label>
               <PasswordField
                 id="password"
                 name="password"
@@ -146,10 +155,12 @@ function Login() {
 
             <button
               type="submit"
-              className={`login-btn ${loading ? "loading" : ""}`}
+              className={`login-btn phi-btn phi-btn--lg ${loading ? "loading" : ""}`}
               disabled={loading}
+              aria-busy={loading}
             >
-              {loading ? "Signing in..." : "Sign In"}
+              {loading && <span className="phi-spinner" aria-hidden="true" />}
+              {loading ? "Signing in…" : "Sign in"}
             </button>
           </form>
 

@@ -312,7 +312,7 @@ export default function DbHealthPage() {
         <div className="dbh-head-main">
           <button
             type="button"
-            className="dbh-back"
+            className="dbh-back phi-btn phi-btn--sm phi-btn--secondary"
             onClick={() => navigate("/app/dashboard")}
           >
             ← Dashboard
@@ -400,7 +400,7 @@ export default function DbHealthPage() {
             <span className="dbh-hint">drop null columns</span>
           </label>
 
-          <button type="submit" className="dbh-load" disabled={status === "loading"}>
+          <button type="submit" className="dbh-load phi-btn phi-btn--sm" disabled={status === "loading"}>
             {status === "loading" ? "Loading…" : "Load"}
           </button>
         </form>
@@ -557,7 +557,7 @@ export default function DbHealthPage() {
             {emptyFields.length > 0 && (
               <button
                 type="button"
-                className="dbh-empty-toggle"
+                className="dbh-empty-toggle phi-btn phi-btn--sm phi-btn--secondary"
                 onClick={() => setShowEmptyFields((v) => !v)}
                 aria-expanded={showEmptyFields}
               >
@@ -571,7 +571,7 @@ export default function DbHealthPage() {
           <div className="dbh-raw">
             <button
               type="button"
-              className="dbh-raw-toggle"
+              className="dbh-raw-toggle phi-btn phi-btn--sm phi-btn--secondary"
               onClick={() => setShowRaw((v) => !v)}
               aria-expanded={showRaw}
             >

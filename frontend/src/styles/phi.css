@@ -1,0 +1,981 @@
+/* ═════════════════════════════════════════════════════════════
+   PHI DESIGN SYSTEM
+   Golden ratio (φ = 1.618), Fibonacci spacing, navy + blue, light and dark.
+
+   This file is the only place a colour, a spacing step, a radius or a type
+   size is *defined*. Everything else in the app refers to these names, so a
+   change here is a change everywhere — and so both themes stay correct
+   without a second set of rules per component.
+
+   Loaded before every other stylesheet (src/index.js), so page CSS can still
+   override it where a screen genuinely needs to.
+   ═════════════════════════════════════════════════════════════ */
+
+:root {
+  color-scheme: light;
+
+  /* ── surface & ink ─────────────────────────────────────── */
+  --bg: #f9fbfe;
+  --surface: #ffffff;
+  --sunken: #eff4fa;
+  --text: #0f2447;
+  --muted: #4a5b78;
+  --on-primary: #ffffff;
+  --border: #d4ddea;
+  --border-strong: #b3c0d4;
+
+  /* ── brand ─────────────────────────────────────────────── */
+  --primary: #0f2447;
+  --primary-hover: #1f5fd1;
+  --accent: #1f5fd1;
+  --accent-hover: #1a4faf;
+  --accent-soft: #e4edfc;
+  --wash: #f0f5ff;
+  --focus: #4a86f0;
+  --overlay: rgba(11, 20, 38, 0.55);
+
+  /* ── status ────────────────────────────────────────────── */
+  --success: #1e7a4c;
+  --success-soft: #e3f4ea;
+  --warning: #8a5a00;
+  --warning-soft: #fff3d6;
+  --danger: #b4382a;
+  --danger-soft: #fbe6e3;
+
+  /* ── type: 16px × φ ────────────────────────────────────── */
+  --text-xs: 10px;
+  --text-sm: 13px;
+  --text-base: 16px;
+  --text-md: 20px;
+  --text-lg: 26px;
+  --text-xl: 42px;
+  --text-2xl: 68px;
+  --text-3xl: 110px;
+
+  /* ── space: Fibonacci ──────────────────────────────────── */
+  --s1: 3px;
+  --s2: 5px;
+  --s3: 8px;
+  --s4: 13px;
+  --s5: 21px;
+  --s6: 34px;
+  --s7: 55px;
+  --s8: 89px;
+  --s9: 144px;
+
+  /* ── radius ────────────────────────────────────────────── */
+  --r-sm: 3px;
+  --r-md: 8px;
+  --r-lg: 13px;
+  --r-xl: 21px;
+  --r-full: 9999px;
+
+  /* ── shadow ────────────────────────────────────────────── */
+  --sh1: 0 1px 3px rgba(15, 36, 71, 0.08);
+  --sh2: 0 3px 8px rgba(15, 36, 71, 0.08);
+  --sh3: 0 8px 21px rgba(15, 36, 71, 0.12);
+
+  /* ── layers ────────────────────────────────────────────── */
+  --z-sticky: 13;
+  --z-dropdown: 21;
+  --z-overlay: 34;
+  --z-modal: 55;
+  --z-toast: 89;
+  --z-tooltip: 144;
+
+  /* ── motion ────────────────────────────────────────────── */
+  --ease: cubic-bezier(0.22, 0.61, 0.36, 1);
+  --t-hover: 89ms;
+  --t-toggle: 144ms;
+  --t-menu: 233ms;
+  --t-modal: 377ms;
+
+  /* ── fonts ─────────────────────────────────────────────── */
+  /* One family across the product. The fallbacks matter: Google Sans is
+     fetched, and a page still has to read while it is on its way. */
+  --font-display: "Google Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-body: "Google Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+  /* ── layout ────────────────────────────────────────────── */
+  --container-form: 610px;
+  --container-md: 987px;
+  --container-lg: 1120px;
+  --container-app: 1440px;
+  --sidebar-w: 233px;
+  --topbar-h: 55px;
+  --page-pad: var(--s6);
+}
+
+/* Dark is the same names with different values — never a second rule set. */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  --bg: #0d1a33;
+  --surface: #17284e;
+  --sunken: #112042;
+  --text: #e6edf8;
+  --muted: #9fb0cc;
+  --on-primary: #0b1426;
+  --border: #22345a;
+  --border-strong: #34496f;
+
+  --primary: #e6edf8;
+  --primary-hover: #93bbff;
+  --accent: #6fa3ff;
+  --accent-hover: #93bbff;
+  --accent-soft: #1d3768;
+  --wash: #1d3768;
+  --focus: #93bbff;
+  --overlay: rgba(4, 9, 20, 0.66);
+
+  --success: #5cc98e;
+  --success-soft: #12301f;
+  --warning: #f2c35b;
+  --warning-soft: #33280f;
+  --danger: #f07a66;
+  --danger-soft: #3a1c1a;
+
+  --sh1: 0 1px 3px rgba(0, 0, 0, 0.4);
+  --sh2: 0 3px 8px rgba(0, 0, 0, 0.45);
+  --sh3: 0 8px 21px rgba(0, 0, 0, 0.5);
+
+}
+
+/* The OS decides until someone chooses; the choice is stamped on <html>. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+
+    --bg: #0d1a33;
+    --surface: #17284e;
+    --sunken: #112042;
+    --text: #e6edf8;
+    --muted: #9fb0cc;
+    --on-primary: #0b1426;
+    --border: #22345a;
+    --border-strong: #34496f;
+
+    --primary: #e6edf8;
+    --primary-hover: #93bbff;
+    --accent: #6fa3ff;
+    --accent-hover: #93bbff;
+    --accent-soft: #1d3768;
+    --wash: #1d3768;
+    --focus: #93bbff;
+    --overlay: rgba(4, 9, 20, 0.66);
+
+    --success: #5cc98e;
+    --success-soft: #12301f;
+    --warning: #f2c35b;
+    --warning-soft: #33280f;
+    --danger: #f07a66;
+    --danger-soft: #3a1c1a;
+
+  --sh1: 0 1px 3px rgba(0, 0, 0, 0.4);
+  --sh2: 0 3px 8px rgba(0, 0, 0, 0.45);
+  --sh3: 0 8px 21px rgba(0, 0, 0, 0.5);
+
+  }
+}
+
+/* ═══ base ═══════════════════════════════════════════════ */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-body);
+  font-optical-sizing: auto;
+  font-variation-settings: "GRAD" 0;
+  font-size: var(--text-base);
+  line-height: 1.618;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  font-family: var(--font-display);
+  line-height: 1.1;
+  font-weight: 600;
+  margin: 0;
+}
+
+h1 {
+  font-size: clamp(var(--text-lg), 5vw, var(--text-xl));
+}
+
+h2 {
+  font-size: var(--text-lg);
+}
+
+h3 {
+  font-size: var(--text-md);
+}
+
+p {
+  margin: 0;
+}
+
+code,
+kbd,
+pre,
+samp {
+  font-family: var(--font-mono);
+}
+
+/* Form controls inherit nothing by default: a field with no background of
+   its own falls back to the browser’s, which is a light grey box sitting in
+   the middle of a dark card. Element selectors, so any page rule still wins. */
+input,
+select,
+textarea,
+button {
+  font-family: inherit;
+}
+
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+select,
+textarea {
+  background-color: var(--surface);
+  color: var(--text);
+}
+
+::placeholder {
+  color: var(--muted);
+  opacity: 1;
+}
+
+input[type="checkbox"],
+input[type="radio"] {
+  accent-color: var(--accent);
+}
+
+/* Numbers line up in columns wherever they are compared. */
+td,
+th,
+.phi-num,
+[data-numeric] {
+  font-variant-numeric: tabular-nums;
+}
+
+a {
+  color: var(--accent);
+}
+
+/* The ring is never removed — only made to look deliberate. */
+:where(a, button, input, select, textarea, [tabindex]):focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 0;
+  border-radius: var(--r-sm);
+}
+
+::selection {
+  background: var(--accent-soft);
+  color: var(--text);
+}
+
+/* Keyboard users land here first; it stays hidden until focused. */
+.phi-skip {
+  position: absolute;
+  left: var(--s4);
+  top: calc(var(--s4) * -4);
+  z-index: var(--z-tooltip);
+  padding: var(--s3) var(--s5);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: var(--sh2);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  text-decoration: none;
+  transition: top var(--t-toggle) var(--ease);
+}
+
+.phi-skip:focus-visible {
+  top: var(--s4);
+}
+
+/* ═══ the wordmark ═══════════════════════════════════════
+   The product name, set once. It was three different colours in three
+   headers — navy in one, the accent in another by accident (the global link
+   colour reached the anchor inside it). The mark beside it keeps the blue;
+   the name does not, because a name that shouts competes with the action
+   the blue is reserved for. */
+
+.phi-wordmark {
+  font-family: var(--font-display);
+  font-weight: 400;
+  letter-spacing: -0.01em;
+  color: var(--primary);
+}
+
+.phi-wordmark a,
+a.phi-wordmark {
+  color: inherit;
+  text-decoration: none;
+}
+
+/* The initial beside it: the one piece of brand blue in the chrome. */
+.phi-wordmark-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--r-md);
+  background: var(--accent);
+  /* white in light, deep navy in dark: the dark accent is pale */
+  color: var(--on-primary);
+  font-family: var(--font-body);
+  font-weight: 800;
+}
+
+/* ═══ layout ═════════════════════════════════════════════ */
+
+.phi-container {
+  width: 100%;
+  max-width: var(--container-app);
+  margin-inline: auto;
+  padding-inline: var(--page-pad);
+}
+
+.phi-container--form {
+  max-width: var(--container-form);
+}
+
+.phi-container--md {
+  max-width: var(--container-md);
+}
+
+/* main in the bigger column, stacked below the 987px breakpoint */
+.phi-split {
+  display: grid;
+  grid-template-columns: 1.618fr 1fr;
+  gap: var(--s5);
+}
+
+.phi-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(233px, 1fr));
+  gap: var(--s5);
+}
+
+/* A grid child holding a table or chart must be allowed to shrink. */
+.phi-split > *,
+.phi-cards > * {
+  min-width: 0;
+}
+
+.phi-stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s5);
+}
+
+@media (max-width: 987px) {
+  :root {
+    --page-pad: var(--s5);
+  }
+
+  .phi-split {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ═══ buttons ════════════════════════════════════════════ */
+
+.phi-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--s3);
+  height: 44px;
+  padding: 0 var(--s5);
+  border: 1px solid transparent;
+  border-radius: var(--r-md);
+  background: var(--primary);
+  color: var(--on-primary);
+  font-family: inherit;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background var(--t-hover) var(--ease);
+}
+
+.phi-btn svg {
+  width: 16px;
+  height: 16px;
+  flex: none;
+}
+
+.phi-btn:hover:not(:disabled) {
+  background: var(--primary-hover);
+}
+
+.phi-btn--sm {
+  height: 34px;
+  padding: 0 var(--s4);
+}
+
+.phi-btn--lg {
+  height: 55px;
+  padding: 0 var(--s6);
+  font-size: var(--text-base);
+}
+
+.phi-btn--accent {
+  background: var(--accent);
+  /* white in light, deep navy in dark: #fff alone reads 2.5:1 on the
+     pale dark-theme accent, so the text has to flip with the fill. */
+  color: var(--on-primary);
+}
+
+.phi-btn--accent:hover:not(:disabled) {
+  background: var(--accent-hover);
+}
+
+.phi-btn--secondary {
+  border-color: var(--border-strong);
+  background: var(--surface);
+  color: var(--text);
+}
+
+.phi-btn--secondary:hover:not(:disabled) {
+  background: var(--wash);
+}
+
+.phi-btn--ghost {
+  background: transparent;
+  color: var(--accent);
+}
+
+.phi-btn--ghost:hover:not(:disabled) {
+  background: var(--accent-soft);
+}
+
+.phi-btn--danger {
+  background: var(--danger);
+  color: var(--on-primary);
+}
+
+.phi-btn--icon {
+  width: 44px;
+  padding: 0;
+}
+
+.phi-btn--icon.phi-btn--sm {
+  width: 34px;
+}
+
+.phi-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* A button that is working keeps its width, so nothing jumps. */
+.phi-btn[aria-busy="true"] {
+  cursor: progress;
+}
+
+.phi-spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  border-radius: var(--r-full);
+  animation: phi-spin 600ms linear infinite;
+}
+
+@keyframes phi-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ═══ fields ═════════════════════════════════════════════ */
+
+.phi-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s2);
+}
+
+.phi-label {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--text);
+}
+
+.phi-input,
+.phi-select,
+.phi-textarea {
+  width: 100%;
+  height: 44px;
+  padding: 0 var(--s4);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  color: var(--text);
+  font-family: inherit;
+  font-size: var(--text-base);
+  transition: border-color var(--t-hover) var(--ease);
+}
+
+.phi-textarea {
+  height: auto;
+  min-height: 89px;
+  padding: var(--s4);
+  line-height: 1.618;
+  resize: vertical;
+}
+
+.phi-input:hover:not(:disabled),
+.phi-select:hover:not(:disabled),
+.phi-textarea:hover:not(:disabled) {
+  border-color: var(--border-strong);
+}
+
+.phi-input:focus-visible,
+.phi-select:focus-visible,
+.phi-textarea:focus-visible {
+  border-color: transparent;
+  outline: 2px solid var(--focus);
+  outline-offset: 0;
+}
+
+.phi-input:disabled,
+.phi-select:disabled,
+.phi-textarea:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.phi-input[aria-invalid="true"] {
+  border-color: var(--danger);
+}
+
+.phi-hint {
+  font-size: var(--text-sm);
+  color: var(--muted);
+}
+
+.phi-error {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  font-size: var(--text-sm);
+  color: var(--danger);
+}
+
+.phi-error::before {
+  content: "⚠";
+}
+
+/* ═══ surfaces ═══════════════════════════════════════════ */
+
+.phi-card,
+.phi-panel {
+  padding: var(--s5);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+}
+
+.phi-card--hover {
+  transition: box-shadow var(--t-hover) var(--ease);
+}
+
+.phi-card--hover:hover {
+  box-shadow: var(--sh1);
+}
+
+.phi-panel-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--s5);
+  margin-bottom: var(--s5);
+}
+
+.phi-panel-title {
+  font-size: var(--text-md);
+}
+
+.phi-panel-sub {
+  margin-top: var(--s1);
+  font-size: var(--text-sm);
+  color: var(--muted);
+}
+
+/* ═══ badges & alerts ════════════════════════════════════ */
+
+.phi-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s2);
+  padding: var(--s1) var(--s3);
+  border-radius: var(--r-full);
+  background: var(--sunken);
+  color: var(--text);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+/* The dot is what carries the state when colour cannot be seen. */
+.phi-badge::before {
+  content: "";
+  width: var(--s2);
+  height: var(--s2);
+  border-radius: var(--r-full);
+  background: currentColor;
+}
+
+.phi-badge--success {
+  background: var(--success-soft);
+  color: var(--success);
+}
+
+.phi-badge--warning {
+  background: var(--warning-soft);
+  color: var(--warning);
+}
+
+.phi-badge--danger {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+.phi-badge--accent {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.phi-alert {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--s4);
+  padding: var(--s4) var(--s5);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--sunken);
+  color: var(--text);
+  font-size: var(--text-sm);
+}
+
+.phi-alert--success {
+  border-color: var(--success);
+  background: var(--success-soft);
+}
+
+.phi-alert--warning {
+  border-color: var(--warning);
+  background: var(--warning-soft);
+}
+
+.phi-alert--danger {
+  border-color: var(--danger);
+  background: var(--danger-soft);
+}
+
+/* ═══ table ══════════════════════════════════════════════ */
+
+.phi-table-wrap {
+  position: relative;
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+}
+
+.phi-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: var(--text-sm);
+}
+
+.phi-table th {
+  height: 44px;
+  padding: 0 var(--s4);
+  background: var(--sunken);
+  color: var(--muted);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.phi-table td {
+  height: 55px;
+  padding: 0 var(--s4);
+  border-top: 1px solid var(--border);
+  color: var(--text);
+}
+
+.phi-table tbody tr:hover td {
+  background: var(--wash);
+}
+
+.phi-table .phi-num,
+.phi-table [data-numeric] {
+  text-align: right;
+}
+
+/* ═══ loading & empty ════════════════════════════════════ */
+
+.phi-skeleton {
+  border-radius: var(--r-md);
+  background: var(--sunken);
+  animation: phi-pulse 1618ms var(--ease) infinite;
+}
+
+@keyframes phi-pulse {
+  50% {
+    opacity: 0.55;
+  }
+}
+
+.phi-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--s4);
+  padding: var(--s7) var(--s5);
+  text-align: center;
+  color: var(--muted);
+}
+
+.phi-empty-title {
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  color: var(--text);
+}
+
+/* A row that just changed, so the change is seen where it happened. */
+@keyframes phi-flash {
+  from {
+    background: var(--accent-soft);
+  }
+}
+
+.phi-flash {
+  animation: phi-flash 1618ms var(--ease);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ═══ adopted: the app’s own control names ═════════════
+   These classes predate the system. They are listed beside the primitive
+   they already were, so the definition lives in one place — and the page
+   stylesheets no longer carry their own copy of it. Geometry is left to the
+   pages on purpose: height and padding are the layout around a button, and
+   those are migrated screen by screen. */
+
+:is(
+  .btn-page-active,
+  .btn-primary,
+  .ch-add-btn,
+  .ch-btn.primary,
+  .ch-header-btn--primary,
+  .copy-button,
+  .crash__btn--primary,
+  .date-apply-btn,
+  .deploy-header-button,
+  .deploy-table-button,
+  .msg-btn,
+  .nav-link-btn,
+  .qr-reader button,
+  .reset-btn,
+  .services-add-btn,
+  .upgrade-button,
+  .verify-btn
+) {
+  border: 1px solid transparent;
+  border-radius: var(--r-md);
+  background: var(--primary);
+  color: var(--on-primary);
+  font-family: var(--font-body);
+  font-weight: 600;
+  cursor: pointer;
+  transition: background var(--t-hover) var(--ease), border-color var(--t-hover) var(--ease);
+}
+
+:is(
+  .btn-page-active,
+  .btn-primary,
+  .ch-add-btn,
+  .ch-btn.primary,
+  .ch-header-btn--primary,
+  .copy-button,
+  .crash__btn--primary,
+  .date-apply-btn,
+  .deploy-header-button,
+  .deploy-table-button,
+  .msg-btn,
+  .nav-link-btn,
+  .qr-reader button,
+  .reset-btn,
+  .services-add-btn,
+  .upgrade-button,
+  .verify-btn
+):hover:not(:disabled) {
+  background: var(--primary-hover);
+}
+
+:is(
+  .arch-button,
+  .back-btn,
+  .btn-clear,
+  .btn-deploy,
+  .btn-expand,
+  .btn-export,
+  .btn-form-cancel,
+  .btn-page,
+  .btn-refresh,
+  .btn-secondary,
+  .ch-btn.ghost,
+  .ch-header-btn,
+  .ch-header-btn--sender,
+  .crash__btn,
+  .cred-del-btn,
+  .cred-edit-btn,
+  .date-clear-btn,
+  .filter-button,
+  .grafana-header-button,
+  .header-actions button,
+  .os-button,
+  .profile-btn,
+  .rbac-btn,
+  .rescan-btn,
+  .svc-add-btn,
+  .svc-delete-btn,
+  .tsc-btn
+) {
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  color: var(--text);
+  font-family: var(--font-body);
+  font-weight: 600;
+  cursor: pointer;
+  transition: background var(--t-hover) var(--ease), border-color var(--t-hover) var(--ease);
+}
+
+:is(
+  .arch-button,
+  .back-btn,
+  .btn-clear,
+  .btn-deploy,
+  .btn-expand,
+  .btn-export,
+  .btn-form-cancel,
+  .btn-page,
+  .btn-refresh,
+  .btn-secondary,
+  .ch-btn.ghost,
+  .ch-header-btn,
+  .ch-header-btn--sender,
+  .crash__btn,
+  .cred-del-btn,
+  .cred-edit-btn,
+  .date-clear-btn,
+  .filter-button,
+  .grafana-header-button,
+  .header-actions button,
+  .os-button,
+  .profile-btn,
+  .rbac-btn,
+  .rescan-btn,
+  .svc-add-btn,
+  .svc-delete-btn,
+  .tsc-btn
+):hover:not(:disabled) {
+  background: var(--wash);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+:is(
+  .rbac-btn-danger
+) {
+  border: 1px solid transparent;
+  border-radius: var(--r-md);
+  background: var(--danger);
+  color: var(--on-primary);
+  font-family: var(--font-body);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+:is(
+  .btn-page-active,
+  .btn-primary,
+  .ch-add-btn,
+  .ch-btn.primary,
+  .ch-header-btn--primary,
+  .copy-button,
+  .crash__btn--primary,
+  .date-apply-btn,
+  .deploy-header-button,
+  .deploy-table-button,
+  .msg-btn,
+  .nav-link-btn,
+  .qr-reader button,
+  .reset-btn,
+  .services-add-btn,
+  .upgrade-button,
+  .verify-btn,
+  .arch-button,
+  .back-btn,
+  .btn-clear,
+  .btn-deploy,
+  .btn-expand,
+  .btn-export,
+  .btn-form-cancel,
+  .btn-page,
+  .btn-refresh,
+  .btn-secondary,
+  .ch-btn.ghost,
+  .ch-header-btn,
+  .ch-header-btn--sender,
+  .crash__btn,
+  .cred-del-btn,
+  .cred-edit-btn,
+  .date-clear-btn,
+  .filter-button,
+  .grafana-header-button,
+  .header-actions button,
+  .os-button,
+  .profile-btn,
+  .rbac-btn,
+  .rescan-btn,
+  .svc-add-btn,
+  .svc-delete-btn,
+  .tsc-btn,
+  .rbac-btn-danger
+):disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
