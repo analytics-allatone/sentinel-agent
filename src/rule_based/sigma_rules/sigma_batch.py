@@ -100,15 +100,9 @@ def _batch_bounds(rows: List[Dict[str, Any]]):
     return (min(ts) if ts else None, max(ts) if ts else None, agents)
 
 
-async def run_sigma_on_batch(session, category: str, rows: List[Dict[str, Any]],
+async def run_sigma_on_batch(category: str, rows: List[Dict[str, Any]],
                              rules_path: Optional[str] = None,
                              margin_seconds: int = 2) -> dict:
-    """Run the Sigma rules for this category's table, scoped to just this batch.
-
-    session : the SAME AsyncSession that just stored the batch (rows are visible)
-    category: consumer category (e.g. 'process' / 'process_events')
-    rows    : the batch dicts you just inserted (need 'timestamp' and agent id)
-    """
     table = CATEGORY_TABLE.get(category)
     if not table:
         return {"ran": 0, "findings": 0, "reason": f"no table for '{category}'"}
@@ -122,41 +116,44 @@ async def run_sigma_on_batch(session, category: str, rows: List[Dict[str, Any]],
     if tmin is None:
         return {"ran": 0, "findings": 0, "reason": "batch has no timestamps"}
 
+    from db.db import get_async_session 
     findings, errors = 0, 0
     first_error = None
-    for rule in rules:
-        # rule bounds by `now() - lookback`; for a batch we bound by the batch's
-        # own time range instead. A rule may target several tables, but here we
-        # only scan the ONE table this batch landed in (`table`), since that's
-        # where the fresh rows are.
-        scoped_sql, params = _batch_scoped_sql(rule, table, tmin, tmax, agents, margin_seconds)
-        stmt = text(_to_named(scoped_sql)).bindparams(
-            bindparam("rule_id", type_=String),
-            bindparam("severity", type_=Integer),
-            bindparam("title", type_=String),
-        )
-        try:
-            hits = (await session.execute(stmt, params)).mappings().all()
-        except Exception as e:
-            errors += 1
-            msg = str(e).splitlines()[0][:160]
-            if first_error is None:
-                first_error = f"{rule.title[:40]}: {msg}"
-            # print the first few so the real cause is visible, not swallowed
-            if errors <= 3:
-                print(f"[sigma-batch] ERROR in '{rule.title[:40]}': {msg}")
-            await session.rollback()
-            continue
 
-        technique = next((t for t in rule.tags if str(t).startswith("attack.t")), "")
-        for row in hits:
-            await _store_alert(session, dict(row), technique)
-            findings += 1
+    async with get_async_session() as session:
+        for rule in rules:
+            scoped_sql, params = _batch_scoped_sql(rule, table, tmin, tmax,
+                                                   agents, margin_seconds)
+            stmt = text(_to_named(scoped_sql)).bindparams(
+                bindparam("rule_id", type_=String),
+                bindparam("severity", type_=Integer),
+                bindparam("title", type_=String),
+            )
+            try:
+                hits = (await session.execute(stmt, params)).mappings().all()
+            except Exception as e:
+                errors += 1
+                msg = str(e).splitlines()[0][:160]
+                if first_error is None:
+                    first_error = f"{rule.title[:40]}: {msg}"
+                if errors <= 3:
+                    print(f"[sigma-batch] ERROR in '{rule.title[:40]}': {msg}")
+                await session.rollback()          # only sigma's own txn
+                continue
 
-    await session.commit()
+            technique = next((t for t in rule.tags if str(t).startswith("attack.t")), "")
+            for row in hits:
+                await _store_alert(session, dict(row), technique)
+                findings += 1
+
+        # commit only if we actually wrote something (own session)
+        if findings:
+            await session.commit()
+        else:
+            await session.rollback()              # clean close, nothing pending
+
     return {"ran": len(rules), "findings": findings, "errors": errors,
             "table": table, "batch_size": len(rows), "first_error": first_error}
-
 
 def _batch_scoped_sql(rule, table, tmin, tmax, agents, margin):
     """Rebuild the rule's SELECT but time-bounded to the batch, not now()-lookback.
