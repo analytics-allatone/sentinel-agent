@@ -126,8 +126,6 @@ def _group_by_category(data_to_push):
     events_data = data_to_push.get("event_data") or []
     agent_name  = meta_data.get("agent_name")
     category_wise_data = {}
-
-    category_wise_data = {}
     for ed in events_data:
         cat = ed.get("category")
         if not cat:
