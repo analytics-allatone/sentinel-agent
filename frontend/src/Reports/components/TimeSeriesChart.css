@@ -23,7 +23,7 @@
   align-items: center;
   gap: 6px;
   font-size: 12px;
-  color: #445;
+  color: var(--text);
   font-weight: 600;
 }
 .tsc-leg i {
@@ -39,23 +39,15 @@
   gap: 6px;
 }
 .tsc-btn {
-  border: 1px solid #d8dee6;
-  background: #fff;
-  color: #2c3e50;
-  border-radius: 6px;
   width: 28px;
   height: 28px;
   font-size: 16px;
   line-height: 1;
-  cursor: pointer;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  transition: background 0.15s, border-color 0.15s;
 }
 .tsc-btn:hover {
-  background: #f0f7f4;
-  border-color: #0f6e56;
 }
 .tsc-btn-txt {
   width: auto;
@@ -88,15 +80,15 @@
   stroke-width: 1;
 }
 .tsc-ylabel {
-  fill: #8a97a5;
+  fill: var(--muted);
   font-size: 11px;
 }
 .tsc-xlabel {
-  fill: #8a97a5;
+  fill: var(--muted);
   font-size: 10.5px;
 }
 .tsc-cross {
-  stroke: #64748b;
+  stroke: var(--muted);
   stroke-width: 1;
   stroke-dasharray: 4 3;
 }
@@ -127,8 +119,8 @@
   position: absolute;
   z-index: 5;
   min-width: 168px;
-  background: rgba(255, 255, 255, 0.98);
-  border: 1px solid #d8dee6;
+  background: var(--surface);
+  border: 1px solid var(--border);
   border-radius: 8px;
   box-shadow: 0 6px 20px rgba(20, 40, 60, 0.16);
   padding: 8px 10px;
@@ -161,7 +153,7 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  color: #556;
+  color: var(--muted);
 }
 .tsc-tip-key i {
   width: 10px;
@@ -171,7 +163,7 @@
 }
 .tsc-tip-val {
   font-weight: 700;
-  color: #1f2d3a;
+  color: var(--text);
   font-variant-numeric: tabular-nums;
 }
 
@@ -183,12 +175,12 @@
 
 @media (prefers-color-scheme: dark) {
   .tsc-leg { color: #c7d0da; }
-  .tsc-btn { background: #1e2732; color: #dbe4ee; border-color: #34404d; }
-  .tsc-btn:hover { background: #26323f; border-color: #4CAF50; }
-  .tsc-grid { stroke: #263139; }
-  .tsc-frame { stroke: #33414d; }
+  .tsc-btn { background: var(--primary); color: var(--on-primary); border-color: var(--border-strong); }
+  .tsc-btn:hover { background: var(--primary); border-color: #4CAF50; }
+  .tsc-grid { stroke: var(--text); }
+  .tsc-frame { stroke: var(--text); }
   .tsc-mm-bg { fill: #1a222c; stroke: #33414d; }
-  .tsc-tip { background: #1e2732; border-color: #34404d; }
+  .tsc-tip { background: var(--primary); border-color: #34404d; }
   .tsc-tip-time { color: #eef3f8; }
   .tsc-tip-key { color: #aeb9c4; }
   .tsc-tip-val { color: #f3f6f9; }

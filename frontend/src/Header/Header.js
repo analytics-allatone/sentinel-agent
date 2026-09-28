@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import ThemeToggle from '../theme/ThemeToggle';
 import './Header.css';
 
 const Header = () => {
@@ -12,7 +13,7 @@ const Header = () => {
     <header className="header">
       <div className="header-container">
         <div className="header-logo">
-          <h1><a href="/app/login">Guardlynx</a></h1>
+          <h1 className="phi-wordmark"><a href="/app/login">GuardLynx</a></h1>
         </div>
 
         <button className="menu-toggle" onClick={toggleMenu}>
@@ -26,6 +27,7 @@ const Header = () => {
             <li><a href="/users">Users</a></li>
             <li><a href="/settings">Settings</a></li> */}
             <li><a href="/app/login" className="nav-link-btn">Login</a></li>
+            <li><ThemeToggle /></li>
           </ul>
         </nav>
       </div>

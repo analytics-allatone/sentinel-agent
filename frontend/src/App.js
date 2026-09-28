@@ -26,6 +26,7 @@ import AgentInfoDashboard from "./Reports/AgentInfoDashboard";
 import Unauthorized from "./pages/Unauthorized/Unauthorized";
 import NotFound from "./pages/NotFound/NotFound";
 import DbHealthPage from "./DbHealth/DbHealthPage";
+import DesignSystemPage from "./DesignSystem/DesignSystemPage";
 import {
   RequireSession,
   RequireTempToken,
@@ -192,6 +193,11 @@ function AppContent() {
 
           {/* Anything that matched none of the above — a mistyped, moved or
               stale address. Must stay last: it matches everything. */}
+          {/* The design system documents itself from the live stylesheet,
+              so it is deliberately open: it holds no data, and it is the
+              quickest way to see whether a build carries the current CSS. */}
+          <Route path="/app/design-system" element={<DesignSystemPage />} />
+
           <Route path="*" element={<NotFound />} />
           </Routes>
           </TwoFactorProvider>

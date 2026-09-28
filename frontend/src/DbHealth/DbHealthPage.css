@@ -10,34 +10,31 @@
    ───────────────────────────────────────────────────────────── */
 
 .dbh-page {
-  --dbh-ink: #101828;
-  --dbh-text: #344054;
-  --dbh-dim: #667085;
-  --dbh-faint: #98a2b3;
-  --dbh-line: #e7eaf0;
-  --dbh-line-soft: #f1f3f7;
-  --dbh-surface: #ffffff;
-  --dbh-accent: #6654e8;
-  --dbh-ok: #12b76a;
-  --dbh-warn: #f79009;
-  --dbh-bad: #e5484d;
-  --dbh-radius: 14px;
-  --dbh-shadow: 0 1px 2px rgba(16, 24, 40, 0.04), 0 8px 24px rgba(16, 24, 40, 0.05);
-  --dbh-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --dbh-ink: var(--text);
+  --dbh-text: var(--text);
+  --dbh-dim: var(--muted);
+  --dbh-faint: var(--muted);
+  --dbh-line: var(--border);
+  --dbh-line-soft: var(--border);
+  --dbh-surface: var(--surface);
+  --dbh-accent: var(--accent);
+  --dbh-ok: var(--success);
+  --dbh-warn: var(--warning);
+  --dbh-bad: var(--danger);
+  --dbh-radius: var(--r-lg);
+  --dbh-shadow: var(--sh2);
+  --dbh-mono: var(--font-mono);
 
   min-height: 100vh;
   padding: 22px 22px 56px;
   box-sizing: border-box;
-  background:
-    radial-gradient(900px 380px at 12% -8%, #eceaff 0%, rgba(236, 234, 255, 0) 60%),
-    radial-gradient(700px 320px at 88% -12%, #e6f3ff 0%, rgba(230, 243, 255, 0) 55%),
-    #f6f7fb;
-  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  background: var(--bg);
+  font-family: var(--font-body);
   color: var(--dbh-ink);
 }
 
 .dbh-mono {
-  font-family: var(--dbh-mono);
+  font-family: var(--font-mono);
   font-size: 0.96em;
 }
 
@@ -71,28 +68,7 @@
   min-width: 0;
 }
 
-.dbh-back {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  margin-bottom: 10px;
-  padding: 4px 10px 4px 7px;
-  border: 1px solid var(--dbh-line);
-  border-radius: 999px;
-  background: #fff;
-  color: var(--dbh-dim);
-  font-family: inherit;
-  font-size: 11.5px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: color 0.15s ease, border-color 0.15s ease, background 0.15s ease;
-}
 
-.dbh-back:hover {
-  border-color: var(--dbh-accent);
-  background: #f7f5ff;
-  color: var(--dbh-accent);
-}
 
 .dbh-title {
   display: flex;
@@ -119,26 +95,26 @@
 
 .dbh-badge--ok {
   border-color: #a9e9c8;
-  background: #ecfdf3;
-  color: #067647;
+  background: var(--success-soft);
+  color: var(--success);
 }
 
 .dbh-badge--warn {
   border-color: #fbdfa8;
-  background: #fffaeb;
-  color: #b54708;
+  background: var(--warning-soft);
+  color: var(--warning);
 }
 
 .dbh-badge--bad {
   border-color: #fbc9c7;
-  background: #fef3f2;
-  color: #b42318;
+  background: var(--danger-soft);
+  color: var(--danger);
 }
 
 .dbh-badge--muted {
   border-color: var(--dbh-line);
-  background: #f4f5f8;
-  color: #475467;
+  background: var(--sunken);
+  color: var(--muted);
 }
 
 /* The meta line reads as a row of facts, not a run-on sentence. */
@@ -156,7 +132,7 @@
   padding: 3px 9px;
   border-radius: 999px;
   background: linear-gradient(135deg, #ece9ff, #e4f1ff);
-  color: #4338ca;
+  color: var(--accent);
   font-size: 10.5px;
   font-weight: 800;
   text-transform: uppercase;
@@ -171,7 +147,7 @@
   padding: 3px 10px;
   border: 1px solid var(--dbh-line);
   border-radius: 999px;
-  background: #fbfcfe;
+  background: var(--surface);
   color: var(--dbh-text);
   font-size: 11.5px;
   font-weight: 600;
@@ -204,7 +180,7 @@
   padding: 10px 12px;
   border: 1px solid var(--dbh-line);
   border-radius: 12px;
-  background: #fafbfd;
+  background: var(--surface);
 }
 
 .dbh-field-ctl,
@@ -221,9 +197,9 @@
   width: 74px;
   height: 34px;
   padding: 0 9px;
-  border: 1px solid #dfe4ec;
+  border: 1px solid var(--border);
   border-radius: 8px;
-  background: #fff;
+  background: var(--surface);
   font-family: inherit;
   font-size: 12px;
   outline: none;
@@ -248,35 +224,9 @@
   font-weight: 500;
 }
 
-.dbh-load {
-  height: 34px;
-  padding: 0 18px;
-  border: 1px solid var(--dbh-accent);
-  border-radius: 8px;
-  background: var(--dbh-accent);
-  color: #fff;
-  font-family: inherit;
-  font-size: 12px;
-  font-weight: 650;
-  cursor: pointer;
-  box-shadow: 0 1px 2px rgba(102, 84, 232, 0.35);
-  transition: background 0.15s ease, transform 0.12s ease;
-}
 
-.dbh-load:hover:not(:disabled) {
-  background: #5746d5;
-}
 
-.dbh-load:active:not(:disabled) {
-  transform: translateY(1px);
-}
 
-.dbh-load:disabled {
-  border-color: #cfc9f5;
-  background: #cfc9f5;
-  box-shadow: none;
-  cursor: not-allowed;
-}
 
 /* ── states ─────────────────────────────────────────────────── */
 
@@ -294,8 +244,8 @@
 .dbh-status--error {
   border-style: solid;
   border-color: #fbc9c7;
-  background: #fef6f5;
-  color: #b42318;
+  background: var(--danger-soft);
+  color: var(--danger);
 }
 
 /* ── not-inspected notice ───────────────────────────────────── */
@@ -368,7 +318,7 @@
   padding: 4px 11px;
   border: 1px solid var(--dbh-line);
   border-radius: 999px;
-  background: #fff;
+  background: var(--surface);
   color: var(--dbh-text);
   font-size: 11.5px;
   font-weight: 600;
@@ -385,20 +335,20 @@
 
 .dbh-chip--ok {
   border-color: #b7ebd0;
-  background: #f4fdf8;
-  color: #067647;
+  background: var(--success-soft);
+  color: var(--success);
 }
 
 .dbh-chip--warn {
   border-color: #fbdfa8;
-  background: #fffaf0;
-  color: #b54708;
+  background: var(--warning-soft);
+  color: var(--warning);
 }
 
 .dbh-chip--bad {
   border-color: #fbc9c7;
-  background: #fef4f3;
-  color: #b42318;
+  background: var(--danger-soft);
+  color: var(--danger);
 }
 
 .dbh-chip--muted {
@@ -415,7 +365,7 @@
   padding: 6px;
   border: 1px solid var(--dbh-line);
   border-radius: 999px;
-  background: #fff;
+  background: var(--surface);
   width: fit-content;
   max-width: 100%;
   box-shadow: var(--dbh-shadow);
@@ -435,7 +385,7 @@
 }
 
 .dbh-history-item:hover {
-  background: #f4f2ff;
+  background: var(--accent-soft);
   color: var(--dbh-accent);
 }
 
@@ -470,7 +420,7 @@
 
 .dbh-stat:hover {
   transform: translateY(-1px);
-  border-color: #d9dbe6;
+  border-color: var(--border);
 }
 
 /* A hairline of colour beats a whole coloured card: the number stays the
@@ -480,7 +430,7 @@
   position: absolute;
   inset: 0 auto 0 0;
   width: 3px;
-  background: #dfe3ea;
+  background: var(--bg);
 }
 
 .dbh-stat--ok::before {
@@ -513,15 +463,15 @@
 }
 
 .dbh-stat--ok .dbh-stat-value {
-  color: #067647;
+  color: var(--success);
 }
 
 .dbh-stat--warn .dbh-stat-value {
-  color: #b54708;
+  color: var(--warning);
 }
 
 .dbh-stat--bad .dbh-stat-value {
-  color: #b42318;
+  color: var(--danger);
 }
 
 .dbh-stat-sub {
@@ -578,8 +528,8 @@
 .dbh-card-count {
   padding: 1px 8px;
   border-radius: 999px;
-  background: #f1f3f7;
-  color: #475467;
+  background: var(--sunken);
+  color: var(--muted);
   font-size: 10.5px;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
@@ -654,25 +604,7 @@
 
 /* ── the empty half of the record ───────────────────────────── */
 
-.dbh-empty-toggle {
-  margin-top: 12px;
-  padding: 7px 12px;
-  border: 1px solid var(--dbh-line);
-  border-radius: 999px;
-  background: #fff;
-  color: var(--dbh-dim);
-  font-family: inherit;
-  font-size: 11.5px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: color 0.15s ease, border-color 0.15s ease, background 0.15s ease;
-}
 
-.dbh-empty-toggle:hover {
-  border-color: var(--dbh-accent);
-  background: #f7f5ff;
-  color: var(--dbh-accent);
-}
 
 .dbh-empty-fields {
   margin-top: 12px;
@@ -703,7 +635,7 @@
   z-index: 1;
   padding: 9px 12px;
   border-bottom: 1px solid var(--dbh-line);
-  background: #f8f9fc;
+  background: var(--sunken);
   color: var(--dbh-dim);
   font-size: 10px;
   font-weight: 700;
@@ -723,11 +655,11 @@
 }
 
 .dbh-table tbody tr:nth-child(even) td {
-  background: #fcfcfe;
+  background: var(--surface);
 }
 
 .dbh-table tbody tr:hover td {
-  background: #f6f4ff;
+  background: var(--accent-soft);
 }
 
 .dbh-table tbody tr:last-child td {
@@ -775,7 +707,7 @@
   padding: 0 11px;
   border: 1px solid var(--dbh-line);
   border-radius: 999px;
-  background: #fff;
+  background: var(--surface);
   color: var(--dbh-text);
   font-family: inherit;
   font-size: 11.5px;
@@ -804,24 +736,7 @@
   margin-top: 16px;
 }
 
-.dbh-raw-toggle {
-  padding: 8px 14px;
-  border: 1px solid var(--dbh-line);
-  border-radius: 999px;
-  background: #fff;
-  color: var(--dbh-dim);
-  font-family: inherit;
-  font-size: 11.5px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: color 0.15s ease, border-color 0.15s ease, background 0.15s ease;
-}
 
-.dbh-raw-toggle:hover {
-  border-color: var(--dbh-accent);
-  background: #f7f5ff;
-  color: var(--dbh-accent);
-}
 
 /* Dark, because it is machine output: it should not be mistaken for the
    page's own reading of the record. */
@@ -831,9 +746,9 @@
   max-height: 460px;
   overflow: auto;
   border-radius: 12px;
-  background: #0f1523;
-  color: #cbd5e1;
-  font-family: var(--dbh-mono);
+  background: var(--sunken);
+  color: var(--text);
+  font-family: var(--font-mono);
   font-size: 11.5px;
   line-height: 1.65;
   box-shadow: var(--dbh-shadow);
@@ -869,14 +784,6 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .dbh-stat,
-  .dbh-back,
-  .dbh-load,
-  .dbh-history-item,
-  .dbh-empty-toggle,
-  .dbh-raw-toggle {
-    transition: none;
-  }
 
   .dbh-stat:hover {
     transform: none;

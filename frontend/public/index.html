@@ -25,6 +25,33 @@
       Learn how to configure a non-root public URL by running `npm run build`.
     -->
     <title>Guardlynx App</title>
+
+    <!-- Google Sans for the product, JetBrains Mono for code. -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Google+Sans:ital,opsz,wght@0,17..18,400..700;1,17..18,400..700&family=JetBrains+Mono:wght@400;500&display=swap"
+    />
+
+    <!--
+      The theme is stamped on <html> before the first paint. Doing this in
+      React would be one frame too late: the page would flash light before
+      turning dark. No choice stored means the OS decides, which is why the
+      attribute is left off rather than set to a guess.
+    -->
+    <script>
+      (function () {
+        try {
+          var stored = localStorage.getItem("phi-theme");
+          if (stored === "light" || stored === "dark") {
+            document.documentElement.setAttribute("data-theme", stored);
+          }
+        } catch (e) {
+          /* storage refused; prefers-color-scheme still applies */
+        }
+      })();
+    </script>
   </head>
   <body>
     <noscript>You need to enable JavaScript to run this app.</noscript>

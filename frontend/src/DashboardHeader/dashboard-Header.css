@@ -15,9 +15,9 @@
 
   box-sizing: border-box;
 
-  background: #ffffff;
+  background: var(--surface);
 
-  border-bottom: 1px solid #e8ebf0;
+  border-bottom: 1px solid var(--border);
 
   z-index: 900;
 
@@ -39,10 +39,8 @@
 .header-page-info h1 {
   margin: 0;
 
-  color: #172033;
 
   font-size: 21px;
-  font-weight: 700;
 
   line-height: 1.2;
 }
@@ -50,7 +48,7 @@
 .header-page-info p {
   margin: 4px 0 0;
 
-  color: #667085;
+  color: var(--muted);
 
   font-size: 11px;
 
@@ -90,7 +88,7 @@
   border: 1px solid #e0e5ec;
   border-radius: 8px;
 
-  background: #ffffff;
+  background: var(--surface);
 
   position: relative;
 }
@@ -103,7 +101,7 @@
 
   display: block;
 
-  color: #667085;
+  color: var(--muted);
 
   position: static;
 }
@@ -119,13 +117,13 @@
 
   background: transparent;
 
-  color: #344054;
+  color: var(--text);
 
   font-size: 10px;
 }
 
 .search-box input::placeholder {
-  color: #98a2b3;
+  color: var(--muted);
 }
 
 .search-shortcut {
@@ -142,9 +140,9 @@
 
   border-radius: 5px;
 
-  background: #f2f4f7;
+  background: var(--sunken);
 
-  color: #667085;
+  color: var(--muted);
 
   font-size: 9px;
   font-weight: 600;
@@ -173,7 +171,7 @@
 
   background: transparent;
 
-  color: #344054;
+  color: var(--text);
 
   cursor: pointer;
 }
@@ -204,13 +202,13 @@
 
   box-sizing: border-box;
 
-  border: 2px solid #ffffff;
+  border: 2px solid var(--border);
 
   border-radius: 50%;
 
-  background: #ef3347;
+  background: var(--danger);
 
-  color: #ffffff;
+  color: var(--on-primary);
 
   font-size: 8px;
   font-weight: 700;
@@ -235,19 +233,13 @@
 
   padding: 4px 9px 4px 5px;
 
-  border: 1px solid #e2e6ec;
 
-  border-radius: 9px;
 
-  background: #ffffff;
 
-  cursor: pointer;
 }
 
 .profile-btn:hover {
-  background: #faf9ff;
 
-  border-color: #d7d0f7;
 }
 
 .avatar {
@@ -260,9 +252,9 @@
 
   border-radius: 50%;
 
-  background: #eef0f4;
+  background: var(--sunken);
 
-  color: #667085;
+  color: var(--muted);
 }
 
 .avatar svg {
@@ -278,14 +270,14 @@
 }
 
 .user-name {
-  color: #172033;
+  color: var(--text);
   font-size: 11px;
   font-weight: 700;
 }
 
 .user-role {
   margin-top: 2px;
-  color: #667085;
+  color: var(--muted);
   font-size: 9px;
 }
 
@@ -293,7 +285,7 @@
   display: flex;
   align-items: center;
 
-  color: #667085;
+  color: var(--muted);
 }
 
 .profile-arrow svg {
@@ -310,14 +302,13 @@
 .profile-dropdown {
   position: absolute;
 
-  background: #ffffff;
+  background: var(--surface);
 
-  border: 1px solid #e4e7ec;
+  border: 1px solid var(--border);
 
   border-radius: 8px;
 
-  box-shadow:
-    0 12px 30px rgba(16, 24, 40, 0.14);
+  box-shadow: var(--sh1);
 
   z-index: 1500;
 }
@@ -340,13 +331,12 @@
 
   box-sizing: border-box;
 
-  background: #ffffff;
+  background: var(--surface);
 
-  border: 1px solid #e4e7ec;
+  border: 1px solid var(--border);
   border-radius: 10px;
 
-  box-shadow:
-    0 10px 30px rgba(16, 24, 40, 0.14);
+  box-shadow: var(--sh1);
 
   z-index: 1500;
 }
@@ -354,9 +344,9 @@
 .notification-header {
   padding: 12px 14px;
 
-  border-bottom: 1px solid #eef0f3;
+  border-bottom: 1px solid var(--border);
 
-  color: #172033;
+  color: var(--text);
 
   font-size: 14px;
   font-weight: 700;
@@ -370,7 +360,7 @@
 
   padding: 11px 14px;
 
-  color: #475467;
+  color: var(--muted);
 
   font-size: 12px;
 }
@@ -391,13 +381,13 @@
 }
 
 .notification-dot.purple {
-  background: #6947e8;
+  background: var(--accent);
 }
 
 .profile-item {
   padding: 12px 16px;
 
-  color: #344054;
+  color: var(--text);
 
   font-size: 12px;
 
@@ -409,15 +399,13 @@
 
   cursor: pointer;
 
-  transition:
-    background-color 0.15s ease,
-    color 0.15s ease;
+  transition: all var(--t-hover) var(--ease);
 }
 
 .profile-item:hover {
-  background: #f5f3ff;
+  background: var(--accent-soft);
 
-  color: #5d47df;
+  color: var(--accent);
 }
 
 .profile-item.logout {
@@ -425,9 +413,9 @@
 }
 
 .profile-item.logout:hover {
-  background: #fff1f2;
+  background: var(--danger-soft);
 
-  color: #dc2638;
+  color: var(--danger);
 }
 
 .profile-dropdown hr {
@@ -435,7 +423,7 @@
 
   border: none;
 
-  border-top: 1px solid #eef0f3;
+  border-top: 1px solid var(--border);
 }
 
 
@@ -522,7 +510,7 @@
   border: none;
   background: transparent;
 
-  color: #344054;
+  color: var(--text);
 
   font-size: 20px;
 

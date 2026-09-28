@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import "./dashboard-Header.css";
 import { logout } from "../api/api";
+import ThemeToggle from "../theme/ThemeToggle";
 
 import {
   LuSearch,
@@ -42,7 +43,7 @@ const DashboardHeader = ({ onMenuToggle , sidebarOpen}) => {
   )}
 
   <div className="header-page-info">
-    <h1>GuardLynx</h1>
+    <h1 className="phi-wordmark">GuardLynx</h1>
     {/* <p>Overview of your network security</p> */}
   </div>
 
@@ -70,6 +71,10 @@ const DashboardHeader = ({ onMenuToggle , sidebarOpen}) => {
           </span> */}
 
         </div></>}
+
+
+        {/* THEME — follows the OS until someone chooses otherwise. */}
+        <ThemeToggle />
 
 
         {/* NOTIFICATION */}

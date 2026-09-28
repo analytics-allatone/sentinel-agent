@@ -5,17 +5,12 @@
    ───────────────────────────────────────────────────────────── */
 
 .ua {
-  --ua-bg-1: #0b1020;
-  --ua-bg-2: #131a33;
-  --ua-bg-3: #1b2145;
+  --ua-accent-1: var(--accent);
+  --ua-accent-2: var(--accent-hover);
   --ua-card: rgba(24, 30, 54, 0.55);
   --ua-card-border: rgba(255, 255, 255, 0.12);
   --ua-text: #eef1f8;
   --ua-text-dim: #9aa4bf;
-  --ua-accent-1: #5b8cff;
-  --ua-accent-2: #7a5cff;
-  --ua-shield-1: #5b8cff;
-  --ua-shield-2: #7a5cff;
   --ua-shield-stroke: rgba(255, 255, 255, 0.35);
   --ua-btn: rgba(255, 255, 255, 0.08);
   --ua-btn-border: rgba(255, 255, 255, 0.16);
@@ -34,13 +29,10 @@
   justify-content: center;
   padding: 24px;
   box-sizing: border-box;
-  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-family: var(--font-body);
   color: var(--ua-text);
   text-align: center;
-  background:
-    radial-gradient(1200px 700px at 15% 10%, var(--ua-bg-3), transparent 60%),
-    radial-gradient(1000px 600px at 85% 90%, var(--ua-bg-2), transparent 55%),
-    linear-gradient(140deg, var(--ua-bg-1), var(--ua-bg-2));
+  background: var(--surface);
 }
 
 /* faint grid overlay for enterprise depth */
@@ -50,26 +42,17 @@
   inset: 0;
   z-index: 0;
   pointer-events: none;
-  background-image:
-    linear-gradient(var(--ua-grid) 1px, transparent 1px),
-    linear-gradient(90deg, var(--ua-grid) 1px, transparent 1px);
+  background-image: none;
   background-size: 46px 46px;
   mask-image: radial-gradient(circle at 50% 42%, #000 0%, transparent 72%);
   -webkit-mask-image: radial-gradient(circle at 50% 42%, #000 0%, transparent 72%);
 }
 
 .ua[data-theme="light"] {
-  --ua-bg-1: #eef2fb;
-  --ua-bg-2: #e4ecff;
-  --ua-bg-3: #dfe7ff;
   --ua-card: rgba(255, 255, 255, 0.72);
   --ua-card-border: rgba(15, 23, 42, 0.10);
   --ua-text: #16203a;
-  --ua-text-dim: #5c6a86;
-  --ua-accent-1: #2f6bff;
-  --ua-accent-2: #7a4bff;
-  --ua-shield-1: #3f74ff;
-  --ua-shield-2: #7a4bff;
+  --ua-text-dim: var(--muted);
   --ua-shield-stroke: rgba(15, 23, 42, 0.18);
   --ua-btn: rgba(15, 23, 42, 0.05);
   --ua-btn-border: rgba(15, 23, 42, 0.12);
@@ -551,16 +534,9 @@
 
 /* ── reduced motion ─────────────────────────────────────────── */
 @media (prefers-reduced-motion: reduce) {
-  .ua__shape,
-  .ua__shield,
-  .ua__shield-glow,
-  .ua__shield-ring,
-  .ua__card,
   .ua__toast {
     animation: none !important;
   }
-  .ua__btn,
-  .ua__theme,
   .ua__progress-fill {
     transition: none;
   }

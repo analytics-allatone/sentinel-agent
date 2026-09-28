@@ -1513,7 +1513,7 @@ const sendSoc2Pdf = async () => {
         <div className="soc2-empty-state">
           <div className="soc2-empty-title soc2-error-title">Could not load report</div>
           <div className="soc2-empty-sub">{errorMsg}</div>
-          <button className="soc2-btn soc2-btn-primary" onClick={() => load(toParams())}>
+          <button className="soc2-btn soc2-btn-primary phi-btn" onClick={() => load(toParams())}>
             Retry
           </button>
         </div>
@@ -1597,7 +1597,7 @@ const sendSoc2Pdf = async () => {
             <span className="soc2-field-label">Agents</span>
             <button
               type="button"
-              className="soc2-input soc2-agentpicker-toggle"
+              className="soc2-input soc2-agentpicker-toggle phi-input"
               onClick={() => setAgentPickerOpen((open) => !open)}
               aria-expanded={agentPickerOpen}
               aria-haspopup="true"
@@ -1663,7 +1663,7 @@ const sendSoc2Pdf = async () => {
           <label className="soc2-field">
             <span className="soc2-field-label">Range</span>
             <select
-              className="soc2-select"
+              className="soc2-select phi-input"
               value={preset}
               onChange={(e) =>
                 e.target.value === "custom" ? setPreset("custom") : applyPreset(Number(e.target.value))
@@ -1707,7 +1707,7 @@ const sendSoc2Pdf = async () => {
               <label className="soc2-field">
                 <span className="soc2-field-label">Buckets</span>
                 <select
-                  className="soc2-select"
+                  className="soc2-select phi-input"
                   value={bucket}
                   onChange={(e) => setBucket(e.target.value)}
                 >
@@ -1720,7 +1720,7 @@ const sendSoc2Pdf = async () => {
 
           <div className="soc2-actions">
             <button
-  className="soc2-btn soc2-btn-primary"
+  className="soc2-btn soc2-btn-primary phi-btn"
   type="submit"
   disabled={loading}
 >
@@ -1728,7 +1728,7 @@ const sendSoc2Pdf = async () => {
   {loading ? "Generating…" : "Generate"}
 </button>
             <button
-              className="soc2-btn"
+              className="soc2-btn phi-btn phi-btn--secondary"
               type="button"
               onClick={handleExportPdf}
               disabled={!report || exporting}
@@ -1766,7 +1766,7 @@ const sendSoc2Pdf = async () => {
       {status === "error" && report && (
         <div className="soc2-errorbar" role="alert">
           <span>{errorMsg} Showing the last window that loaded.</span>
-          <button className="soc2-btn soc2-btn-sm" type="button" onClick={() => load(toParams())}>
+          <button className="soc2-btn soc2-btn-sm phi-btn phi-btn--sm phi-btn--secondary" type="button" onClick={() => load(toParams())}>
             Retry
           </button>
         </div>

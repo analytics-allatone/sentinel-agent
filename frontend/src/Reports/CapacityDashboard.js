@@ -32,6 +32,7 @@ import {
 } from "./capacityTransform";
 import { CHART_CHROME, GAP_COLOR, SERIES_COLORS } from "./colors";
 import { istInputToApi, lastHoursInputs } from "./timeRange";
+import { resolveTheme, subscribeToTheme } from "../theme/theme";
 import {
   DISK_CRITICAL,
   DISK_LEVEL_LABEL,
@@ -96,40 +97,6 @@ const presetLabel = (h) => {
   const days = h / HOURS_PER_DAY;
   return `Last ${days} day${days > 1 ? "s" : ""}`;
 };
-
-/**
- * Theme-toggle glyph as inline SVG (currentColor) — the previous Unicode
- * ☀/☾ rendered as an ambiguous asterisk in the monospace font on some
- * platforms. `mode` is the CURRENT theme; the icon shows the target the click
- * moves to (sun while dark, moon while light).
- */
-function ThemeIcon({ mode }) {
-  const common = {
-    className: "capacity-dash__icon",
-    viewBox: "0 0 24 24",
-    width: 16,
-    height: 16,
-    fill: "none",
-    stroke: "currentColor",
-    strokeWidth: 2,
-    strokeLinecap: "round",
-    strokeLinejoin: "round",
-    "aria-hidden": true,
-  };
-  if (mode === "dark") {
-    return (
-      <svg {...common}>
-        <circle cx="12" cy="12" r="4.2" />
-        <path d="M12 2.5v2.2M12 19.3v2.2M4.6 4.6l1.6 1.6M17.8 17.8l1.6 1.6M2.5 12h2.2M19.3 12h2.2M4.6 19.4l1.6-1.6M17.8 6.2l1.6-1.6" />
-      </svg>
-    );
-  }
-  return (
-    <svg {...common}>
-      <path d="M20 14.6A8 8 0 1 1 9.4 4 6.2 6.2 0 0 0 20 14.6z" />
-    </svg>
-  );
-}
 
 // Recharts lays the plot out inside these; the pointer maths needs the plot
 // box, not the container box, or the cursor anchor drifts.
@@ -300,27 +267,16 @@ function zoomAround([start, end], factor, lastIndex) {
 
 const fullRange = (lastIndex) => [0, Math.max(0, lastIndex)];
 
-const THEME_KEY = "capacity-dash-theme";
-
-/** Saved choice wins; otherwise follow the OS. */
+/**
+ * The report is drawn in whatever theme the app is in.
+ *
+ * It keeps a theme of its own as state rather than reading the tokens,
+ * because its charts are painted in JavaScript — the series colours are
+ * re-stepped per theme in colors.js — and because exporting a PDF forces
+ * light for the capture and puts the screen back afterwards.
+ */
 function initialTheme() {
-  try {
-    const saved = window.localStorage.getItem(THEME_KEY);
-    if (saved === "light" || saved === "dark") return saved;
-  } catch (_) {
-    /* storage can be blocked; fall through to the OS preference */
-  }
-  try {
-    if (
-      window.matchMedia &&
-      window.matchMedia("(prefers-color-scheme: light)").matches
-    ) {
-      return "light";
-    }
-  } catch (_) {
-    /* matchMedia missing */
-  }
-  return "dark";
+  return resolveTheme();
 }
 
 /** datetime-local input values for the last 12 hours, in IST (see timeRange.js). */
@@ -1708,14 +1664,8 @@ const chartEndIndex = useMemo(() => {
     };
   }, []);
 
-  // persist the theme choice
-  useEffect(() => {
-    try {
-      window.localStorage.setItem(THEME_KEY, theme);
-    } catch (_) {
-      /* storage blocked — the choice just will not survive a reload */
-    }
-  }, [theme]);
+  // Follow the app: the header toggle and the OS both reach the report here.
+  useEffect(() => subscribeToTheme(setTheme), []);
 
   /**
    * Export to PDF via the browser's own print-to-PDF, so there is no PDF
@@ -2443,22 +2393,7 @@ const chartEndIndex = useMemo(() => {
             {sendingPdf ? "Sending…" : "Send PDF"}
           </button>
 
-          <button
-            className="capacity-dash__btn capacity-dash__btn--icon"
-            type="button"
-            onClick={() => setTheme((t) => (t === "dark" ? "light" : "dark"))}
-            aria-pressed={theme === "light"}
-            title={
-              theme === "dark" ? "Switch to light mode" : "Switch to dark mode"
-            }
-          >
-            <ThemeIcon mode={theme} />
-            <span className="capacity-dash__sr-only">
-              {theme === "dark"
-                ? "Switch to light mode"
-                : "Switch to dark mode"}
-            </span>
-          </button>
+          {/* The theme is the app's, changed from the header. */}
         </form>
       </header>
 

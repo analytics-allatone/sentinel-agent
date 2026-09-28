@@ -1473,7 +1473,7 @@ function Dashboard() {
       redis: { color: "#d82c20", label: "Rd" },
     };
     return (
-      styles[key] || { color: "#667eea", label: (engine || "?").slice(0, 2) }
+      styles[key] || { color: "var(--accent)", label: (engine || "?").slice(0, 2) }
     );
   };
 
@@ -2074,7 +2074,7 @@ function Dashboard() {
         {/* <div className="stat-card">
           <h3>AGENTS BY STATUS</h3>
           <div className="pie-chart">
-            {renderDonut(statusSegments, "#cccccc")}
+            {renderDonut(statusSegments, "var(--border)")}
           </div>
           <div className="legend">
             <div className="legend-item">
@@ -2119,7 +2119,7 @@ function Dashboard() {
 
           <div className="chart-content">
             <div className="pie-chart">
-              {renderDonut(statusSegments, "#cccccc", totalAgents)}
+              {renderDonut(statusSegments, "var(--border)", totalAgents)}
             </div>
 
             <div className="legend">
@@ -2168,7 +2168,7 @@ function Dashboard() {
 
         {/* <div className="stat-card">
           <h3>TOP 5 OS</h3>
-          <div className="pie-chart">{renderDonut(osSegments, "#cccccc")}</div>
+          <div className="pie-chart">{renderDonut(osSegments, "var(--border)")}</div>
           <div className="legend">
             {osStats.length > 0 ? (
               osStats.map((os, index) => (
@@ -2186,7 +2186,7 @@ function Dashboard() {
               <div className="legend-item">
                 <span
                   className="legend-color"
-                  style={{ backgroundColor: "#cccccc" }}
+                  style={{ backgroundColor: "var(--border-strong)" }}
                 ></span>{" "}
                 No OS data
               </div>
@@ -2205,7 +2205,7 @@ function Dashboard() {
 
           <div className="chart-content">
             <div className="pie-chart">
-              {renderDonut(osSegments, "#cccccc", totalOsAgents)}
+              {renderDonut(osSegments, "var(--border)", totalOsAgents)}
             </div>
 
             <div className="legend">
@@ -2226,7 +2226,7 @@ function Dashboard() {
                   <span
                     className="legend-color"
                     style={{
-                      backgroundColor: "#cccccc",
+                      backgroundColor: "var(--border-strong)",
                     }}
                   ></span>
                   No OS data
@@ -2239,7 +2239,7 @@ function Dashboard() {
         {/* <div className="stat-card">
           <h3>TOP 5 GROUPS</h3>
           <div className="pie-chart">
-            {renderDonut(groupSegments, "#00a86b")}
+            {renderDonut(groupSegments, "var(--border)")}
           </div>
           <div className="legend">
             {groupStats.length > 0 ? (
@@ -2259,7 +2259,7 @@ function Dashboard() {
               <div className="legend-item">
                 <span
                   className="legend-color"
-                  style={{ backgroundColor: "#00a86b" }}
+                  style={{ backgroundColor: "var(--success)" }}
                 ></span>{" "}
                 default (0)
               </div>
@@ -2278,7 +2278,7 @@ function Dashboard() {
 
           <div className="chart-content">
             <div className="pie-chart">
-              {renderDonut(groupSegments, "#00a86b", totalGroupAgents)}
+              {renderDonut(groupSegments, "var(--border)", totalGroupAgents)}
             </div>
 
             <div className="legend">
@@ -2300,7 +2300,7 @@ function Dashboard() {
                   <span
                     className="legend-color"
                     style={{
-                      backgroundColor: "#00a86b",
+                      backgroundColor: "var(--success)",
                     }}
                   ></span>
                   default (0)

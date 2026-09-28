@@ -3,7 +3,7 @@
    tile reads at a glance; the dot in the sub keeps state off colour-alone. */
 .stat-card {
   position: relative;
-  background: #fff;
+  background: var(--surface);
   border: 1px solid rgba(11, 11, 11, 0.09);
   border-radius: 10px;
   padding: 12px 14px;
@@ -44,7 +44,7 @@
   font-weight: 500;
   letter-spacing: 0.03em;
   text-transform: uppercase;
-  color: #898781;
+  color: var(--muted);
   display: flex;
   align-items: center;
   gap: 6px;
@@ -57,7 +57,7 @@
 .stat-value {
   font-size: 26px;
   font-weight: 600;
-  color: #0b0b0b;
+  color: var(--text);
   line-height: 1.15;
   letter-spacing: -0.02em;
 }
@@ -84,21 +84,21 @@
 
 /* text tones clear contrast on white; the rail/dot carry the hue */
 .stat-sub-danger {
-  color: #a32d2d;
+  color: var(--danger);
 }
 .stat-sub-warning {
-  color: #854f0b;
+  color: var(--warning);
 }
 .stat-sub-success {
-  color: #27500a;
+  color: var(--success);
 }
 .stat-sub-muted {
-  color: #898781;
+  color: var(--muted);
 }
 
 /* skeleton */
 .stat-skel {
-  background: linear-gradient(90deg, #ececea 25%, #f3f3f1 50%, #ececea 75%);
+  background: linear-gradient(90deg, var(--bg) 25%, var(--surface) 50%, var(--bg) 75%);
   background-size: 200% 100%;
   animation: stat-shimmer 1.2s ease-in-out infinite;
   border-radius: 4px;

@@ -10,15 +10,15 @@
 
 .capacity-dash {
   /* dark is the default theme; .capacity-dash--light re-points these below */
-  --cap-bg: #0c1118;
-  --cap-panel: #121924;
-  --cap-panel-hi: #16202d;
-  --cap-border: #1e2836;
-  --cap-grid: #182231;
-  --cap-text: #c9d4e2;
-  --cap-strong: #e6edf6;
-  --cap-dim: #6b7c93;
-  --cap-faint: #3e4c60;
+  --cap-bg: #0d1a33;
+  --cap-panel: #16264a;
+  --cap-panel-hi: #1b2d55;
+  --cap-border: #22345a;
+  --cap-grid: #1a2c52;
+  --cap-text: #e6edf8;
+  --cap-strong: #ffffff;
+  --cap-dim: #9fb0cc;
+  --cap-faint: #34496f;
   --cap-scheme: dark;
 
   --cap-cpu: #f2a93b;
@@ -28,10 +28,10 @@
   --cap-agent-mem: #f2748d;
   --cap-bw: #4a90e2;
 
-  --cap-accent-bg: #1d4e63;
-  --cap-accent-border: #2a6f8c;
-  --cap-accent-text: #dff1fa;
-  --cap-btn-hover: #1c2836;
+  --cap-accent-bg: #16264a;
+  --cap-accent-border: #34496f;
+  --cap-accent-text: #93bbff;
+  --cap-btn-hover: #16264a;
 
   --cap-error-bg: #24141a;
   --cap-error-border: #4a2530;
@@ -45,7 +45,7 @@
 
   background: var(--cap-bg);
   color: var(--cap-text);
-  font-family: var(--cap-mono);
+  font-family: var(--font-mono);
   min-height: 100vh;
   padding: 16px;
   text-align: left;
@@ -59,14 +59,14 @@
    Selected, not an inversion: the series hexes are re-stepped in colors.js
    (the dark ones sit under 3:1 on white), and the chrome is re-picked here. */
 .capacity-dash--light {
-  --cap-bg: #f4f5f7;
+  --cap-bg: #f9fbfe;
   --cap-panel: #ffffff;
-  --cap-panel-hi: #f7f8fa;
-  --cap-border: #dfe3ea;
-  --cap-grid: #e7e9ee;
-  --cap-text: #313947;
-  --cap-strong: #0f141c;
-  --cap-dim: #6b7280;
+  --cap-panel-hi: #eff4fa;
+  --cap-border: #d4ddea;
+  --cap-grid: #e3e9f2;
+  --cap-text: #4a5b78;
+  --cap-strong: #0f2447;
+  --cap-dim: #4a5b78;
   --cap-faint: #aab1bd;
   --cap-scheme: light;
 
@@ -158,7 +158,7 @@
   border: 1px solid var(--cap-border);
   border-radius: 6px;
   color: var(--cap-text);
-  font-family: var(--cap-mono);
+  font-family: var(--font-mono);
   font-size: 12.5px;
   padding: 0 9px;
   color-scheme: var(--cap-scheme);
@@ -180,7 +180,7 @@
   border: 1px solid var(--cap-border);
   border-radius: 6px;
   color: var(--cap-text);
-  font-family: var(--cap-mono);
+  font-family: var(--font-mono);
   font-size: 12.5px;
   padding: 0 9px;
   cursor: pointer;
@@ -206,7 +206,7 @@
   border: 1px solid var(--cap-border);
   border-radius: 6px;
   color: var(--cap-text);
-  font-family: var(--cap-mono);
+  font-family: var(--font-mono);
   font-size: 12px;
   padding: 0 11px;
   cursor: pointer;
@@ -508,7 +508,7 @@
   border: 1px solid transparent;
   border-radius: 5px;
   color: var(--cap-text);
-  font-family: var(--cap-mono);
+  font-family: var(--font-mono);
   font-size: 11.5px;
   padding: 3px 6px;
   cursor: pointer;
@@ -724,13 +724,7 @@
     background: #ffffff;
     color: #172033;
 
-    font-family:
-      Inter,
-      -apple-system,
-      BlinkMacSystemFont,
-      "Segoe UI",
-      Arial,
-      sans-serif;
+    font-family: var(--font-body);
 
     font-size: 11px;
     line-height: 1.45;
@@ -1497,7 +1491,7 @@
 
   .capacity-dash__print-summary-meta-ip {
     font-size: 10.5px;
-    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-family: var(--font-mono);
   }
 
 .capacity-dash__print-summary-meta-card strong {
@@ -1636,7 +1630,7 @@
   display: flex;
   flex-direction: column;
 
-  background: #ffffff;
+  background: var(--surface);
 
   border-radius: 16px;
 
@@ -1661,7 +1655,7 @@
 
   padding: 24px 30px 20px;
 
-  border-bottom: 1px solid #e2e8f0;
+  border-bottom: 1px solid var(--border);
 
   background:
     linear-gradient(
@@ -1688,7 +1682,7 @@
   line-height: 1.2;
   font-weight: 750;
 
-  color: #0f172a;
+  color: var(--text);
 }
 
 .capacity-dash__send-subtitle {
@@ -1698,7 +1692,7 @@
   font-size: 13px;
   line-height: 1.55;
 
-  color: #64748b;
+  color: var(--muted);
 }
 
 
@@ -1716,11 +1710,11 @@
 
   padding: 0;
 
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--border);
   border-radius: 10px;
 
-  background: #ffffff;
-  color: #64748b;
+  background: var(--surface);
+  color: var(--muted);
 
   font-size: 22px;
   line-height: 1;
@@ -1734,9 +1728,9 @@
 }
 
 .capacity-dash__send-close:hover:not(:disabled) {
-  background: #f1f5f9;
+  background: var(--accent-soft);
   border-color: #cbd5e1;
-  color: #0f172a;
+  color: var(--text);
 }
 
 
@@ -1756,7 +1750,8 @@
   min-height: 0;
   padding: 0 30px 26px;
   overflow-y: auto;
-  background: #f8fafc;
+
+  background: var(--accent-soft);
 }
 
 
@@ -1773,9 +1768,9 @@
 
   border-radius: 10px;
 
-  background: #fef2f2;
+  background: var(--danger-soft);
 
-  color: #b91c1c;
+  color: var(--danger);
 
   font-size: 14px;
 
@@ -1792,9 +1787,9 @@
 
   border-radius: 10px;
 
-  background: #f0fdf4;
+  background: var(--success-soft);
 
-  color: #15803d;
+  color: var(--success);
 
   font-size: 14px;
 
@@ -1825,9 +1820,9 @@
 
   border-radius: 12px;
 
-  background: #ffffff;
+  background: var(--surface);
 
-  color: #64748b;
+  color: var(--muted);
 
   font-size: 14px;
 }
@@ -1853,14 +1848,14 @@
 
 .capacity-dash__sender-section-title {
   margin: 0 0 6px;
-  color: #0f172a;
+  color: var(--text);
   font-size: 15px;
   font-weight: 700;
 }
 
 .capacity-dash__sender-section-description {
   margin: 0 0 14px;
-  color: #64748b;
+  color: var(--muted);
   font-size: 13px;
   line-height: 1.5;
 }
@@ -1883,9 +1878,9 @@
   gap: 12px;
   min-width: 0;
   padding: 15px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--border);
   border-radius: 14px;
-  background: #ffffff;
+  background: var(--surface);
   cursor: pointer;
   transition:
     border-color 0.18s ease,
@@ -1902,7 +1897,7 @@
 
 .capacity-dash__sender-account--selected {
   border-color: #2563eb;
-  background: #eff6ff;
+  background: var(--accent-soft);
   box-shadow:
     0 0 0 1px rgba(37, 99, 235, 0.16),
     0 8px 24px rgba(37, 99, 235, 0.08);
@@ -1949,7 +1944,7 @@
 }
 
 .capacity-dash__sender-name {
-  color: #0f172a;
+  color: var(--text);
   font-size: 14px;
   font-weight: 700;
   line-height: 1.35;
@@ -1960,7 +1955,7 @@
 
 .capacity-dash__sender-identifier {
   margin-top: 4px;
-  color: #64748b;
+  color: var(--muted);
   font-size: 12px;
   line-height: 1.4;
   overflow: hidden;
@@ -1974,8 +1969,8 @@
   margin-top: 9px;
   padding: 4px 8px;
   border-radius: 999px;
-  background: #f1f5f9;
-  color: #475569;
+  background: var(--accent-soft);
+  color: var(--accent);
   font-size: 10px;
   font-weight: 700;
   text-transform: capitalize;
@@ -1990,7 +1985,7 @@
 .capacity-dash__sender-account-label {
   overflow: hidden;
 
-  color: #0f172a;
+  color: var(--text);
 
   font-size: 15px;
   font-weight: 700;
@@ -2005,7 +2000,7 @@
 
   overflow: hidden;
 
-  color: #64748b;
+  color: var(--muted);
 
   font-size: 13px;
 
@@ -2053,24 +2048,24 @@
 /* Sender type */
 
 .capacity-dash__sender-account-type {
-  background: #e2e8f0;
-  color: #475569;
+  background: var(--accent-soft);
+  color: var(--accent);
 }
 
 
 /* Verified sender */
 
 .capacity-dash__sender-account-verified {
-  background: #dcfce7;
-  color: #15803d;
+  background: var(--success-soft);
+  color: var(--success);
 }
 
 
 /* Inactive sender */
 
 .capacity-dash__sender-account-inactive {
-  background: #fef3c7;
-  color: #92400e;
+  background: var(--warning-soft);
+  color: var(--warning);
 }
 
 .capacity-dash__send-section {
@@ -2103,8 +2098,8 @@
 
   border-radius: 9px;
 
-  background: #eff6ff;
-  color: #2563eb;
+  background: var(--accent-soft);
+  color: var(--accent);
 
   font-size: 12px;
   font-weight: 800;
@@ -2113,7 +2108,7 @@
 .capacity-dash__send-section-title {
   margin: 1px 0 3px;
 
-  color: #0f172a;
+  color: var(--text);
 
   font-size: 15px;
   line-height: 1.3;
@@ -2123,7 +2118,7 @@
 .capacity-dash__send-section-description {
   margin: 0;
 
-  color: #64748b;
+  color: var(--muted);
 
   font-size: 12px;
   line-height: 1.45;
@@ -2140,8 +2135,8 @@
 
   border-radius: 999px;
 
-  background: #eff6ff;
-  color: #2563eb;
+  background: var(--accent-soft);
+  color: var(--accent);
 
   font-size: 11px;
   font-weight: 700;
@@ -2156,9 +2151,9 @@
   border: 1px dashed #cbd5e1;
   border-radius: 12px;
 
-  background: #ffffff;
+  background: var(--surface);
 
-  color: #64748b;
+  color: var(--muted);
 
   font-size: 14px;
   line-height: 1.5;
@@ -2173,9 +2168,9 @@
   border: 1px dashed #cbd5e1;
   border-radius: 12px;
 
-  background: #ffffff;
+  background: var(--surface);
 
-  color: #64748b;
+  color: var(--muted);
 
   font-size: 14px;
 }
@@ -2184,7 +2179,7 @@
 /* .capacity-dash__send-section-description {
   margin: 0 0 14px;
 
-  color: #64748b;
+  color: var(--muted);
 
   font-size: 13px;
 
@@ -2203,9 +2198,9 @@
   min-width: 0;
   padding: 15px;
 
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--border);
   border-radius: 14px;
-  background: #ffffff;
+  background: var(--surface);
 
   cursor: pointer;
 
@@ -2224,7 +2219,7 @@
 
 .capacity-dash__channel--selected {
   border-color: #2563eb;
-  background: #eff6ff;
+  background: var(--accent-soft);
 
   box-shadow:
     0 0 0 1px rgba(37, 99, 235, 0.16),
@@ -2282,7 +2277,7 @@
 .capacity-dash__channel-name {
   overflow: hidden;
 
-  color: #0f172a;
+  color: var(--text);
 
   font-size: 15px;
 
@@ -2299,7 +2294,7 @@
 
   overflow: hidden;
 
-  color: #64748b;
+  color: var(--muted);
 
   font-size: 13px;
 
@@ -2352,45 +2347,45 @@
 /* Channel type */
 
 .capacity-dash__channel-type {
-  background: #e2e8f0;
+  background: var(--accent-soft);
 
-  color: #475569;
+  color: var(--accent);
 }
 
 
 /* Backend ready */
 
 .capacity-dash__channel-ready {
-  background: #dcfce7;
+  background: var(--success-soft);
 
-  color: #15803d;
+  color: var(--success);
 }
 
 
 /* Backend sender not configured */
 
 .capacity-dash__channel-not-ready {
-  background: #fef3c7;
+  background: var(--warning-soft);
 
-  color: #92400e;
+  color: var(--warning);
 }
 
 
 /* Backend can attach PDF */
 
 .capacity-dash__channel-pdf {
-  background: #dbeafe;
+  background: var(--accent-soft);
 
-  color: #1d4ed8;
+  color: var(--accent);
 }
 
 
 /* Backend sends only text */
 
 .capacity-dash__channel-message-only {
-  background: #f1f5f9;
+  background: var(--accent-soft);
 
-  color: #64748b;
+  color: var(--muted);
 }
 
 
@@ -2419,9 +2414,9 @@
 
   padding: 15px 30px;
 
-  border-top: 1px solid #e2e8f0;
+  border-top: 1px solid var(--border);
 
-  background: #ffffff;
+  background: var(--surface);
 }
 
 .capacity-dash__send-selection {
@@ -2429,14 +2424,14 @@
   align-items: center;
   gap: 18px;
 
-  color: #64748b;
+  color: var(--muted);
 
   font-size: 12px;
   font-weight: 600;
 }
 
 .capacity-dash__send-selection strong {
-  color: #0f172a;
+  color: var(--text);
   font-weight: 750;
 }
 
@@ -2489,7 +2484,7 @@
 
   z-index: -1;
 
-  background: #ffffff;
+  background: var(--surface);
 }
 
 
@@ -2560,7 +2555,7 @@
   display: flex;
   flex-direction: column;
 
-  background: #ffffff;
+  background: var(--surface);
 
   border: 1px solid rgba(148, 163, 184, 0.30);
   border-radius: 20px;
@@ -2712,8 +2707,8 @@
   font: inherit;
   font-size: 13px;
 
-  background: #f8fafc;
-  color: #0f172a;
+  background: var(--accent-soft);
+  color: var(--text);
 
   transition:
     border-color 0.15s ease,
@@ -2732,7 +2727,7 @@
 
   border-color: #60a5fa;
 
-  background: #ffffff;
+  background: var(--surface);
 
   box-shadow:
     0 0 0 3px rgba(37, 99, 235, 0.10);
@@ -2749,10 +2744,10 @@
   margin-bottom: 18px;
   padding: 20px;
 
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--border);
   border-radius: 16px;
 
-  background: #ffffff;
+  background: var(--surface);
 
   box-shadow: 0 1px 3px rgba(15, 23, 42, 0.03);
 }
@@ -2768,7 +2763,7 @@
 }
 
 .capacity-dash__subtitle-ip {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-family: var(--font-mono);
   font-size: 0.95em;
 }
 

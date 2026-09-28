@@ -316,12 +316,12 @@ export default function TwoFactorToggle() {
                 <div className="tf-actions">
                   <button
                     type="submit"
-                    className={`tf-btn ${turningOn ? "tf-btn-primary" : "tf-btn-danger"}`}
+                    className={`tf-btn phi-btn ${turningOn ? "" : "phi-btn--danger"}`}
                     disabled={code.length !== OTP_LENGTH || busy || loadingQr}
                   >
                     {busy ? (
                       <>
-                        <span className="tf-spinner" aria-hidden="true" />
+                        <span className="phi-spinner" aria-hidden="true" />
                         {turningOn ? "Turning on…" : "Turning off…"}
                       </>
                     ) : turningOn ? (
@@ -333,7 +333,7 @@ export default function TwoFactorToggle() {
 
                   <button
                     type="button"
-                    className="tf-btn tf-btn-secondary"
+                    className="tf-btn phi-btn phi-btn--secondary"
                     onClick={closeDialog}
                     disabled={busy}
                   >

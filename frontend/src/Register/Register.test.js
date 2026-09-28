@@ -71,7 +71,7 @@ test("it sends the contract the API publishes", async () => {
   renderForm();
   fill();
 
-  fireEvent.click(screen.getByRole("button", { name: /sign up/i }));
+  fireEvent.click(screen.getByRole("button", { name: /create account/i }));
 
   await waitFor(() =>
     expect(api.post).toHaveBeenCalledWith("/signup", {
@@ -86,7 +86,7 @@ test("the signup body never carries a role", async () => {
   renderForm();
   fill();
 
-  fireEvent.click(screen.getByRole("button", { name: /sign up/i }));
+  fireEvent.click(screen.getByRole("button", { name: /create account/i }));
 
   await waitFor(() => expect(api.post).toHaveBeenCalled());
   const sent = api.post.mock.calls[0][1];
@@ -98,7 +98,7 @@ test("the new account is signed in and asked about two-step verification", async
   renderForm();
   fill();
 
-  fireEvent.click(screen.getByRole("button", { name: /sign up/i }));
+  fireEvent.click(screen.getByRole("button", { name: /create account/i }));
 
   await waitFor(() => expect(screen.getByText("Two-step choice")).toBeInTheDocument());
   expect(setCookie).toHaveBeenCalledWith("token", "new-session", 7);
@@ -111,7 +111,7 @@ test("no session in the answer means no half-signed-in state", async () => {
   renderForm();
   fill();
 
-  fireEvent.click(screen.getByRole("button", { name: /sign up/i }));
+  fireEvent.click(screen.getByRole("button", { name: /create account/i }));
 
   expect(await screen.findByText(/please log in/i)).toBeInTheDocument();
   expect(setCookie).not.toHaveBeenCalled();
@@ -121,7 +121,7 @@ test("no session in the answer means no half-signed-in state", async () => {
 test("an empty field stops the request", () => {
   renderForm();
 
-  fireEvent.click(screen.getByRole("button", { name: /sign up/i }));
+  fireEvent.click(screen.getByRole("button", { name: /create account/i }));
 
   expect(screen.getByText(/please fill in all fields/i)).toBeInTheDocument();
   expect(api.post).not.toHaveBeenCalled();
@@ -134,7 +134,7 @@ test("a short password is refused before it reaches the API", () => {
     target: { value: "abc" },
   });
 
-  fireEvent.click(screen.getByRole("button", { name: /sign up/i }));
+  fireEvent.click(screen.getByRole("button", { name: /create account/i }));
 
   expect(screen.getByText(/at least 6 characters/i)).toBeInTheDocument();
   expect(api.post).not.toHaveBeenCalled();

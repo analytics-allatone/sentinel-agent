@@ -10,10 +10,10 @@
   width: 48px;
   height: 56px;
   padding: 0;
-  border: 1px solid #dfe4ec;
+  border: 1px solid var(--border);
   border-radius: 10px;
-  background: #fff;
-  color: #172033;
+  background: var(--surface);
+  color: var(--text);
   font-family: inherit;
   font-size: 22px;
   font-weight: 600;
@@ -24,19 +24,19 @@
 }
 
 .otp-box:focus {
-  border-color: #6654e8;
+  border-color: var(--accent);
   box-shadow: 0 0 0 3px rgba(102, 84, 232, 0.18);
 }
 
 .otp-box:disabled {
-  background: #f7f8fa;
-  color: #98a2b3;
+  background: var(--bg);
+  color: var(--muted);
   cursor: not-allowed;
 }
 
 /* A wrong code marks every box, since the code is wrong as a whole. */
 .otp-input--invalid .otp-box {
-  border-color: #d64545;
+  border-color: var(--danger);
 }
 
 .otp-input--invalid .otp-box:focus {

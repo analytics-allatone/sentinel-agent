@@ -396,9 +396,9 @@ const InstallationProcess = () => {
             <div
               className="notification error"
               style={{
-                background: "#fff2f2",
+                background: "var(--danger-soft)",
                 border: "1px solid #ffc9c9",
-                color: "#7a0000",
+                color: "var(--danger)",
                 padding: "10px",
                 borderRadius: "6px",
                 margin: "12px 0",

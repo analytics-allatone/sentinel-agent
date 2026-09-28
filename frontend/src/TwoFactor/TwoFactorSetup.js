@@ -151,12 +151,12 @@ export default function TwoFactorSetup() {
         <div className="tf-actions">
           <button
             type="submit"
-            className="tf-btn tf-btn-primary"
+            className="tf-btn phi-btn"
             disabled={code.length !== OTP_LENGTH || verifying || loadingQr}
           >
             {verifying ? (
               <>
-                <span className="tf-spinner" aria-hidden="true" />
+                <span className="phi-spinner" aria-hidden="true" />
                 Verifying…
               </>
             ) : (
@@ -166,7 +166,7 @@ export default function TwoFactorSetup() {
 
           <button
             type="button"
-            className="tf-btn tf-btn-secondary"
+            className="tf-btn phi-btn phi-btn--secondary"
             onClick={later}
             disabled={verifying}
           >

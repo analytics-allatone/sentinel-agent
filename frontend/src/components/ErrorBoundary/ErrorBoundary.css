@@ -7,18 +7,18 @@
   justify-content: center;
   padding: 24px;
   box-sizing: border-box;
-  background: #f7f8fa;
-  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  color: #172033;
+  background: var(--bg);
+  font-family: var(--font-body);
+  color: var(--text);
 }
 
 .crash__card {
   width: 100%;
   max-width: 540px;
   padding: 30px 28px 24px;
-  border: 1px solid #e4e7ec;
+  border: 1px solid var(--border);
   border-radius: 14px;
-  background: #ffffff;
+  background: var(--surface);
   box-shadow: 0 14px 40px rgba(23, 32, 51, 0.08);
   text-align: center;
 }
@@ -31,8 +31,8 @@
   height: 60px;
   margin-bottom: 14px;
   border-radius: 50%;
-  background: #fef3f2;
-  color: #d64545;
+  background: var(--danger-soft);
+  color: var(--danger);
 }
 
 .crash__title {
@@ -44,7 +44,7 @@
 .crash__lead {
   margin: 0 auto;
   max-width: 44ch;
-  color: #667085;
+  color: var(--muted);
   font-size: 13.5px;
   line-height: 1.6;
 }
@@ -63,40 +63,24 @@
   justify-content: center;
   height: 38px;
   padding: 0 15px;
-  border: 1px solid #dfe4ec;
-  border-radius: 8px;
-  background: #ffffff;
-  color: #344054;
-  font-family: inherit;
   font-size: 13px;
-  font-weight: 600;
   text-decoration: none;
-  cursor: pointer;
-  transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease;
 }
 
 .crash__btn:hover {
-  border-color: #6654e8;
-  color: #6654e8;
-  background: #f6f4ff;
 }
 
 .crash__btn--primary {
-  border-color: #6654e8;
-  background: #6654e8;
-  color: #ffffff;
 }
 
 .crash__btn--primary:hover {
-  background: #5746d5;
-  color: #ffffff;
 }
 
 .crash__detail-toggle {
   margin-top: 16px;
   border: 0;
   background: none;
-  color: #98a2b3;
+  color: var(--muted);
   font-family: inherit;
   font-size: 12px;
   text-decoration: underline;
@@ -109,8 +93,8 @@
   max-height: 190px;
   overflow: auto;
   border-radius: 8px;
-  background: #1f2430;
-  color: #f4f5f7;
+  background: var(--primary);
+  color: var(--on-primary);
   font-size: 11.5px;
   line-height: 1.5;
   text-align: left;

@@ -45,13 +45,13 @@ export default function EnableTwoFactorPrompt() {
       <div className="tf-actions">
         <button
           type="button"
-          className="tf-btn tf-btn-primary"
+          className="tf-btn phi-btn"
           onClick={() => navigate("/app/2fa/setup")}
         >
           Enable two-step verification
         </button>
 
-        <button type="button" className="tf-btn tf-btn-secondary" onClick={skip}>
+        <button type="button" className="tf-btn phi-btn phi-btn--secondary" onClick={skip}>
           Skip for now
         </button>
       </div>

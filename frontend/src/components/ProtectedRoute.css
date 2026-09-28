@@ -17,7 +17,7 @@
 }
 .pr-checking-label {
   font-size: 13px;
-  color: #7a869a;
+  color: var(--muted);
   letter-spacing: 0.02em;
 }
 @keyframes pr-spin {

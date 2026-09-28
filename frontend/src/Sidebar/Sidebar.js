@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import TwoFactorToggle from "../TwoFactor/TwoFactorToggle";
 import "./Sidebar.css";
 
@@ -15,6 +15,7 @@ import {
   LuClipboardList,
   LuPlug,
   LuSettings,
+  LuPalette,
   LuRocket,
   LuUserRound,
   LuChevronDown,
@@ -32,6 +33,7 @@ const ROUTED_PATHS = new Set([
   "/messages",
   "/reports/soc2",
   "/access",
+  "/design-system",
 ]);
 
 const UNROUTED_PATH = "/*";
@@ -41,8 +43,30 @@ function hrefFor(item) {
   return `/app${ROUTED_PATHS.has(item.href) ? item.href : UNROUTED_PATH}`;
 }
 
+
+/** The menu, grouped by what someone came to do. */
+const NAV_SECTIONS = [
+  { title: "Overview", items: ["dashboard", "agents", "groups", "endpoints"] },
+  { title: "Monitoring", items: ["agent-details", "alerts", "messages", "activity"] },
+  { title: "Reports", items: ["reports"] },
+  { title: "Administration", items: ["policies", "integrations", "users", "design-system", "settings"] },
+];
+
 const Sidebar = ({ isOpen, onClose }) => {
   const [activeMenu, setActiveMenu] = useState("dashboard");
+
+  // A drawer that covers the page has to be dismissable from the keyboard,
+  // not only by finding the scrim with a pointer.
+  useEffect(() => {
+    if (!isOpen || !onClose) return undefined;
+
+    const onKeyDown = (event) => {
+      if (event.key === "Escape") onClose();
+    };
+
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [isOpen, onClose]);
 
   const menuItems = [
     {
@@ -119,12 +143,23 @@ const Sidebar = ({ isOpen, onClose }) => {
       href: "/access",
     },
     {
+      id: "design-system",
+      label: "Design system",
+      icon: LuPalette,
+      href: "/design-system",
+    },
+    {
       id: "settings",
       label: "Settings",
       icon: LuSettings,
       href: "/settings",
     },
   ];
+
+  const byId = menuItems.reduce((all, item) => {
+    all[item.id] = item;
+    return all;
+  }, {});
 
   const handleMenuClick = (id) => {
     setActiveMenu(id);
@@ -141,6 +176,8 @@ const Sidebar = ({ isOpen, onClose }) => {
       <div
         className={`sidebar-overlay ${isOpen ? "visible" : ""}`}
         onClick={onClose}
+        role="presentation"
+        aria-hidden="true"
       ></div>
 
       <aside className={`sidebar ${isOpen ? "open" : ""}`}>
@@ -152,11 +189,11 @@ const Sidebar = ({ isOpen, onClose }) => {
 
   <div className="sidebar-brand">
 
-    <div className="sidebar-brand-icon">
+    <div className="sidebar-brand-icon phi-wordmark-mark">
       G
     </div>
 
-    <span className="sidebar-brand-name">
+    <span className="sidebar-brand-name phi-wordmark">
       GuardLynx
     </span>
 
@@ -176,54 +213,46 @@ const Sidebar = ({ isOpen, onClose }) => {
         {/* =================================
             NAVIGATION
             ================================= */}
-        <nav className="sidebar-nav">
+        <nav className="sidebar-nav" aria-label="Main">
 
-          <ul className="nav-menu">
+          {NAV_SECTIONS.map((section) => (
+            <div className="nav-section" key={section.title}>
+              <h2 className="nav-section-title">{section.title}</h2>
 
-            {menuItems.map((item) => {
-              const Icon = item.icon;
+              <ul className="nav-menu">
+                {section.items.map((id) => {
+                  const item = byId[id];
+                  if (!item) return null;
+                  const Icon = item.icon;
+                  const current = activeMenu === item.id;
 
-              return (
-                <li key={item.id}>
+                  return (
+                    <li key={item.id}>
+                      <a
+                        href={hrefFor(item)}
+                        className={`nav-item ${current ? "active" : ""}`}
+                        aria-current={current ? "page" : undefined}
+                        onClick={() => handleMenuClick(item.id)}
+                      >
+                        <span className="nav-icon">
+                          <Icon />
+                        </span>
 
-                  <a
-                    href={hrefFor(item)}
-                    className={`nav-item ${
-                      activeMenu === item.id ? "active" : ""
-                    }`}
-                    onClick={() => handleMenuClick(item.id)}
-                  >
+                        <span className="nav-label">{item.label}</span>
 
-                    <span className="nav-icon">
-                      <Icon />
-                    </span>
+                        {item.badge && (
+                          <span className="nav-badge">{item.badge}</span>
+                        )}
+                      </a>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          ))}
 
-                    <span className="nav-label">
-                      {item.label}
-                    </span>
-
-                    {item.badge && (
-                      <span className="nav-badge">
-                        {item.badge}
-                      </span>
-                    )}
-
-                  </a>
-
-                </li>
-              );
-            })}
-
-          </ul>
-
-        </nav>
-
-
-        {/* =================================
-            BOTTOM AREA
-            ================================= */}
-        <div className="sidebar-bottom">
-
+          {/* Not navigation — it scrolls with the menu rather than pinning
+              the bottom of the column. */}
           {/* =================================
               UPGRADE CARD
               ================================= */}
@@ -247,6 +276,14 @@ const Sidebar = ({ isOpen, onClose }) => {
             </button>
 
           </div>
+
+        </nav>
+
+
+        {/* =================================
+            BOTTOM AREA
+            ================================= */}
+        <div className="sidebar-bottom">
 
 
           {/* =================================
