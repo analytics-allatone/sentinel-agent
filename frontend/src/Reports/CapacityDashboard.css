@@ -1754,11 +1754,8 @@
 .capacity-dash__send-body {
   flex: 1;
   min-height: 0;
-
-  padding: 22px 30px 26px;
-
+  padding: 0 30px 26px;
   overflow-y: auto;
-
   background: #f8fafc;
 }
 
@@ -1802,6 +1799,15 @@
   font-size: 14px;
 
   line-height: 1.5;
+}
+
+.capacity-dash__send-error,
+.capacity-dash__send-success {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  margin: 0 -30px 16px;
+  padding: 14px 30px;
 }
 
 
@@ -2572,9 +2578,9 @@
   }
 
 
-  .capacity-dash__send-body {
+  /* .capacity-dash__send-body {
     padding: 18px;
-  }
+  } */
 
 
   .capacity-dash__send-footer {
