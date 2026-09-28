@@ -100,27 +100,24 @@ def _batch_bounds(rows: List[Dict[str, Any]]):
     return (min(ts) if ts else None, max(ts) if ts else None, agents)
 
 
-async def run_sigma_on_batch(category: str, rows: List[Dict[str, Any]],
+
+async def run_sigma_on_batch(session, category: str, rows: List[Dict[str, Any]],
                              rules_path: Optional[str] = None,
                              margin_seconds: int = 2) -> dict:
     table = CATEGORY_TABLE.get(category)
     if not table:
         return {"ran": 0, "findings": 0, "reason": f"no table for '{category}'"}
-
     grouped = _load_rules_grouped(rules_path)
     rules = grouped.get(table, [])
     if not rules or not rows:
         return {"ran": 0, "findings": 0, "reason": "no rules or no rows"}
-
     tmin, tmax, agents = _batch_bounds(rows)
     if tmin is None:
         return {"ran": 0, "findings": 0, "reason": "batch has no timestamps"}
+    findings, errors, first_error = 0, 0, None
+    alerts: List[dict] = []       
 
-    from db.db import get_async_session 
-    findings, errors = 0, 0
-    first_error = None
-
-    async with get_async_session() as session:
+    try:
         for rule in rules:
             scoped_sql, params = _batch_scoped_sql(rule, table, tmin, tmax,
                                                    agents, margin_seconds)
@@ -137,21 +134,37 @@ async def run_sigma_on_batch(category: str, rows: List[Dict[str, Any]],
                 if first_error is None:
                     first_error = f"{rule.title[:40]}: {msg}"
                 if errors <= 3:
-                    print(f"[sigma-batch] ERROR in '{rule.title[:40]}': {msg}")
-                await session.rollback()          # only sigma's own txn
+                    print(f"[sigma-batch] ERROR '{rule.title[:40]}': {msg}")
                 continue
-
             technique = next((t for t in rule.tags if str(t).startswith("attack.t")), "")
             for row in hits:
-                await _store_alert(session, dict(row), technique)
+                d = dict(row, technique=technique, phase="sigma")
+                alerts.append(d)
                 findings += 1
-
-        # commit only if we actually wrote something (own session)
-        if findings:
+ 
+        
+        if alerts:
+            await session.execute(text("""
+                INSERT INTO security_alerts
+                  (rule_id, severity, agent_name, entity, event_count,
+                   first_seen, last_seen, detail, technique, phase)
+                VALUES
+                  (:rule_id, :severity, :agent_name, :entity, :event_count,
+                   :first_seen, :last_seen, :detail, :technique, :phase)
+                ON CONFLICT (rule_id, agent_name, entity, first_seen)
+                DO UPDATE SET event_count = EXCLUDED.event_count,
+                              last_seen   = EXCLUDED.last_seen
+            """), alerts)                       
             await session.commit()
         else:
-            await session.rollback()              # clean close, nothing pending
-
+            await session.rollback()
+        
+ 
+    except Exception as e:
+        await session.rollback()                
+        first_error = first_error or str(e)[:160]
+        print(f"[sigma-batch] {category}: rolled back ({e})")
+ 
     return {"ran": len(rules), "findings": findings, "errors": errors,
             "table": table, "batch_size": len(rows), "first_error": first_error}
 
@@ -196,18 +209,3 @@ WHERE {TIME_COLUMN} >= CAST(%(tmin)s AS timestamptz) - INTERVAL '{int(margin)} s
 GROUP BY e.agent_name, {entity}
 """
     return sql, params
-
-
-async def _store_alert(session, row: dict, technique: str):
-    row = dict(row, technique=technique, phase="sigma")
-    await session.execute(text("""
-        INSERT INTO security_alerts
-          (rule_id, severity, agent_name, entity, event_count,
-           first_seen, last_seen, detail, technique, phase)
-        VALUES
-          (:rule_id, :severity, :agent_name, :entity, :event_count,
-           :first_seen, :last_seen, :detail, :technique, :phase)
-        ON CONFLICT (rule_id, agent_name, entity, first_seen)
-        DO UPDATE SET event_count = EXCLUDED.event_count,
-                      last_seen   = EXCLUDED.last_seen
-    """), row)
