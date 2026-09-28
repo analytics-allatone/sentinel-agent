@@ -32,11 +32,7 @@ dbname = "testdb"
 
 DATABASE_URL_ASYNC=f"postgresql+asyncpg://{dbuser}:{dbpassword}@{dbendpoint}:5432/{dbname}"
 
-async_engine: AsyncEngine = create_async_engine(DATABASE_URL_ASYNC, pool_size=10,
-    max_overflow=20,
-    pool_timeout=30,
-    pool_pre_ping=True,
-    pool_recycle=1800,)
+async_engine: AsyncEngine = create_async_engine(DATABASE_URL_ASYNC)
 
 AsyncSessionLocal = sessionmaker(
     async_engine, class_=AsyncSession, expire_on_commit=False
