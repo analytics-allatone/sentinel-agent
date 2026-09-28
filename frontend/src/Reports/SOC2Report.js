@@ -15,6 +15,17 @@ import { fetchSoc2Report, fetchAgents, SOC2_SECTIONS } from "./soc2Api";
 import { buildSoc2View, fmtInt, fmtIst } from "./soc2Transform";
 import { lastHoursInputs, istInputToApi } from "./timeRange";
 
+import html2canvas from "html2canvas";
+import { jsPDF } from "jspdf";
+
+import { fetchChannels } from "../Channels/channelsApi";
+import {
+  fetchChannelAccounts,
+  sendFileViaChannelAccount,
+} from "../Channels/channelAccountsApi";
+
+import "./CapacityDashboard.css";
+
 import {
   LuShieldCheck,
   LuUserRound,
@@ -153,6 +164,37 @@ export default function SOC2Report() {
   const [sectionErrors, setSectionErrors] = useState([]);
   const [errorMsg, setErrorMsg] = useState("");
   const [exporting, setExporting] = useState(false);
+
+  const [sendModalOpen, setSendModalOpen] = useState(false);
+const [sendSubject, setSendSubject] = useState("");
+const [sendBody, setSendBody] = useState("");
+
+const [channels, setChannels] = useState([]);
+const [channelAccounts, setChannelAccounts] = useState([]);
+const [channelsLoading, setChannelsLoading] = useState(false);
+
+const [selectedAccountId, setSelectedAccountId] = useState(null);
+const [selectedChannelIds, setSelectedChannelIds] = useState([]);
+
+const [sendingPdf, setSendingPdf] = useState(false);
+const [sendError, setSendError] = useState("");
+const [sendSuccess, setSendSuccess] = useState("");
+
+useEffect(() => {
+  if (!sendSuccess && !sendError) {
+    return undefined;
+  }
+
+  const timer = window.setTimeout(() => {
+    setSendSuccess("");
+    setSendError("");
+  }, 5000);
+
+  return () => window.clearTimeout(timer);
+}, [sendSuccess, sendError]);
+
+const [sendReportReady, setSendReportReady] = useState(false);
+const sendReportRef = useRef(null);
 
   const abortRef = useRef(null);
   const runRef = useRef(0);
@@ -410,6 +452,1044 @@ export default function SOC2Report() {
     });
   };
 
+  // ============================================================
+// SEND PDF
+// ============================================================
+
+const openSendModal = async () => {
+  if (!report || sendingPdf) return;
+
+  setSendModalOpen(true);
+  setSendError("");
+  setSendSuccess("");
+  setChannelsLoading(true);
+
+  try {
+    const [channelList, accountList] = await Promise.all([
+      fetchChannels(),
+      fetchChannelAccounts(),
+    ]);
+
+    setChannels(channelList || []);
+
+    // Only active and verified sender accounts
+    setChannelAccounts(
+      (accountList || []).filter(
+        (account) =>
+          account.is_active !== false &&
+          account.is_verified !== false,
+      ),
+    );
+
+    setSelectedAccountId(null);
+    setSelectedChannelIds([]);
+
+    setSendSubject("SOC 2 Evidence Report");
+
+    setSendBody(
+      `SOC 2 Evidence Report for ${scopeAgent}. Reporting period: ${scopeWindow}.`,
+    );
+  } catch (err) {
+    setSendError(
+      err?.message ||
+        "Unable to load sender accounts or communication channels.",
+    );
+  } finally {
+    setChannelsLoading(false);
+  }
+};
+
+const closeSendModal = () => {
+  if (sendingPdf) return;
+
+  setSendModalOpen(false);
+  setSendError("");
+  setSendSuccess("");
+};
+
+const toggleChannelSelection = (channelId) => {
+  setSelectedChannelIds((current) =>
+    current.includes(channelId)
+      ? current.filter((id) => id !== channelId)
+      : [...current, channelId],
+  );
+};
+
+const handleAccountSelection = (accountId) => {
+  const nextAccountId = Number(accountId);
+
+  setSelectedAccountId(nextAccountId);
+  setSelectedChannelIds([]);
+
+  setSendError("");
+  setSendSuccess("");
+};
+
+const selectedSenderAccount = channelAccounts.find(
+  (account) => account.id === Number(selectedAccountId),
+);
+
+const compatibleChannels = useMemo(() => {
+  if (!selectedSenderAccount) {
+    return [];
+  }
+
+  const senderType = String(
+    selectedSenderAccount.channel_type || "",
+  ).toLowerCase();
+
+  return channels.filter((channel) => {
+    const recipientType = String(
+      channel.type || "",
+    ).toLowerCase();
+
+    // Gmail sender -> email/gmail recipient
+    if (senderType === "gmail") {
+      return ["email", "gmail"].includes(recipientType);
+    }
+
+    // Outlook sender -> outlook recipient
+    if (senderType === "outlook365") {
+      return recipientType === "outlook";
+    }
+
+    // Telegram sender -> telegram recipient
+    if (senderType === "telegram") {
+      return recipientType === "telegram";
+    }
+
+    // WhatsApp sender -> WhatsApp recipient
+    if (senderType === "whatsapp") {
+      return recipientType === "whatsapp";
+    }
+
+    // SMS sender -> SMS recipient
+    if (senderType === "sms") {
+      return recipientType === "sms";
+    }
+
+    // Jira sender -> Jira recipient
+    if (senderType === "jira") {
+      return recipientType === "jira";
+    }
+
+    return false;
+   });
+}, [channels, selectedSenderAccount]);
+
+const waitForSoc2ReportRender = () =>
+  new Promise((resolve) => {
+    window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(() => {
+        // Allow React + charts/SVG layout to finish.
+        window.setTimeout(resolve, 250);
+      });
+    });
+  });
+
+const buildSoc2PdfBlob = async () => {
+  setSendReportReady(true);
+
+  await waitForSoc2ReportRender();
+
+  const reportElement = sendReportRef.current;
+
+  if (!reportElement) {
+    throw new Error(
+      "The SOC 2 report could not be prepared for sending.",
+    );
+  }
+
+  /*
+   * IMPORTANT:
+   * PrintableReport contains:
+   *
+   * 1. Cover page
+   * 2. Executive summary
+   * 3. TOC
+   * 4. Multiple report sections
+   *
+   * Browser print automatically splits the sections into
+   * multiple A4 pages, but html2canvas does not know about
+   * browser print pagination.
+   *
+   * Therefore we capture every top-level report element and
+   * manually split large sections into A4-sized PDF pages.
+   */
+
+ const captureTargets = Array.from(
+  reportElement.querySelectorAll(
+    ".soc2-print-page, .soc2-print-section",
+  ),
+);
+
+  if (!captureTargets.length) {
+    throw new Error(
+      "No SOC 2 report pages or sections were available to create the PDF.",
+    );
+  }
+
+  console.log(
+    "SOC2 Send PDF capture targets:",
+    captureTargets.map((element, index) => ({
+      index: index + 1,
+      className: element.className,
+      width: element.scrollWidth,
+      height: element.scrollHeight,
+    })),
+  );
+
+  const pdf = new jsPDF({
+    orientation: "portrait",
+    unit: "mm",
+    format: "a4",
+    compress: true,
+  });
+
+  const PDF_WIDTH_MM = 210;
+  const PDF_HEIGHT_MM = 297;
+
+  /*
+   * Small margin around every generated PDF page.
+   */
+  const PDF_MARGIN_MM = 4;
+
+  const CONTENT_WIDTH_MM =
+    PDF_WIDTH_MM - PDF_MARGIN_MM * 2;
+
+  const CONTENT_HEIGHT_MM =
+    PDF_HEIGHT_MM - PDF_MARGIN_MM * 2;
+
+  let pdfPageAdded = false;
+
+  /*
+   * ---------------------------------------------------------
+   * Capture one report element
+   * ---------------------------------------------------------
+   */
+  const captureElement = async (element) => {
+    if (!element) {
+      return null;
+    }
+
+    const rect = element.getBoundingClientRect();
+
+    if (!rect.width || !rect.height) {
+      return null;
+    }
+
+    const canvas = await html2canvas(element, {
+      scale: 2,
+      useCORS: true,
+      allowTaint: false,
+      backgroundColor: "#ffffff",
+      logging: false,
+
+      width: Math.ceil(rect.width),
+
+      height: Math.ceil(
+        element.scrollHeight || rect.height,
+      ),
+
+      windowWidth: Math.max(
+        document.documentElement.clientWidth,
+        Math.ceil(rect.width),
+      ),
+
+      windowHeight: Math.max(
+        document.documentElement.clientHeight,
+        Math.ceil(rect.height),
+      ),
+
+      onclone: (clonedDocument) => {
+        // let printCss = "";
+
+        // /*
+        //  * Copy print CSS rules into the html2canvas clone.
+        //  */
+        // Array.from(document.styleSheets).forEach(
+        //   (styleSheet) => {
+        //     try {
+        //       Array.from(styleSheet.cssRules).forEach(
+        //         (rule) => {
+        //           if (
+        //             rule instanceof CSSMediaRule &&
+        //             rule.media &&
+        //             rule.media.mediaText.includes("print")
+        //           ) {
+        //             Array.from(rule.cssRules).forEach(
+        //               (printRule) => {
+        //                 printCss += `${printRule.cssText}\n`;
+        //               },
+        //             );
+        //           }
+        //         },
+        //       );
+        //     } catch (error) {
+        //       /*
+        //        * Ignore inaccessible cross-origin stylesheets.
+        //        */
+        //     }
+        //   },
+        // );
+
+        // const printStyle =
+        //   clonedDocument.createElement("style");
+
+        // printStyle.setAttribute(
+        //   "data-soc2-send-pdf-print-styles",
+        //   "true",
+        // );
+
+        // printStyle.textContent = printCss;
+
+        // clonedDocument.head.appendChild(printStyle);
+
+        /*
+         * Send-PDF-specific CSS.
+         *
+         * IMPORTANT:
+         * Do not use:
+         *
+         * .soc2-send-report-capture .soc2-print-page
+         *
+         * because html2canvas is capturing the individual
+         * page/section element, not necessarily its parent.
+         *
+         * Therefore target the report classes directly.
+         */
+//         const overrideStyle =
+//           clonedDocument.createElement("style");
+
+//         overrideStyle.setAttribute(
+//           "data-soc2-send-pdf-overrides",
+//           "true",
+//         );
+
+//         overrideStyle.textContent = `
+//           html,
+//           body {
+//             margin: 0 !important;
+//             padding: 0 !important;
+//             background: #ffffff !important;
+//           }
+
+//           .soc2-print-page,
+//           .soc2-print-section {
+//             display: block !important;
+//             visibility: visible !important;
+//             position: relative !important;
+
+//             width: 210mm !important;
+
+//             height: auto !important;
+//             min-height: 0 !important;
+//             max-height: none !important;
+
+//             margin: 0 !important;
+
+//             overflow: visible !important;
+
+//             background: #ffffff !important;
+
+//             break-before: auto !important;
+//             break-after: auto !important;
+//             break-inside: auto !important;
+
+//             page-break-before: auto !important;
+//             page-break-after: auto !important;
+//             page-break-inside: auto !important;
+//           }
+
+//           .soc2-print-page,
+// .soc2-print-section,
+// .soc2-print-section-heading,
+// .soc2-print-section-body {
+//   box-sizing: border-box !important;
+//   min-width: 0 !important;
+//   max-width: 210mm !important;
+// }
+
+// .soc2-print-section-body {
+//   width: 100% !important;
+//   overflow-x: hidden !important;
+// }
+
+// .soc2-print-section-process .inc-table,
+// .soc2-print-section-change .inc-table {
+//   width: 100% !important;
+//   max-width: 100% !important;
+//   min-width: 0 !important;
+//   table-layout: fixed !important;
+//   box-sizing: border-box !important;
+// }
+
+// .soc2-print-section-process .inc-table-wrap,
+// .soc2-print-section-change .inc-table-wrap {
+//   width: 100% !important;
+//   max-width: 100% !important;
+//   min-width: 0 !important;
+//   overflow-x: hidden !important;
+//   box-sizing: border-box !important;
+// }
+
+// .soc2-print-section-process .inc-table th,
+// .soc2-print-section-process .inc-table td,
+// .soc2-print-section-change .inc-table th,
+// .soc2-print-section-change .inc-table td {
+//   min-width: 0 !important;
+//   max-width: none !important;
+//   overflow-wrap: anywhere !important;
+//   word-break: break-word !important;
+// }
+
+//           .soc2-screen-only,
+// .soc2-spinner {
+//   display: none !important;
+// }
+
+// .soc2-tabbar {
+//   position: static !important;
+// }
+
+// /* html2canvas can fail on CSS gradients when a cloned
+//    element has a non-finite gradient dimension/stop. */
+// .soc2-bd-fill {
+//   background: #6045e8 !important;
+//   background-image: none !important;
+// }
+
+// .soc2-tabbar *,
+// .soc2-print-section * {
+//   transition: none !important;
+// }
+//         `;
+
+//         clonedDocument.head.appendChild(
+//           overrideStyle,
+//         );
+const overrideStyle =
+  clonedDocument.createElement("style");
+
+overrideStyle.setAttribute(
+  "data-soc2-send-pdf-overrides",
+  "true",
+);
+
+overrideStyle.textContent = `
+  html,
+  body {
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #ffffff !important;
+  }
+
+  /*
+   * IMPORTANT:
+   * Keep the original report layout.
+   * Do NOT copy @media print CSS here.
+   */
+
+  .soc2-print-root {
+    display: block !important;
+    position: relative !important;
+
+    width: 210mm !important;
+
+    margin: 0 !important;
+    padding: 0 !important;
+
+    background: #ffffff !important;
+
+    visibility: visible !important;
+  }
+
+  .soc2-print-root,
+  .soc2-print-root * {
+    visibility: visible !important;
+  }
+
+  /*
+   * Individual Send-PDF capture target.
+   */
+
+  .soc2-print-page,
+  .soc2-print-section {
+    position: relative !important;
+
+    width: 210mm !important;
+
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+
+    margin: 0 !important;
+
+    box-sizing: border-box !important;
+
+    overflow: visible !important;
+
+    background: #ffffff !important;
+
+    break-before: auto !important;
+    break-after: auto !important;
+    break-inside: auto !important;
+
+    page-break-before: auto !important;
+    page-break-after: auto !important;
+    page-break-inside: auto !important;
+  }
+
+  /*
+   * Preserve the original cover layout.
+   */
+
+  .soc2-print-cover {
+    display: flex !important;
+    flex-direction: column !important;
+  }
+
+  /*
+   * Normal report sections.
+   */
+
+  .soc2-print-section {
+    display: block !important;
+  }
+
+  /*
+   * TOC must remain normal document flow.
+   */
+
+  .soc2-print-toc-page {
+    display: block !important;
+
+    width: 210mm !important;
+
+    padding: 7mm 5mm !important;
+
+    box-sizing: border-box !important;
+  }
+
+  .soc2-print-toc-page > * {
+    position: static !important;
+  }
+
+  .soc2-print-toc-title {
+    position: static !important;
+
+    display: block !important;
+
+    margin: 5px 0 4px !important;
+  }
+
+  .soc2-print-toc-description {
+    position: static !important;
+
+    display: block !important;
+
+    margin: 0 0 18px !important;
+  }
+
+  .soc2-print-toc-list {
+    position: static !important;
+
+    display: block !important;
+
+    width: 100% !important;
+
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  .soc2-print-toc-list li {
+    position: static !important;
+
+    display: flex !important;
+
+    width: 100% !important;
+
+    box-sizing: border-box !important;
+  }
+
+  /*
+   * Section heading/body must remain in normal flow.
+   */
+
+  .soc2-print-section-heading,
+  .soc2-print-section-body {
+    position: static !important;
+
+    display: block !important;
+
+    width: 100% !important;
+
+    min-width: 0 !important;
+    max-width: 100% !important;
+
+    box-sizing: border-box !important;
+  }
+
+  /*
+   * Tables stay inside A4 width.
+   */
+
+  .soc2-print-section-process .inc-table-wrap,
+  .soc2-print-section-change .inc-table-wrap {
+    width: 100% !important;
+
+    max-width: 100% !important;
+    min-width: 0 !important;
+
+    overflow-x: hidden !important;
+
+    box-sizing: border-box !important;
+  }
+
+  .soc2-print-section-process .inc-table,
+  .soc2-print-section-change .inc-table {
+    width: 100% !important;
+
+    max-width: 100% !important;
+    min-width: 0 !important;
+
+    table-layout: fixed !important;
+
+    box-sizing: border-box !important;
+  }
+
+  .soc2-print-section-process .inc-table th,
+  .soc2-print-section-process .inc-table td,
+  .soc2-print-section-change .inc-table th,
+  .soc2-print-section-change .inc-table td {
+    min-width: 0 !important;
+
+    overflow-wrap: anywhere !important;
+    word-break: break-word !important;
+  }
+
+  /*
+   * Remove interactive-only items.
+   */
+
+  .soc2-screen-only,
+  .soc2-spinner {
+    display: none !important;
+  }
+
+  /*
+   * html2canvas gradient workaround.
+   */
+
+  .soc2-bd-fill {
+    background: #6045e8 !important;
+    background-image: none !important;
+  }
+
+  /*
+   * Prevent animation/transition during capture.
+   */
+
+  .soc2-print-root *,
+  .soc2-print-root *::before,
+  .soc2-print-root *::after {
+    transition: none !important;
+    animation: none !important;
+  }
+`;
+
+clonedDocument.head.appendChild(overrideStyle);
+      },
+    });
+
+    if (
+      !canvas ||
+      !canvas.width ||
+      !canvas.height ||
+      !Number.isFinite(canvas.width) ||
+      !Number.isFinite(canvas.height)
+    ) {
+      throw new Error(
+        `Could not generate SOC 2 canvas. ` +
+          `Canvas size: ${canvas?.width || 0} × ${
+            canvas?.height || 0
+          }`,
+      );
+    }
+
+    return canvas;
+  };
+
+  /*
+   * ---------------------------------------------------------
+   * Add a canvas slice to the PDF
+   * ---------------------------------------------------------
+   */
+  const addCanvasSliceToPdf = (
+    canvas,
+    sourceTopPx,
+    sourceHeightPx,
+  ) => {
+    if (
+      !canvas ||
+      !canvas.width ||
+      !canvas.height ||
+      sourceHeightPx <= 0
+    ) {
+      return;
+    }
+
+    /*
+     * Temporary canvas containing only the current A4 slice.
+     */
+    const sliceCanvas =
+      document.createElement("canvas");
+
+    sliceCanvas.width = canvas.width;
+    sliceCanvas.height = sourceHeightPx;
+
+    const context =
+      sliceCanvas.getContext("2d");
+
+    if (!context) {
+      throw new Error(
+        "Could not create the PDF canvas context.",
+      );
+    }
+
+    context.fillStyle = "#ffffff";
+
+    context.fillRect(
+      0,
+      0,
+      sliceCanvas.width,
+      sliceCanvas.height,
+    );
+
+    context.drawImage(
+      canvas,
+
+      0,
+      sourceTopPx,
+      canvas.width,
+      sourceHeightPx,
+
+      0,
+      0,
+      sliceCanvas.width,
+      sliceCanvas.height,
+    );
+
+    const imageData =
+      sliceCanvas.toDataURL(
+        "image/jpeg",
+        0.92,
+      );
+
+    /*
+     * Fit slice into A4.
+     */
+    const imageWidth =
+      CONTENT_WIDTH_MM;
+
+    const imageHeight =
+      (sliceCanvas.height /
+        sliceCanvas.width) *
+      imageWidth;
+
+    const x = PDF_MARGIN_MM;
+
+    const y =
+      PDF_MARGIN_MM +
+      Math.max(
+        0,
+        (CONTENT_HEIGHT_MM -
+          imageHeight) /
+          2,
+      );
+
+    if (pdfPageAdded) {
+      pdf.addPage();
+    }
+
+    pdf.addImage(
+      imageData,
+      "JPEG",
+      x,
+      y,
+      imageWidth,
+      imageHeight,
+      undefined,
+      "FAST",
+    );
+
+    pdfPageAdded = true;
+  };
+
+  /*
+   * ---------------------------------------------------------
+   * Process all report pages / sections
+   * ---------------------------------------------------------
+   */
+  for (
+    let index = 0;
+    index < captureTargets.length;
+    index += 1
+  ) {
+    const target = captureTargets[index];
+
+    console.log(
+      `Generating SOC2 Send PDF section ${index + 1}/${captureTargets.length}`,
+      {
+        className: target.className,
+        height: target.scrollHeight,
+      },
+    );
+
+    const canvas =
+      await captureElement(target);
+
+    if (!canvas) {
+      console.warn(
+        `Skipping empty SOC2 report section ${index + 1}`,
+      );
+
+      continue;
+    }
+
+    console.log(
+      `SOC2 section ${index + 1} canvas:`,
+      {
+        width: canvas.width,
+        height: canvas.height,
+      },
+    );
+
+    /*
+     * Determine how many source pixels correspond
+     * to one millimetre in the PDF.
+     */
+    const sourcePixelsPerMm =
+      canvas.width /
+      PDF_WIDTH_MM;
+
+    /*
+     * Maximum canvas height that fits into one
+     * printable A4 page.
+     */
+    const maxSliceHeightPx =
+      Math.floor(
+        CONTENT_HEIGHT_MM *
+          sourcePixelsPerMm,
+      );
+
+    if (
+      !Number.isFinite(
+        maxSliceHeightPx,
+      ) ||
+      maxSliceHeightPx <= 0
+    ) {
+      throw new Error(
+        `Invalid PDF slice size for SOC 2 section ${
+          index + 1
+        }.`,
+      );
+    }
+
+    /*
+     * Split a large section into multiple
+     * A4-sized PDF pages.
+     */
+    let topPx = 0;
+
+    let sliceNumber = 0;
+
+    while (topPx < canvas.height) {
+      sliceNumber += 1;
+
+      const remainingPx =
+        canvas.height - topPx;
+
+      const sliceHeightPx =
+        Math.min(
+          maxSliceHeightPx,
+          remainingPx,
+        );
+
+      console.log(
+        `Adding SOC2 PDF page slice ${sliceNumber}`,
+        {
+          section: index + 1,
+          topPx,
+          sliceHeightPx,
+        },
+      );
+
+      addCanvasSliceToPdf(
+        canvas,
+        topPx,
+        sliceHeightPx,
+      );
+
+      topPx += sliceHeightPx;
+    }
+
+    /*
+     * Release the large canvas before moving
+     * to the next section.
+     */
+    canvas.width = 1;
+    canvas.height = 1;
+
+    /*
+     * Give the browser a frame to release memory.
+     */
+    await new Promise((resolve) => {
+      window.requestAnimationFrame(
+        resolve,
+      );
+    });
+  }
+
+  if (!pdfPageAdded) {
+    throw new Error(
+      "The SOC 2 report did not contain any renderable pages.",
+    );
+  }
+
+  console.log(
+    "SOC2 Send PDF generation completed.",
+    {
+      pagesGenerated:
+        pdf.getNumberOfPages(),
+    },
+  );
+
+  return pdf.output("blob");
+};
+
+const sendSoc2Pdf = async () => {
+  if (sendingPdf) return;
+
+  setSendError("");
+  setSendSuccess("");
+
+  if (!report) {
+    setSendError("Please generate the SOC 2 report first.");
+    return;
+  }
+
+  if (!sendSubject.trim()) {
+    setSendError("Please enter a subject.");
+    return;
+  }
+
+  if (!sendBody.trim()) {
+    setSendError("Please enter a message body.");
+    return;
+  }
+
+  if (!selectedAccountId) {
+    setSendError("Please select a sender account.");
+    return;
+  }
+
+  if (!selectedChannelIds.length) {
+    setSendError("Please select at least one recipient.");
+    return;
+  }
+
+  setSendingPdf(true);
+
+  try {
+    const pdfBlob = await buildSoc2PdfBlob();
+
+    console.log("SOC2 PDF generated:", {
+  sizeBytes: pdfBlob.size,
+  sizeMB: (pdfBlob.size / (1024 * 1024)).toFixed(2),
+  type: pdfBlob.type,
+});
+
+    const safeAgentName = String(
+      scopeAgent || "all-agents",
+    )
+      .replace(/[^a-z0-9]+/gi, "_")
+      .replace(/^_+|_+$/g, "")
+      .toLowerCase();
+
+    const pdfFile = new File(
+      [pdfBlob],
+      `soc2_evidence_report_${safeAgentName}.pdf`,
+      {
+        type: "application/pdf",
+      },
+    );
+
+    const results = [];
+
+    for (const channelId of selectedChannelIds) {
+      try {
+        await sendFileViaChannelAccount(
+          selectedAccountId,
+          {
+            subject: sendSubject.trim(),
+            body: sendBody.trim(),
+            communication_channel_id: channelId,
+            file: pdfFile,
+          },
+        );
+
+        results.push({
+          channelId,
+          success: true,
+        });
+      } catch (err) {
+        results.push({
+          channelId,
+          success: false,
+          error:
+            err?.message ||
+            "Failed to send report.",
+        });
+      }
+    }
+
+    const successCount = results.filter(
+      (item) => item.success,
+    ).length;
+
+    const failedCount =
+      results.length - successCount;
+
+    if (successCount === results.length) {
+      setSendSuccess(
+        `SOC 2 report sent successfully to ${successCount} recipient${
+          successCount === 1 ? "" : "s"
+        }.`,
+      );
+    } else if (successCount > 0) {
+      setSendSuccess(
+        `SOC 2 report sent to ${successCount} recipient${
+          successCount === 1 ? "" : "s"
+        }, but ${failedCount} failed.`,
+      );
+    } else {
+      setSendError(
+        "The SOC 2 report could not be sent to any selected recipient.",
+      );
+    }
+  } catch (err) {
+    setSendError(
+      err?.message ||
+        "Unable to generate or send the SOC 2 PDF.",
+    );
+  } finally {
+    setSendingPdf(false);
+    setSendReportReady(false);
+  }
+};
+
+
   const loading = status === "loading";
   const periodText = `${fromLocal.replace("T", " ")} – ${toLocal.replace("T", " ")} IST`;
 
@@ -655,6 +1735,14 @@ export default function SOC2Report() {
             >
               {exporting ? "…" : "Export PDF"}
             </button>
+            <button
+  className="soc2-btn"
+  type="button"
+  onClick={openSendModal}
+  disabled={!report || sendingPdf}
+>
+  {sendingPdf ? "Sending…" : "Send PDF"}
+</button>
           </div>
         </form>
       </div>
@@ -748,6 +1836,337 @@ export default function SOC2Report() {
       {report && (
         <PrintableReport report={report} agents={agents} scopeText={scopeText} />
       )}
+
+      {/* Send PDF capture only */}
+{report && sendReportReady && (
+  <div
+    ref={sendReportRef}
+    className="soc2-send-report-capture"
+    aria-hidden="true"
+  >
+    <PrintableReport
+      report={report}
+      agents={agents}
+      scopeText={scopeText}
+    />
+  </div>
+)}
+
+      {sendModalOpen && (
+  <div
+    className="capacity-dash__send-overlay"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="soc2-send-title"
+  >
+    <section className="capacity-dash__send-modal">
+      <header className="capacity-dash__send-header">
+        <div>
+          <div className="capacity-dash__send-eyebrow">
+            SOC 2 REPORT
+          </div>
+
+          <h2
+            id="soc2-send-title"
+            className="capacity-dash__send-title"
+          >
+            Send SOC 2 Report
+          </h2>
+
+          <p className="capacity-dash__send-subtitle">
+            Select the sender account and recipients
+            for this SOC 2 Evidence Report.
+          </p>
+        </div>
+
+        <button
+          type="button"
+          className="capacity-dash__send-close"
+          onClick={closeSendModal}
+          disabled={sendingPdf}
+          aria-label="Close"
+        >
+          ×
+        </button>
+      </header>
+
+      <div className="capacity-dash__send-body">
+       {sendError && (
+  <div className="capacity-dash__send-error" role="alert">
+    {sendError}
+  </div>
+)}
+
+{sendSuccess && (
+  <div className="capacity-dash__send-success" role="status">
+    {sendSuccess}
+  </div>
+)}
+
+        {channelsLoading ? (
+          <div className="capacity-dash__send-loading">
+            Loading sender accounts and recipients…
+          </div>
+        ) : (
+          <>
+            {/* MESSAGE */}
+            <section className="capacity-dash__message-section">
+              <div className="capacity-dash__send-section-heading">
+                <div className="capacity-dash__step-number">
+                  1
+                </div>
+
+                <div>
+                  <h3 className="capacity-dash__send-section-title">
+                    Message
+                  </h3>
+
+                  <p className="capacity-dash__send-section-subtitle">
+                    Enter the subject and message that will
+                    accompany the SOC 2 PDF.
+                  </p>
+                </div>
+              </div>
+
+              <label className="capacity-dash__message-field">
+                <span className="capacity-dash__message-label">
+                  Subject
+                </span>
+
+                <input
+                  className="capacity-dash__message-input"
+                  type="text"
+                  value={sendSubject}
+                  onChange={(e) =>
+                    setSendSubject(e.target.value)
+                  }
+                  placeholder="Enter subject"
+                  disabled={sendingPdf}
+                />
+              </label>
+
+              <label className="capacity-dash__message-field">
+                <span className="capacity-dash__message-label">
+                  Body
+                </span>
+
+                <textarea
+                  className="capacity-dash__message-textarea"
+                  value={sendBody}
+                  onChange={(e) =>
+                    setSendBody(e.target.value)
+                  }
+                  placeholder="Enter message"
+                  rows={5}
+                  disabled={sendingPdf}
+                />
+              </label>
+            </section>
+
+            {/* SENDER ACCOUNT */}
+            <section className="capacity-dash__sender-section">
+              <div className="capacity-dash__send-section-heading">
+                <div className="capacity-dash__step-number">
+                  2
+                </div>
+
+                <div>
+                  <h3 className="capacity-dash__send-section-title">
+                    Sender account
+                  </h3>
+
+                  <p className="capacity-dash__send-section-subtitle">
+                    Choose the configured account that will
+                    send this report.
+                  </p>
+                </div>
+              </div>
+
+              {channelAccounts.length === 0 ? (
+                <div className="capacity-dash__send-empty">
+                  No active and verified sender accounts
+                  are available.
+                </div>
+              ) : (
+                <div className="capacity-dash__sender-list">
+                  {channelAccounts.map((account) => (
+                    <label
+                      key={account.id}
+                      className={`capacity-dash__sender-account ${
+                        Number(selectedAccountId) ===
+                        Number(account.id)
+                          ? "capacity-dash__sender-account--selected"
+                          : ""
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="soc2-sender-account"
+                        value={account.id}
+                        checked={
+                          Number(selectedAccountId) ===
+                          Number(account.id)
+                        }
+                        onChange={(e) =>
+                          handleAccountSelection(
+                            e.target.value,
+                          )
+                        }
+                        disabled={sendingPdf}
+                      />
+
+                      <div>
+                        <div className="capacity-dash__sender-account-label">
+                          {account.label ||
+                            account.channel_type}
+                        </div>
+
+                        <div className="capacity-dash__sender-account-identifier">
+                          {account.identifier ||
+                            account.email ||
+                            account.username ||
+                            account.channel_type}
+                        </div>
+                      </div>
+                    </label>
+                  ))}
+                </div>
+              )}
+            </section>
+
+            {/* RECIPIENTS */}
+            <section className="capacity-dash__recipient-section">
+              <div className="capacity-dash__send-section-heading">
+                <div className="capacity-dash__step-number">
+                  3
+                </div>
+
+                <div>
+                  <h3 className="capacity-dash__send-section-title">
+                    Recipients
+                  </h3>
+
+                  <p className="capacity-dash__send-section-subtitle">
+                    Select where the SOC 2 PDF should be
+                    delivered.
+                  </p>
+                </div>
+
+                {selectedSenderAccount && (
+                  <span className="capacity-dash__recipient-count">
+                    {selectedChannelIds.length} selected
+                  </span>
+                )}
+              </div>
+
+              {!selectedSenderAccount ? (
+                <div className="capacity-dash__send-empty">
+                  Select a sender account to view compatible
+                  recipients.
+                </div>
+              ) : compatibleChannels.length === 0 ? (
+                <div className="capacity-dash__send-empty">
+                  No compatible communication channels are
+                  available for this sender account.
+                </div>
+              ) : (
+                <div className="capacity-dash__channel-list">
+                  {compatibleChannels.map((channel) => (
+                    <label
+                      key={channel.id}
+                      className={`capacity-dash__channel ${
+                        selectedChannelIds.includes(
+                          channel.id,
+                        )
+                          ? "capacity-dash__channel--selected"
+                          : ""
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={selectedChannelIds.includes(
+                          channel.id,
+                        )}
+                        onChange={() =>
+                          toggleChannelSelection(
+                            channel.id,
+                          )
+                        }
+                        disabled={sendingPdf}
+                      />
+
+                      <div className="capacity-dash__channel-main">
+                        <div className="capacity-dash__channel-name">
+                          {channel.name}
+                        </div>
+
+                        <div className="capacity-dash__channel-value">
+                          {channel.value}
+                        </div>
+
+                        <div className="capacity-dash__channel-meta">
+                          <span className="capacity-dash__channel-type">
+                            {channel.type}
+                          </span>
+                        </div>
+                      </div>
+                    </label>
+                  ))}
+                </div>
+              )}
+            </section>
+          </>
+        )}
+      </div>
+
+      <footer className="capacity-dash__send-footer">
+        <div className="capacity-dash__send-selection">
+          <div>
+            Sender:{" "}
+            <strong>
+              {selectedSenderAccount
+                ? selectedSenderAccount.label
+                : "Not selected"}
+            </strong>
+          </div>
+
+          <div>
+            Recipients: {selectedChannelIds.length}
+          </div>
+        </div>
+
+        <div className="capacity-dash__send-actions">
+          <button
+            className="capacity-dash__btn"
+            type="button"
+            onClick={closeSendModal}
+            disabled={sendingPdf}
+          >
+            Cancel
+          </button>
+
+          <button
+            className="capacity-dash__btn capacity-dash__btn--primary"
+            type="button"
+            onClick={sendSoc2Pdf}
+            disabled={
+              channelsLoading ||
+              !selectedAccountId ||
+              !selectedChannelIds.length ||
+              !sendSubject.trim() ||
+              !sendBody.trim() ||
+              sendingPdf
+            }
+          >
+            {sendingPdf
+              ? "Generating & Sending…"
+              : "Send Report"}
+          </button>
+        </div>
+      </footer>
+    </section>
+  </div>
+)}
     </div>
   );
 }
@@ -912,7 +2331,7 @@ function PrintableReport({ report, agents, scopeText }) {
       {/* =========================================================
           COVER PAGE
       ========================================================= */}
-      <section className="soc2-print-cover">
+      <section className="soc2-print-page soc2-print-cover">
 
         <div className="soc2-print-cover-top">
           <div className="soc2-print-brand">
@@ -1032,7 +2451,7 @@ function PrintableReport({ report, agents, scopeText }) {
       {/* =========================================================
           TABLE OF CONTENTS
       ========================================================= */}
-      <section className="soc2-print-toc-page">
+      <section className="soc2-print-page soc2-print-toc-page">
 
         <div className="soc2-print-page-eyebrow">
           REPORT STRUCTURE
@@ -1105,7 +2524,7 @@ function PrintExecutiveSummary({ report }) {
           : "Critical attention";
 
   return (
-    <section className="soc2-print-executive">
+    <section className="soc2-print-page soc2-print-executive">
 
       <div className="soc2-print-page-eyebrow">
         01 · EXECUTIVE SUMMARY

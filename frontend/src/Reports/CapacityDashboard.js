@@ -1514,6 +1514,17 @@ export default function CapacityDashboard() {
   const partitions = useMemo(() => readPartitions(payload), [payload]);
   const lastIndex = Math.max(0, rows.length - 1);
 
+  useEffect(() => {
+  if (!sendSuccess && !sendError) return;
+
+  const timer = window.setTimeout(() => {
+    setSendSuccess("");
+    setSendError("");
+  }, 5000); // 5 seconds
+
+  return () => window.clearTimeout(timer);
+}, [sendSuccess, sendError]);
+
   
 
 const chartRows = useMemo(() => {
