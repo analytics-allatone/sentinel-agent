@@ -108,9 +108,10 @@ def inspect(params: Dict[str, Any]) -> Dict[str, Any]:
                    pg_size_pretty(pg_total_relation_size(relid)) AS total_size,
                    pg_total_relation_size(relid) AS total_size_bytes
             FROM pg_catalog.pg_statio_user_tables
-            ORDER BY pg_total_relation_size(relid) DESC LIMIT 20""")}
-
-        # 14. One-Line Health Summary
+            ORDER BY pg_total_relation_size(relid) DESC LIMIT 20"""),
+            "table_count" : one(cur,"""SELECT count(*) FROM pg_stat_user_tables"""),
+            "table_size_bytes": one(cur,"""SELECT sum(pg_database_size(datname)) FROM pg_database WHERE datistemplate = false""")}
+       # 14. One-Line Health Summary
         out["health_summary"] = one(cur, """SELECT now() AS check_time,
             (SELECT count(*) FROM pg_stat_activity) AS total_connections,
             (SELECT count(*) FROM pg_stat_activity WHERE state='active') AS active_queries,
@@ -121,4 +122,7 @@ def inspect(params: Dict[str, Any]) -> Dict[str, Any]:
         conn.close()
 
     bc = out.get("basic_connectivity", {})
-    return {"db_version": bc.get("version"), "current_database": bc.get("current_database"), "points": out}
+    databses=out.get("database_size",{}).get('databases')
+    tb=out.get('table_bloat',{})
+    return {"db_version": bc.get("version"),"database_count": len(databses), "databases": databses,
+            "table_count": tb.get("table_count").get('count'), "total_size_bytes": tb.get("table_size_bytes").get('sum'), "current_database": bc.get("current_database"), "points": out}

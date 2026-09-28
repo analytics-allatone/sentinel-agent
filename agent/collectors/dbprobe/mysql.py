@@ -57,6 +57,9 @@ def inspect(params: Dict[str, Any]) -> Dict[str, Any]:
                             COUNT(*) AS tables
                      FROM information_schema.tables GROUP BY table_schema
                      ORDER BY size_bytes DESC""")
+        table_count=q("""SELECT COUNT(*)  FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_TYPE = 'BASE TABLE'""")
+        database_count = q("""SELECT COUNT(*) FROM information_schema.SCHEMATA WHERE SCHEMA_NAME NOT IN ('information_schema','performance_schema','mysql','sys')""")
+
         cur_size = next((s["size_bytes"] for s in sizes if s["datname"] == cur_db), None)
         out["database_size"] = {"current_database": cur_db, "current_db_size_bytes": cur_size, "databases": sizes}
 
@@ -117,6 +120,7 @@ def inspect(params: Dict[str, Any]) -> Dict[str, Any]:
                                                     (data_length+index_length) AS total_size_bytes, data_free
                                              FROM information_schema.tables
                                              ORDER BY total_size_bytes DESC LIMIT 20""")}
+        total_size_bytes=q("""SELECT SUM(DATA_LENGTH + INDEX_LENGTH) AS total FROM information_schema.TABLES""")        
 
         # 14. Health summary
         out["health_summary"] = {"check_time": None, "total_connections": int(num("Threads_connected")),
@@ -128,4 +132,4 @@ def inspect(params: Dict[str, Any]) -> Dict[str, Any]:
     
     bc = out.get("basic_connectivity", {})
 
-    return {"db_version": bc.get("version"), "current_database": bc.get("current_database"), "points": out}
+    return {"db_version": bc.get("version"),"database_count": database_count[0].get('COUNT(*)'),"databases": sizes,"table_count": table_count[0].get('COUNT(*)'), "total_size_bytes" : total_size_bytes[0].get('total') ,"current_database": bc.get("current_database"), "points": out}

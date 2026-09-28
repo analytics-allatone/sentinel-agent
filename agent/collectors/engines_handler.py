@@ -5,6 +5,11 @@ import importlib.util
 import sys
 from schema.db_event_base import EventOutcome, Severity
 from schema.db_events import EVENT_FOR_ENGINE
+import collectors.dbprobe.oracle
+import collectors.dbprobe.postgres
+import collectors.dbprobe.mysql
+import collectors.dbprobe.redis
+import collectors.dbprobe.mongo
 
 INSPECTORS = {"postgresql": "postgres", "mysql": "mysql", "mariadb": "mysql",
               "oracle": "oracle", "redis": "redis", "mongodb": "mongo"}
