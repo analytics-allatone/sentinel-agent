@@ -3,7 +3,7 @@ import aiomqtt
 import os 
 import json
 from dotenv import load_dotenv
-from db.db import push_data_to_db , get_async_session
+from db.db import push_data_to_db , get_async_session , on_security_message
 from sqlalchemy import select
 from models.agent_model import Agents
 
@@ -49,6 +49,7 @@ async def fetch_agents_map(machine_info):
 async def mqtt_background_consumer():
     master_dict = {}
     agents_map = {}
+    BG_TASKS = set()
     while True:
         try:
             async with aiomqtt.Client(
@@ -87,6 +88,11 @@ async def mqtt_background_consumer():
                     if len(master_dict[agent_name]["event_data"]) >= BATCH_SIZE:
                         try:
                             await push_data_to_db(master_dict[agent_name])
+                            batch = {"meta_data":  master_dict[agent_name]["meta_data"],
+    "event_data": list(master_dict[agent_name]["event_data"]), }
+                            t=asyncio.create_task(on_security_message(batch))
+                            BG_TASKS.add(t)
+                            t.add_done_callback(BG_TASKS.discard)                            
                         except Exception as e:
                             print(f"exception in pushing in db {str(e)}")
                         master_dict[agent_name]["event_data"] = []

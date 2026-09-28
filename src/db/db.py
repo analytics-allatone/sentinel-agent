@@ -121,57 +121,110 @@ CATEGORIES_TABLE_MAPPING = {
 #         rec["event_fingerprint"] = fp
 #         out.append(rec)
 #     return out
-
-        
-async def push_data_to_db(data_to_push):
-    meta_data = data_to_push.get("meta_data")
-    events_data = data_to_push.get("event_data")
-    agent_name = meta_data.get("agent_name")
+def _group_by_category(data_to_push):
+    meta_data   = data_to_push.get("meta_data") or {}
+    events_data = data_to_push.get("event_data") or []
+    agent_name  = meta_data.get("agent_name")
     category_wise_data = {}
-    available_categories = []
     for ed in events_data:
         cat = ed.get("category")
-        if cat:
-            ed["agent_name"] = agent_name
-            if not category_wise_data.get(cat):
-                available_categories.append(cat)
-                category_wise_data[cat] = []
-                if isinstance(ed.get("tags"), str):
-                    try:
-                        ed["tags"] = json.loads(ed["tags"])
-                    except Exception:
-                        ed["tags"] = [ed["tags"]] # Fallback array
+        if not cat:
+            continue
+        ed["agent_name"] = agent_name
+        if cat not in category_wise_data:
+            category_wise_data[cat] = []
+            if isinstance(ed.get("tags"), str):
+                try:
+                    ed["tags"] = json.loads(ed["tags"])
+                except Exception:
+                    ed["tags"] = [ed["tags"]]
+        category_wise_data[cat].append(ed)
+    return category_wise_data
+
+
+async def push_data_to_db(data_to_push):
+    category_wise_data = _group_by_category(data_to_push)
+    # print(category_wise_data)
+    for cat, records in category_wise_data.items():
+        model_class = CATEGORIES_TABLE_MAPPING.get(cat)
+        if not model_class:
+            continue                           
+        try:
+            valid_columns = set(model_class.__table__.columns.keys())
+            cleaned = [{k: v for k, v in r.items() if k in valid_columns} for r in records]
+            if cleaned:
+                async with get_async_session() as session:
+                    await session.execute(insert(model_class), cleaned)
+                    await session.commit()
+        except Exception as e:
+            print(f"[ingest] {cat}: batch rolled back ({e})")
+            continue
+
+
+async def on_security_message(data_to_push):
+    grouped = _group_by_category(data_to_push)
+    print(">>> on_security_message CALLED, cats =", list(grouped.keys()))   # debug
+    for cat, records in grouped.items():
+        try:
+            async with get_async_session() as session:
+                result = await run_sigma_on_batch(session, category=cat, rows=records)
+            print(f"[sigma-batch] {cat}: {result}")
+            if result.get("findings"):
+                print(f"[sigma-batch] {cat}: {result['findings']} alert(s) "
+                      f"from {result.get('batch_size')} events")
+        except Exception as e:
+            # import traceback; traceback.print_exc()      
+            print(f"[sigma] {cat} failed: {e!r}")
+        
+# async def push_data_to_db(data_to_push):
+#     meta_data = data_to_push.get("meta_data")
+#     events_data = data_to_push.get("event_data")
+#     agent_name = meta_data.get("agent_name")
+#     category_wise_data = {}
+#     available_categories = []
+#     for ed in events_data:
+#         cat = ed.get("category")
+#         if cat:
+#             ed["agent_name"] = agent_name
+#             if not category_wise_data.get(cat):
+#                 available_categories.append(cat)
+#                 category_wise_data[cat] = []
+#                 if isinstance(ed.get("tags"), str):
+#                     try:
+#                         ed["tags"] = json.loads(ed["tags"])
+#                     except Exception:
+#                         ed["tags"] = [ed["tags"]] # Fallback array
             
-            category_wise_data[cat].append(ed)
-    try:
-        for cat, records in category_wise_data.items():
-                # records = drop_adjacent_dupes(cat, records)
-                # if not records:
-                #     continue
-                model_class = CATEGORIES_TABLE_MAPPING.get(cat)
-                if not model_class:
-                    return
+#             category_wise_data[cat].append(ed)
+#     try:
+#         for cat, records in category_wise_data.items():
+#                 # records = drop_adjacent_dupes(cat, records)
+#                 # if not records:
+#                 #     continue
+#                 model_class = CATEGORIES_TABLE_MAPPING.get(cat)
+#                 if not model_class:
+#                     return
                 
-                # 1. Get valid column names for this specific SQLAlchemy model
-                valid_columns = set(model_class.__table__.columns.keys())
-                # 2. Filter out any extra keys from the incoming dictionaries
-                cleaned_records = [
-                    {k: v for k, v in record.items() if k in valid_columns}
-                    for record in records
-                ]
+#                 # 1. Get valid column names for this specific SQLAlchemy model
+#                 valid_columns = set(model_class.__table__.columns.keys())
+#                 # 2. Filter out any extra keys from the incoming dictionaries
+#                 cleaned_records = [
+#                     {k: v for k, v in record.items() if k in valid_columns}
+#                     for record in records
+#                 ]
                 
-                # 3. Execute bulk insert if there are valid records to push
-                if cleaned_records:
-                    async with get_async_session() as session:
-                        await session.execute(
-                            insert(model_class),
-                            cleaned_records
-                        )
-                        await session.commit()
-                        # result = await run_sigma_on_batch(session, category=cat, rows=records)
-                        # if result["findings"]:
-                        #     print(f"[sigma-batch] {cat}: {result['findings']} alert(s) "
-                        #         f"from {result['batch_size']} events")
-    except Exception as e:
-        # print(f"Failed to psuh data in db {str(e)}")
-        print("err")
+#                 # 3. Execute bulk insert if there are valid records to push
+#                 if cleaned_records:
+#                     async with get_async_session() as session:
+#                         await session.execute(
+#                             insert(model_class),
+#                             cleaned_records
+#                         )
+#                         await session.commit()
+#                         # result = await run_sigma_on_batch(session, category=cat, rows=records)
+#                         # if result["findings"]:
+#                         #     print(f"[sigma-batch] {cat}: {result['findings']} alert(s) "
+#                         #         f"from {result['batch_size']} events")
+#     except Exception as e:
+#         # print(f"Failed to psuh data in db {str(e)}")
+#         print("err")
