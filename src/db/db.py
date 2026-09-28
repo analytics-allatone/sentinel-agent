@@ -61,7 +61,11 @@ async def get_async_db():
         finally:
             await session.close()
 
-get_async_session = asynccontextmanager(get_async_db)
+get_async_session = asynccontextmanager(get_async_db, pool_size=10,
+    max_overflow=20,
+    pool_timeout=30,
+    pool_pre_ping=True,
+    pool_recycle=1800, )
 
 async def create_db_and_tables():
    
@@ -163,18 +167,22 @@ async def push_data_to_db(data_to_push):
 
 async def on_security_message(data_to_push):
     grouped = _group_by_category(data_to_push)
-    print(">>> on_security_message CALLED, cats =", list(grouped.keys()))   # debug
-    for cat, records in grouped.items():
-        try:
-            async with get_async_session() as session:
-                result = await run_sigma_on_batch(session, category=cat, rows=records)
-            print(f"[sigma-batch] {cat}: {result}")
-            if result.get("findings"):
-                print(f"[sigma-batch] {cat}: {result['findings']} alert(s) "
-                      f"from {result.get('batch_size')} events")
-        except Exception as e:
-            # import traceback; traceback.print_exc()      
-            print(f"[sigma] {cat} failed: {e!r}")
+    if not grouped:
+        return
+    # print(">>> on_security_message CALLED, cats =", list(grouped.keys()))   # debug
+    try:
+        async with get_async_session() as session:
+            for cat, records in grouped.items():
+                try:
+                    result = await run_sigma_on_batch(session, category=cat, rows=records)
+                    if result and result.get("findings"):
+                        print(f"[sigma-batch] {cat}: {result['findings']} alert(s)")
+                except Exception as e:
+                    await session.rollback()
+                    print(f"[sigma] {cat} failed: {e!r}")
+    except Exception as e:
+        import traceback; traceback.print_exc()      # error ab silent nahi
+        print(f"[sigma] {cat} failed: {e!r}")
         
 # async def push_data_to_db(data_to_push):
 #     meta_data = data_to_push.get("meta_data")
