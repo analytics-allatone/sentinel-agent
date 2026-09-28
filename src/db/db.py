@@ -32,7 +32,11 @@ dbname = "testdb"
 
 DATABASE_URL_ASYNC=f"postgresql+asyncpg://{dbuser}:{dbpassword}@{dbendpoint}:5432/{dbname}"
 
-async_engine: AsyncEngine = create_async_engine(DATABASE_URL_ASYNC)
+async_engine: AsyncEngine = create_async_engine(DATABASE_URL_ASYNC, pool_size=10,
+    max_overflow=20,
+    pool_timeout=30,
+    pool_pre_ping=True,
+    pool_recycle=1800,)
 
 AsyncSessionLocal = sessionmaker(
     async_engine, class_=AsyncSession, expire_on_commit=False
@@ -61,11 +65,7 @@ async def get_async_db():
         finally:
             await session.close()
 
-get_async_session = asynccontextmanager(get_async_db, pool_size=10,
-    max_overflow=20,
-    pool_timeout=30,
-    pool_pre_ping=True,
-    pool_recycle=1800, )
+get_async_session = asynccontextmanager(get_async_db)
 
 async def create_db_and_tables():
    
@@ -164,21 +164,22 @@ async def push_data_to_db(data_to_push):
             print(f"[ingest] {cat}: batch rolled back ({e})")
             continue
 
-
 async def on_security_message(data_to_push):
     grouped = _group_by_category(data_to_push)
     if not grouped:
         return
-    # print(">>> on_security_message CALLED, cats =", list(grouped.keys()))   # debug
-    for cat, records in grouped.items():
-        try:
-            result = await run_sigma_on_batch(category=cat, rows=records)
-            if result and result.get("findings"):
-                print(f"[sigma-batch] {cat}: {result['findings']} alert(s)"
-                      f"from {result.get('batch_size')} events")
-        except Exception as e:
-            import traceback; traceback.print_exc()      # error ab silent nahi
-            print(f"[sigma] {cat} failed: {e!r}")
+    # EK hi session, poore batch ke liye.
+    async with get_async_session() as session:
+        for cat, records in grouped.items():
+            try:
+                result = await run_sigma_on_batch(session, category=cat, rows=records)
+                if result.get("findings"):
+                    print(f"[sigma-batch] {cat}: {result['findings']} alert(s) "
+                          f"from {result.get('batch_size')} events")
+            except Exception as e:
+                await session.rollback()
+                print(f"[sigma] {cat} failed: {e!r}")
+ 
         
 # async def push_data_to_db(data_to_push):
 #     meta_data = data_to_push.get("meta_data")
