@@ -3801,3 +3801,96 @@
 .soc2-incidents td.inc-desc:hover .soc2-copy-flag {
   opacity: 1;
 }
+
+/* ============================================================
+   SEND SOC 2 PDF
+   Does NOT affect browser Export PDF / window.print()
+   ============================================================ */
+
+/* ============================================================
+   SEND PDF CAPTURE
+   ============================================================ */
+
+/* ============================================================
+   SOC 2 SEND PDF CAPTURE
+   ============================================================ */
+
+./* ============================================================
+   SOC 2 SEND PDF CAPTURE
+   Does NOT affect browser Export PDF / window.print()
+   ============================================================ */
+
+.soc2-send-report-capture {
+  position: fixed;
+  top: 0;
+  left: -20000px;
+
+  width: 210mm;
+
+  display: block;
+  visibility: visible;
+
+  pointer-events: none;
+
+  z-index: -1;
+
+  background: #ffffff;
+}
+
+.soc2-send-report-capture .soc2-print-root {
+  display: block !important;
+
+  width: 210mm;
+
+  margin: 0;
+  padding: 0;
+
+  background: #ffffff;
+
+  visibility: visible !important;
+}
+
+.soc2-send-report-capture .soc2-print-page {
+  display: block !important;
+
+  width: 210mm;
+
+  min-height: 260mm;
+
+  height: auto;
+
+  margin: 0;
+
+  background: #ffffff;
+
+  visibility: visible !important;
+
+  overflow: visible !important;
+
+  position: relative;
+}
+
+/*
+ * Hide only interactive elements from Send-PDF capture.
+ */
+.soc2-send-report-capture .soc2-screen-only,
+.soc2-send-report-capture .soc2-spinner {
+  display: none !important;
+}
+
+/*
+ * Existing browser Export PDF must remain unchanged.
+ */
+@media print {
+  .soc2-send-report-capture {
+    display: none !important;
+  }
+}
+
+/* Never show the send modal/capture in browser Export PDF */
+@media print {
+  .capacity-dash__send-overlay,
+  .soc2-send-report-capture {
+    display: none !important;
+  }
+}
