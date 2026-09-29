@@ -133,12 +133,16 @@ def inspect(params: Dict[str, Any]) -> Dict[str, Any]:
     # 14) host resources (set by collector via psutil)
     sec["system_resources"] = None
 
+    # sec["health_summary"] = safe(lambda: showq(
+    #     "SELECT (SELECT COUNT(*) FROM v$session) AS total_sessions, "
+    #     "(SELECT COUNT(*) FROM v$session WHERE status='ACTIVE') AS active_sessions, "
+    #     "(SELECT COUNT(*) FROM v$session WHERE blocking_session IS NOT NULL) AS blocked_sessions, "
+    #     "(SELECT SUM(bytes) FROM dba_data_files) AS total_size_bytes FROM dual")[0])
     sec["health_summary"] = safe(lambda: showq(
-        "SELECT (SELECT COUNT(*) FROM v$session) AS total_sessions, "
-        "(SELECT COUNT(*) FROM v$session WHERE status='ACTIVE') AS active_sessions, "
+        "SELECT (SELECT COUNT(*) FROM v$session WHERE type='USER') AS total_sessions, "
+        "(SELECT COUNT(*) FROM v$session WHERE status='ACTIVE' AND type='USER') AS active_sessions, "
         "(SELECT COUNT(*) FROM v$session WHERE blocking_session IS NOT NULL) AS blocked_sessions, "
         "(SELECT SUM(bytes) FROM dba_data_files) AS total_size_bytes FROM dual")[0])
-
     # ---- extra Oracle datasets (new section keys; non-breaking) ----
     sec["session_summary"] = safe(lambda: showq(
         "SELECT COUNT(*) AS total, SUM(CASE WHEN status='ACTIVE' THEN 1 ELSE 0 END) AS active, "
@@ -166,9 +170,14 @@ def inspect(params: Dict[str, Any]) -> Dict[str, Any]:
     sec["top_segments"] = safe(lambda: showq(
         "SELECT owner, segment_name, segment_type, bytes AS total_size_bytes FROM dba_segments "
         f"ORDER BY bytes DESC FETCH FIRST {top_seg} ROWS ONLY"))
+    # sec["resource_limits"] = safe(lambda: showq(
+    #     "SELECT resource_name, current_utilization, max_utilization, TRIM(limit_value) AS limit_value "
+    #     "FROM v$resource_limit WHERE resource_name IN ('sessions','processes','transactions')"))
     sec["resource_limits"] = safe(lambda: showq(
-        "SELECT resource_name, current_utilization, max_utilization, TRIM(limit_value) AS limit_value "
-        "FROM v$resource_limit WHERE resource_name IN ('sessions','processes','transactions')"))
+        "SELECT resource_name, current_utilization, max_utilization, TRIM(limit_value) AS limit_value, "
+        "CASE WHEN TRIM(limit_value) NOT IN ('UNLIMITED','0') "
+        "THEN ROUND(current_utilization*100/TO_NUMBER(TRIM(limit_value)),1) END AS pct_used "
+        "FROM v$resource_limit WHERE resource_name IN ('processes','sessions','transactions')"))
     sec["memory"] = safe(lambda: showq(
         "SELECT (SELECT NVL(SUM(bytes),0) FROM v$sga) AS sga_total_bytes, "
         "(SELECT bytes FROM v$sgainfo WHERE name='Buffer Cache Size') AS buffer_cache_bytes, "
@@ -183,15 +192,109 @@ def inspect(params: Dict[str, Any]) -> Dict[str, Any]:
     sec["standby_destinations"] = safe(lambda: showq(
         "SELECT dest_id, destination, status, target, error FROM v$archive_dest_status "
         "WHERE destination IS NOT NULL AND status <> 'INACTIVE'") or na("no standby destinations"))
+    # sec["rman_backups"] = safe(lambda: showq(
+    #     "SELECT input_type, status, start_time, end_time FROM v$rman_backup_job_details "
+    #     "ORDER BY start_time DESC FETCH FIRST 10 ROWS ONLY"))
     sec["rman_backups"] = safe(lambda: showq(
-        "SELECT input_type, status, start_time, end_time FROM v$rman_backup_job_details "
-        "ORDER BY start_time DESC FETCH FIRST 10 ROWS ONLY"))
+        "SELECT * FROM (SELECT session_key, input_type, status, start_time, end_time, "
+        "ROUND(elapsed_seconds/60,1) AS minutes, output_bytes_display AS output_size "
+        "FROM v$rman_backup_job_details WHERE start_time > SYSDATE-7 "
+        "ORDER BY start_time DESC) WHERE ROWNUM <= 15")
+        or na("no RMAN backup jobs in last 7 days"))
+    # sec["alert_log_errors"] = safe(lambda: showq(
+    #     "SELECT originating_timestamp AS event_time, message_level AS level, message_text AS message "
+    #     f"FROM v$diag_alert_ext WHERE originating_timestamp > SYSTIMESTAMP - NUMTODSINTERVAL({alert_hr},'HOUR') "
+    #     "AND (message_text LIKE 'ORA-%' OR message_level <= 2) "
+    #     "ORDER BY originating_timestamp DESC FETCH FIRST 100 ROWS ONLY"))
     sec["alert_log_errors"] = safe(lambda: showq(
         "SELECT originating_timestamp AS event_time, message_level AS level, message_text AS message "
         f"FROM v$diag_alert_ext WHERE originating_timestamp > SYSTIMESTAMP - NUMTODSINTERVAL({alert_hr},'HOUR') "
-        "AND (message_text LIKE 'ORA-%' OR message_level <= 2) "
+        "AND (message_text LIKE '%ORA-%' OR message_text LIKE '%TNS-%' "
+        "OR message_text LIKE '%Checkpoint not complete%' "
+        "OR UPPER(message_text) LIKE '%DEADLOCK%' OR UPPER(message_text) LIKE '%CORRUPT%' "
+        "OR message_level <= 2) "
         "ORDER BY originating_timestamp DESC FETCH FIRST 100 ROWS ONLY"))
 
+    # 15) Fast Recovery Area usage
+    sec["fast_recovery_area"] = safe(lambda: showq(
+        "SELECT name, ROUND(space_limit/1048576) AS limit_mb, ROUND(space_used/1048576) AS used_mb, "
+        "ROUND(space_reclaimable/1048576) AS reclaimable_mb, number_of_files, "
+        "ROUND((space_used-space_reclaimable)*100/NULLIF(space_limit,0),2) AS pct_used "
+        "FROM v$recovery_file_dest") or na("no FRA configured"))
+ 
+    # 16) TEMP tablespace top consumers (session-level; complements database_sizes TEMP rows)
+    # sec["top_temp_sessions"] = safe(lambda: showq(
+    #     "SELECT * FROM (SELECT s.sid, s.serial# AS serial, s.username, s.osuser, s.machine, "
+    #     "s.program, s.status, u.tablespace, ROUND(SUM(u.blocks*t.block_size)/1048576,2) AS temp_used_mb "
+    #     "FROM v$tempseg_usage u JOIN v$session s ON s.saddr=u.session_addr "
+    #     "JOIN dba_tablespaces t ON t.tablespace_name=u.tablespace "
+    #     "GROUP BY s.sid, s.serial#, s.username, s.osuser, s.machine, s.program, s.status, u.tablespace "
+    #     f"ORDER BY temp_used_mb DESC) WHERE ROWNUM <= {top_sql}"))
+    sec["top_temp_sessions"] = safe(lambda: showq(
+        "SELECT * FROM (SELECT x.*, SUBSTR(q.sql_text,1,80) AS sql_text FROM ("
+        "SELECT s.sid, s.serial# AS serial, s.username, s.osuser, s.machine, s.program, "
+        "s.status, u.tablespace, MAX(u.sql_id) AS temp_sql_id, "
+        "ROUND(SUM(u.blocks*t.block_size)/1048576,2) AS temp_used_mb "
+        "FROM v$tempseg_usage u JOIN v$session s ON s.saddr=u.session_addr "
+        "JOIN dba_tablespaces t ON t.tablespace_name=u.tablespace "
+        "GROUP BY s.sid, s.serial#, s.username, s.osuser, s.machine, s.program, s.status, u.tablespace) x "
+        "LEFT JOIN v$sqlarea q ON q.sql_id=x.temp_sql_id ORDER BY x.temp_used_mb DESC) "
+        f"WHERE ROWNUM <= {top_sql}"))
+ 
+ 
+    # 17) redo log switches per hour (last 24h) — distinct from wal_checkpoint
+    sec["redo_log_switches"] = safe(lambda: showq(
+        "SELECT TO_CHAR(first_time,'YYYY-MM-DD HH24') AS hour, COUNT(*) AS log_switches "
+        "FROM v$log_history WHERE first_time > SYSDATE-1 "
+        "GROUP BY TO_CHAR(first_time,'YYYY-MM-DD HH24') ORDER BY 1"))
+ 
+    # 18) daily archive log generation (last N days)
+    # sec["archive_log_daily"] = safe(lambda: showq(
+    #     "SELECT TO_CHAR(TRUNC(completion_time),'YYYY-MM-DD') AS day, "
+    #     "TO_CHAR(TRUNC(completion_time),'DY') AS day_name, COUNT(*) AS archives, "
+    #     "ROUND(SUM(blocks*block_size)/1048576,2) AS size_mb "
+    #     f"FROM v$archived_log WHERE completion_time >= TRUNC(SYSDATE)-({int(params.get('archive_days',30))}-1) "
+    #     "AND standby_dest='NO' GROUP BY TRUNC(completion_time) ORDER BY TRUNC(completion_time)")
+    #     or na("NOARCHIVELOG mode or no archives in period"))
+    sec["archive_log_daily"] = safe(lambda: showq(
+        "SELECT TO_CHAR(TRUNC(completion_time),'YYYY-MM-DD') AS day, "
+        "TO_CHAR(TRUNC(completion_time),'DY') AS day_name, COUNT(*) AS archives, "
+        "ROUND(SUM(blocks*block_size)/1048576,2) AS size_mb, "
+        "ROUND(SUM(blocks*block_size)/1073741824,2) AS size_gb "
+        f"FROM v$archived_log WHERE completion_time >= TRUNC(SYSDATE)-({int(params.get('archive_days',30))}-1) "
+        "AND standby_dest='NO' "
+        "AND dest_id=(SELECT MIN(dest_id) FROM v$archived_log "
+        f"WHERE completion_time >= TRUNC(SYSDATE)-({int(params.get('archive_days',30))}-1) AND standby_dest='NO') "
+        "GROUP BY TRUNC(completion_time) ORDER BY TRUNC(completion_time)")
+        or na("NOARCHIVELOG mode or no archives in period"))
+    # 19) datafiles not ONLINE
+    sec["datafiles_offline"] = safe(lambda: showq(
+        "SELECT file#, name, status FROM v$datafile WHERE status NOT IN ('ONLINE','SYSTEM')"))
+ 
+    # 20) failed scheduler jobs (last 24h)
+    sec["failed_scheduler_jobs"] = safe(lambda: showq(
+        "SELECT * FROM (SELECT owner, job_name, status, actual_start_date, error#, "
+        "DBMS_LOB.SUBSTR(additional_info,200,1) AS info FROM dba_scheduler_job_run_details "
+        "WHERE status<>'SUCCEEDED' AND log_date > SYSTIMESTAMP - INTERVAL '1' DAY "
+        "ORDER BY log_date DESC) WHERE ROWNUM <= 20"))
+ 
+    # 21) user accounts: password expiry, status, tablespaces
+    # sec["user_accounts"] = safe(lambda: showq(
+    #     "SELECT u.username, u.account_status, u.expiry_date, "
+    #     "CASE WHEN u.expiry_date IS NOT NULL THEN ROUND(u.expiry_date-SYSDATE) END AS days_to_expire, "
+    #     "u.profile, u.default_tablespace, u.temporary_tablespace, u.created, u.last_login "
+    #     f"FROM dba_users u WHERE ({1 if params.get('include_oracle_users') else 0}=1 "
+    #     "OR u.oracle_maintained='N') ORDER BY u.expiry_date NULLS LAST, u.username"))
+    sec["user_accounts"] = safe(lambda: showq(
+        "SELECT u.username, u.account_status, u.expiry_date, "
+        "CASE WHEN u.expiry_date IS NOT NULL THEN ROUND(u.expiry_date-SYSDATE) END AS days_to_expire, "
+        "u.lock_date, u.profile, NVL(NULLIF(p.limit,'DEFAULT'),d.limit) AS pwd_life_time, "
+        "u.default_tablespace, u.temporary_tablespace, u.created, u.last_login "
+        "FROM dba_users u "
+        "LEFT JOIN dba_profiles p ON p.profile=u.profile AND p.resource_name='PASSWORD_LIFE_TIME' "
+        "LEFT JOIN dba_profiles d ON d.profile='DEFAULT' AND d.resource_name='PASSWORD_LIFE_TIME' "
+        f"WHERE ({1 if params.get('include_oracle_users') else 0}=1 OR u.oracle_maintained='N') "
+        "ORDER BY u.expiry_date NULLS LAST, u.username"))
     # CDB / PDB enumeration
     is_cdb = safe(lambda: showq("SELECT cdb FROM v$database")[0].get("cdb"))
     databases = []

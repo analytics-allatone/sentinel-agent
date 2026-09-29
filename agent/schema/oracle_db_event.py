@@ -10,6 +10,8 @@ ORACLE_SECTIONS = [
     "top_segments", "table_bloat", "index_usage", "dead_tuples_vacuum", "wal_checkpoint",
     "wraparound_risk", "replication_primary", "replication_delay", "standby_destinations",
     "alert_log_errors", "modified_parameters", "rman_backups", "system_resources", "health_summary",
+    "fast_recovery_area","top_temp_sessions","redo_log_switches","archive_log_daily", "datafiles_offline",
+    "failed_scheduler_jobs","user_accounts"
 ]
 
 
@@ -58,6 +60,13 @@ class OracleDbEvent(BaseDbEvent):
     rman_backups: Optional[Any] = None
     system_resources: Optional[Any] = None
     health_summary: Optional[Any] = None
+    fast_recovery_area:    Optional[Any] = None
+    top_temp_sessions:     Optional[Any] = None
+    redo_log_switches:     Optional[Any] = None
+    archive_log_daily:     Optional[Any] = None
+    datafiles_offline:     Optional[Any] = None
+    failed_scheduler_jobs: Optional[Any] = None
+    user_accounts:         Optional[Any] = None
 
     SECTIONS: ClassVar[List[str]] = ORACLE_SECTIONS
     METRICS: ClassVar[List[tuple]] = [

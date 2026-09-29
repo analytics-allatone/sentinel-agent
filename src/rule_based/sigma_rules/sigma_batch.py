@@ -1,149 +1,109 @@
-import os
 from typing import List, Dict, Any, Optional
-
-from sqlalchemy import text, bindparam, String, Integer
-
+from collections import defaultdict
+from sqlalchemy import text
 from .sigma_compiler import load_rules
-from .sigma_fieldmap import LOGSOURCE_TABLE
+from datetime import datetime
 
-CATEGORY_TABLE = {
-    "process": "process_events",  "process_events": "process_events",
-    "auth": "auth_events",        "auth_events": "auth_events",
-    "network": "network_events",  "network_events": "network_events",
-    "file": "file_events",        "file_events": "file_events",
-    "usb": "usb_events",          "usb_events": "usb_events",
-    # db engine batches each land in their own engine table:
-    "mysql": "mysql_db_events",       "mysql_db_events": "mysql_db_events",
-    "postgres": "postgres_db_events", "postgres_db_events": "postgres_db_events",
-    "redis": "redis_db_events",       "redis_db_events": "redis_db_events",
-    "oracle": "oracle_db_events",     "oracle_db_events": "oracle_db_events",
-    "mongo": "mongo_db_events",       "mongo_db_events": "mongo_db_events",
-}
+_RULES_BY_TABLE = None
 
-# compile rules ONCE and keep them grouped by table (compiling 3k rules per
-# batch would be far too slow). Populated lazily on first use.
-_RULES_BY_TABLE: Optional[Dict[str, list]] = None
-
-
-def _rules_dir() -> str:
-    return os.getenv("SIGMA_RULES_DIR",
-                     os.path.join(os.path.dirname(__file__), "sigma", "rules","windows"))
-
-
-def _load_rules_grouped(rules_path: Optional[str] = None) -> Dict[str, list]:
+def _load_rules_grouped(rules_path=None):
     global _RULES_BY_TABLE
     if _RULES_BY_TABLE is not None:
         return _RULES_BY_TABLE
-    path = rules_path or _rules_dir()
-    # Fail loudly instead of silently compiling 0 rules: a wrong path is the
-    # single most common cause of "compiled 0 rules". Tell the operator exactly
-    # what path was tried and whether it exists / has any .yml under it.
-    import glob as _glob
-    if not os.path.isdir(path):
-        print(f"[sigma-batch] RULES DIR NOT FOUND: {path!r}\n"
-              f"              set SIGMA_RULES_DIR to your enabled/ folder "
-              f"(the dir that contains the .yml rules).")
-        _RULES_BY_TABLE = {}
-        return _RULES_BY_TABLE
-    n_yml = len(_glob.glob(os.path.join(path, "**", "*.yml"), recursive=True))
-    if n_yml == 0:
-        print(f"[sigma-batch] RULES DIR HAS NO .yml FILES: {path!r}\n"
-              f"              point SIGMA_RULES_DIR at the folder that actually "
-              f"holds the rules.")
-        _RULES_BY_TABLE = {}
-        return _RULES_BY_TABLE
-
+    import os
+    path = rules_path or os.getenv("SIGMA_RULES_DIR",
+        os.path.join(os.path.dirname(__file__), "sigma", "rules", "windows"))
     res = load_rules(path)
-    grouped: Dict[str, list] = {}
+    grouped = {}
     for rule in res["rules"]:
-        # register under EVERY table the rule targets, so a batch landing in any
-        # of them (e.g. any db engine table) picks the rule up.
         for t in getattr(rule, "tables", [rule.table]):
             grouped.setdefault(t, []).append(rule)
     _RULES_BY_TABLE = grouped
-    print(f"[sigma-batch] rules dir: {path}")
-    print(f"[sigma-batch] compiled {res['loaded']} rules "
-          f"({res['skipped_count']} skipped) across {len(grouped)} tables: "
-          f"{ {k: len(v) for k, v in sorted(grouped.items())} }")
+    print(f"[sigma-mem] compiled {res['loaded']} rules across {len(grouped)} tables")
     return grouped
 
 
-_PARAM_RE = __import__("re").compile(r"%\((\w+)\)s")
-def _to_named(sql: str) -> str:
-    return _PARAM_RE.sub(r":\1", sql)
+CATEGORY_TABLE = {
+    "process": "process_events", "auth": "auth_events", "network": "network_events",
+    "file": "file_events", "usb": "usb_events",
+    "mysql": "mysql_db_events", "postgres": "postgres_db_events",
+    "redis": "redis_db_events", "oracle": "oracle_db_events", "mongo": "mongo_db_events",
+}
 
-
-def _as_datetime(v):
-    """asyncpg needs a real datetime for timestamptz params, not an ISO string.
-    Accept datetime as-is; parse strings (handling a trailing 'Z')."""
-    from datetime import datetime
+def _to_dt(v):
+    """timestamp ko real datetime banao (string/ISO/Z handle karke)."""
     if v is None or isinstance(v, datetime):
         return v
     s = str(v).strip().replace("Z", "+00:00")
     try:
         return datetime.fromisoformat(s)
     except Exception:
-        # last resort: drop sub-second / tz junk and retry
         try:
             return datetime.fromisoformat(s[:19])
         except Exception:
             return None
-
-
-def _batch_bounds(rows: List[Dict[str, Any]]):
-    """Min/max timestamp (as real datetimes) and the set of agent_names in this
-    batch, so we can scope the Sigma SELECT to just these rows."""
-    ts = [_as_datetime(r.get("timestamp")) for r in rows if r.get("timestamp")]
-    ts = [t for t in ts if t is not None]
-    agents = sorted({r.get("agent_name") or r.get("agent_id")
-                     for r in rows if (r.get("agent_name") or r.get("agent_id")) is not None})
-    return (min(ts) if ts else None, max(ts) if ts else None, agents)
-
-
+ 
 
 async def run_sigma_on_batch(session, category: str, rows: List[Dict[str, Any]],
-                             rules_path: Optional[str] = None,
-                             margin_seconds: int = 2) -> dict:
-    table = CATEGORY_TABLE.get(category)
-    if not table:
-        return {"ran": 0, "findings": 0, "reason": f"no table for '{category}'"}
+                             rules_path: Optional[str] = None, **_) -> dict:
+    
+    """MEMORY-based: har rule ko batch ke rows pe check karo, DB scan nahi."""
+    table = CATEGORY_TABLE.get(category, category)
     grouped = _load_rules_grouped(rules_path)
+    print(table)
     rules = grouped.get(table, [])
     if not rules or not rows:
         return {"ran": 0, "findings": 0, "reason": "no rules or no rows"}
-    tmin, tmax, agents = _batch_bounds(rows)
-    if tmin is None:
-        return {"ran": 0, "findings": 0, "reason": "batch has no timestamps"}
-    findings, errors, first_error = 0, 0, None
-    alerts: List[dict] = []       
-
-    try:
-        for rule in rules:
-            scoped_sql, params = _batch_scoped_sql(rule, table, tmin, tmax,
-                                                   agents, margin_seconds)
-            stmt = text(_to_named(scoped_sql)).bindparams(
-                bindparam("rule_id", type_=String),
-                bindparam("severity", type_=Integer),
-                bindparam("title", type_=String),
-            )
+    
+    # if rows:
+    #     print("RECORD KEYS:", sorted(rows[0].keys()))
+    # for rule in rules[:1]:
+    #     det = rule.doc.get("detection", {})
+    #     # print("RULE:", rule.title[:50])
+    #     # print("  detection:", det)
+    #     # print("  fieldmap :", rule.fieldmap)
+    #     # rule kis column me dhoondh raha hai:
+    #     for name, block in det.items():
+    #         if name == "condition": continue
+    #         if isinstance(block, dict):
+    #             for raw_field in block:
+    #                 f = raw_field.split("|")[0]
+    #                 col = rule.fieldmap.get(f)
+                    # have = col.split(".")[-1] in rows[0] if col else False
+                    # print(f"    field '{f}' -> column {col} -> record me hai? {have}")
+    # har rule -> matching rows -> ek alert (agent+entity ke hisaab se group)
+    alerts = []
+    findings = 0
+    for rule in rules:
+        # group matched rows by (agent, entity) -> count/first/last
+        groups = defaultdict(list)
+        for r in rows:
             try:
-                hits = (await session.execute(stmt, params)).mappings().all()
-            except Exception as e:
-                errors += 1
-                msg = str(e).splitlines()[0][:160]
-                if first_error is None:
-                    first_error = f"{rule.title[:40]}: {msg}"
-                if errors <= 3:
-                    print(f"[sigma-batch] ERROR '{rule.title[:40]}': {msg}")
+                if rule.matches(r):                      # <-- MEMORY match, no DB
+                    agent = r.get("agent_name") or r.get("agent_id")
+                    entity = (r.get("process_name") or r.get("user_name")
+                              or r.get("network_src_ip") or agent)
+                    groups[(agent, entity)].append(r)
+            except Exception:
                 continue
-            technique = next((t for t in rule.tags if str(t).startswith("attack.t")), "")
-            for row in hits:
-                d = dict(row, technique=technique, phase="sigma")
-                alerts.append(d)
-                findings += 1
- 
-        
-        if alerts:
+        technique = next((t for t in rule.tags if str(t).startswith("attack.t")), "")
+        for (agent, entity), matched in groups.items():
+            dts = sorted(d for d in (_to_dt(m.get("timestamp")) for m in matched) if d)
+            alerts.append({
+                "rule_id": f"SIGMA_{(rule.id or rule.title)[:40]}",
+                "severity": int(rule.severity),          # int pakka karo
+                "agent_name": agent,
+                "entity": str(entity) if entity is not None else None,
+                "event_count": len(matched),             # int
+                "first_seen": dts[0] if dts else None,    # datetime, NOT str
+                "last_seen":  dts[-1] if dts else None,   # datetime, NOT str
+                "detail": rule.title[:200],
+                "technique": technique,
+                "phase": "sigma",
+            })
+            findings += 1
+    if alerts:
+        try:
             await session.execute(text("""
                 INSERT INTO security_alerts
                   (rule_id, severity, agent_name, entity, event_count,
@@ -154,58 +114,12 @@ async def run_sigma_on_batch(session, category: str, rows: List[Dict[str, Any]],
                 ON CONFLICT (rule_id, agent_name, entity, first_seen)
                 DO UPDATE SET event_count = EXCLUDED.event_count,
                               last_seen   = EXCLUDED.last_seen
-            """), alerts)                       
+            """), alerts)
             await session.commit()
-        else:
+        except Exception as e:
             await session.rollback()
-        
- 
-    except Exception as e:
-        await session.rollback()                
-        first_error = first_error or str(e)[:160]
-        print(f"[sigma-batch] {category}: rolled back ({e})")
- 
-    return {"ran": len(rules), "findings": findings, "errors": errors,
-            "table": table, "batch_size": len(rows), "first_error": first_error}
+            return {"ran": len(rules), "findings": 0, "errors": 1,
+                    "first_error": str(e)[:160], "batch_size": len(rows)}
 
-def _batch_scoped_sql(rule, table, tmin, tmax, agents, margin):
-    """Rebuild the rule's SELECT but time-bounded to the batch, not now()-lookback.
-    `table` is the specific table this batch landed in."""
-    from .sigma_fieldmap import PARENT_JOIN, TIME_COLUMN, ENTITY_COLUMN
-    joins = PARENT_JOIN if rule.needs_parent_join else ""
-    entity = ENTITY_COLUMN.get(table, "e.agent_name")
-
-    params = dict(rule.params,
-                  rule_id=f"SIGMA_{(rule.id or rule.title)[:40]}",
-                  severity=rule.severity,
-                  title=rule.title[:200],
-                  tmin=tmin, tmax=tmax)
-
-    agent_clause = ""
-    if agents:
-        # bind agent list so we only scan this batch's agent(s)
-        names = []
-        for i, a in enumerate(agents):
-            k = f"agent{i}"
-            params[k] = a
-            names.append(f"%({k})s")
-        agent_clause = f"AND e.agent_name IN ({', '.join(names)})"
-
-    sql = f"""
-SELECT %(rule_id)s AS rule_id,
-       %(severity)s AS severity,
-       e.agent_name,
-       {entity} AS entity,
-       count(*) AS event_count,
-       min({TIME_COLUMN}) AS first_seen,
-       max({TIME_COLUMN}) AS last_seen,
-       %(title)s AS detail
-FROM {table} e
-{joins}
-WHERE {TIME_COLUMN} >= CAST(%(tmin)s AS timestamptz) - INTERVAL '{int(margin)} seconds'
-  AND {TIME_COLUMN} <= CAST(%(tmax)s AS timestamptz) + INTERVAL '{int(margin)} seconds'
-  {agent_clause}
-  AND ({rule.where})
-GROUP BY e.agent_name, {entity}
-"""
-    return sql, params
+    return {"ran": len(rules), "findings": findings, "errors": 0,
+            "table": table, "batch_size": len(rows)}

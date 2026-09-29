@@ -1,6 +1,7 @@
 import os
 import glob
 from typing import Any, Dict, List, Optional
+import re as _re
 
 import yaml
 from .sigma_fieldmap import (LOGSOURCE_TABLE, FIELD_MAP,
@@ -195,7 +196,110 @@ class SigmaRule:
         if not where:
             raise UnmappableRule("empty condition")
         return where, params
+     def matches(self, record: dict) -> bool:
+        detection = self.doc.get("detection", {})
+        if not detection:
+            return False
+        condition = str(detection.get("condition", "")).lower().strip()
+ 
+        def eval_block(name):
+            block = detection.get(name)
+            return self._block_match(block, record) if block is not None else False
+ 
+        def expand(token):
+            if token.endswith("*"):
+                p = token[:-1]
+                return [k for k in detection if k != "condition" and k.startswith(p)]
+            return [token]
+ 
+        toks = condition.replace("(", " ( ").replace(")", " ) ").split()
+        if not toks:
+            return all(eval_block(k) for k in detection if k != "condition")
+ 
+        out, i = [], 0
+        while i < len(toks):
+            t = toks[i]
+            if t in ("and", "or", "not", "(", ")"):
+                out.append(t)
+            elif t in ("all", "1") and i + 2 < len(toks) and toks[i+1] == "of":
+                names = expand(toks[i+2])
+                vals = [eval_block(n) for n in names]
+                out.append(str(all(vals) if t == "all" else any(vals)))
+                i += 2
+            elif t == "them":
+                names = [k for k in detection if k != "condition"]
+                out.append(str(any(eval_block(n) for n in names)))
+            else:
+                names = expand(t)
+                out.append(str(eval_block(names[0]) if len(names) == 1
+                               else any(eval_block(n) for n in names)))
+            i += 1
+        try:
+            return bool(eval(" ".join(out), {"__builtins__": {}}, {}))
+        except Exception:
+            return False
+    _COL_RE = _re.compile(r"[ep]\.(\w+)")   # e.col  ya  p.col (parent join)
 
+    def _get_value(self, record: dict, sql_expr):
+        if not sql_expr:
+            return None
+        # SQL expression se saare column naam nikaalo (COALESCE me kai hote hain)
+        cols = self._COL_RE.findall(sql_expr)
+        if not cols:
+            return None
+        for col in cols:              # COALESCE order: pehla non-null jeetta hai
+            v = record.get(col)
+            if v is not None:
+                return v
+        return None
+ 
+    def _block_match(self, block, record) -> bool:
+        if isinstance(block, list):
+            return any(self._block_match(b, record) for b in block)
+        if not isinstance(block, dict):
+            return False
+        for raw_field, value in block.items():
+            field, modifiers = self._split_modifiers(raw_field)
+            column = self.fieldmap.get(field)
+            if not column:
+                return False
+            # col = column.split(".")[-1]          # 'e.process_name' -> 'process_name'
+            actual = self._get_value(record, column)
+            if not self._value_match(actual, value, modifiers):
+                return False
+        return True
+    
+    def _value_match(self, actual, value, modifiers) -> bool:
+        if isinstance(value, list):
+            return any(self._value_match(actual, v, modifiers) for v in value)
+        if value is None:
+            return actual is None
+        if actual is None:
+            return False
+        a, v = str(actual).lower(), str(value).lower()
+ 
+        if "contains" in modifiers:
+            return v in a
+        if "startswith" in modifiers:
+            return a.startswith(v)
+        if "endswith" in modifiers:
+            # Sigma aksar '\powershell.exe' (path prefix) use karta hai; aapka
+            # process_name bare 'powershell.exe' hota hai. Filename part compare.
+            if a.endswith(v):
+                return True
+            a_tail = a.replace("/", "\\").split("\\")[-1]
+            v_tail = v.replace("/", "\\").split("\\")[-1]
+            return a_tail == v_tail or a_tail.endswith(v_tail)
+        if "re" in modifiers:
+            import re as _re
+            try:
+                return _re.search(v, a) is not None
+            except Exception:
+                return False
+        if "*" in v or "?" in v:
+            import fnmatch
+            return fnmatch.fnmatch(a, v)
+        return a == v
     def _block_sql(self, block, params, counter) -> str:
         """A selection block: dict of field->value, or list of such dicts."""
         if isinstance(block, list):
