@@ -122,6 +122,13 @@ class OracleDbEvents(DbEventCommon, Base):
     rman_backups = Column(JSONB)
     system_resources = Column(JSONB)
     health_summary = Column(JSONB)
+    fast_recovery_area= Column(JSONB)
+    top_temp_sessions= Column(JSONB)
+    redo_log_switches= Column(JSONB)
+    archive_log_daily= Column(JSONB)
+    datafiles_offline= Column(JSONB)
+    failed_scheduler_jobs= Column(JSONB)
+    user_accounts= Column(JSONB)
 
 
 class RedisDbEvents(DbEventCommon, Base):
