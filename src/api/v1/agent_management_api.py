@@ -36,7 +36,9 @@ from utils.web_config import (canon_server, clean, load_tls_hosts,
                                   dump_tls_hosts, build_control_json)
 from auth.crypto import hash_password
 from utils.crypto import canon_engine
-
+from datetime import datetime
+from models.security_alert_model import SecurityAlerts
+from schemas.v1.alerts_schema import GetAlertsResponse, AlertData
 
 agent_management_router = APIRouter()
 
@@ -431,3 +433,95 @@ async def delete_credential(agent_name: str = Query(),
 
     return standard_success_response(data={"service_name": service_name},
                                      message="Credential deleted successfully")
+
+SEVERITY_LABEL = {1: "informational", 2: "low", 3: "medium", 4: "high", 5: "critical"}
+ 
+ 
+@agent_management_router.get(
+    "/get-alerts",
+    response_model=standard_success_response[GetAlertsResponse],
+    status_code=200)
+async def get_alerts(
+    category: Optional[str] = Query(None, description="file | process | network | authentication | usb | database"),
+    severity: Optional[int] = Query(None, ge=1, le=5, description="1=info 2=low 3=medium 4=high 5=critical"),
+    severity_min: Optional[int] = Query(None, ge=1, le=5, description="is level se upar ke alerts"),
+    agent_name: Optional[str] = Query(None),
+    from_dt: Optional[datetime] = Query(None, description="is date/time ke baad (last_seen)"),
+    to_dt: Optional[datetime] = Query(None, description="is date/time se pehle (last_seen)"),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(50, ge=1, le=200, description="ek page me kitne alerts"),
+    db: AsyncSession = Depends(get_async_db),
+    # user: dict = Depends(verify_token),
+):
+    """Sigma security alerts — category / severity / date filter."""
+ 
+    filters = []
+    if category:
+        filters.append(SecurityAlerts.category == category.strip().lower())
+    if severity is not None:
+        filters.append(SecurityAlerts.severity == severity)
+    if severity_min is not None:
+        filters.append(SecurityAlerts.severity >= severity_min)
+    if agent_name:
+        filters.append(SecurityAlerts.agent_name == agent_name)
+    if from_dt:
+        filters.append(SecurityAlerts.last_seen >= from_dt)
+    if to_dt:
+        filters.append(SecurityAlerts.last_seen <= to_dt)
+ 
+    # total (pagination ke liye)
+    count_q = select(func.count()).select_from(SecurityAlerts)
+    if filters:
+        count_q = count_q.where(*filters)
+    total = (await db.execute(count_q)).scalar() or 0
+ 
+    # page ka data — naye alerts pehle
+    q = select(SecurityAlerts)
+    if filters:
+        q = q.where(*filters)
+    q = q.order_by(desc(SecurityAlerts.last_seen)) \
+         .limit(page_size).offset((page - 1) * page_size)
+ 
+    rows = (await db.execute(q)).scalars().all()
+ 
+    alerts = []
+    for r in rows:
+        d = AlertData.model_validate(r)
+        d.severity_label = SEVERITY_LABEL.get(r.severity, "unknown")   # number + label dono
+        alerts.append(d)
+ 
+    res_data = GetAlertsResponse(
+        total=total, page=page, page_size=page_size, alerts=alerts)
+    return standard_success_response(data=res_data, message="Alerts fetched successfully")
+
+@agent_management_router.get(
+    "/alerts-summary",
+    status_code=200)
+async def alerts_summary(
+    db: AsyncSession = Depends(get_async_db),
+    user: dict = Depends(verify_token),
+):
+    """rule-wise count."""
+ 
+    by_sev = (await db.execute(
+        select(SecurityAlerts.severity, func.count())
+        .group_by(SecurityAlerts.severity)
+        .order_by(SecurityAlerts.severity.desc())
+    )).all()
+ 
+    by_rule = (await db.execute(
+        select(SecurityAlerts.rule_id, func.count().label("c"))
+        .group_by(SecurityAlerts.rule_id)
+        .order_by(func.count().desc())
+        .limit(10)
+    )).all()
+ 
+    total = (await db.execute(select(func.count()).select_from(SecurityAlerts))).scalar() or 0
+ 
+    return standard_success_response(
+        data={
+            "total": total,
+            "by_severity": [{"severity": s, "count": c} for s, c in by_sev],
+            "top_rules":  [{"rule_id": r, "count": c} for r, c in by_rule],
+        },
+        message="Alerts summary")
