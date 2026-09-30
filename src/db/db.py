@@ -169,6 +169,7 @@ async def on_security_message(data_to_push):
         for cat, records in grouped.items():
             try:
                 result = await run_sigma_on_batch(session, category=cat, rows=records)
+                print(result)
                 if result.get("findings"):
                     print(f"[sigma-batch] {cat}: {result['findings']} alert(s) "
                           f"from {result.get('batch_size')} events")
