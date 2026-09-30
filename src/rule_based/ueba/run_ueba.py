@@ -46,13 +46,13 @@ ALERT_THRESHOLD = 3.0        # only persist windows at/above this deviation
 
 def _write_alerts(engine, entity_type, scored):
     import json
-    print(scored)
+    # print(scored)
     rows = [r for r in scored if not r.get("cold_start") and r["score"] >= ALERT_THRESHOLD]
     if not rows:
         return 0
     with engine.begin() as conn:
         for r in rows:
-            print(r)
+            # print(r)
             conn.execute(text(
                 "INSERT INTO ueba_alerts (entity_type, entity, time_window, score, reasons) "
                 "VALUES (:t, :e, :w, :s, :r)"),

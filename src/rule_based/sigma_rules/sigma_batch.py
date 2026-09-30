@@ -50,7 +50,7 @@ async def run_sigma_on_batch(session, category: str, rows: List[Dict[str, Any]],
     """MEMORY-based: har rule ko batch ke rows pe check karo, DB scan nahi."""
     table = CATEGORY_TABLE.get(category, category)
     grouped = _load_rules_grouped(rules_path)
-    print(table)
+    # print(table)
     rules = grouped.get(table, [])
     if not rules or not rows:
         return {"ran": 0, "findings": 0, "reason": "no rules or no rows"}

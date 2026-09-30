@@ -426,7 +426,6 @@ async def delete_credential(agent_name: str = Query(),
     category = "web_servers" if credential.engine in CATEGORIES["web_servers"] else category
     category = "app_servers" if credential.engine in CATEGORIES["app_servers"] else category
     result = await mqtt_request(agent_name=credential.agent_name, command="stop",args={"engine" : credential.engine ,  "service_name" : credential.service_name} , timeout=10.0)
-    print(result)
     await db.delete(credential)
     await db.commit()
 
