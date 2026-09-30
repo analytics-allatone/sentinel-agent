@@ -5,6 +5,16 @@ from .sigma_compiler import load_rules
 from datetime import datetime
 
 _RULES_BY_TABLE = None
+TABLE_TO_CATEGORY = {
+    "process_events": "process",
+    "network_events": "network",
+    "file_events":    "file",
+    "auth_events":    "authentication",
+    "usb_events":     "usb",
+    "mysql_db_events": "database", "postgres_db_events": "database",
+    "redis_db_events": "database", "oracle_db_events": "database",
+    "mongo_db_events": "database",
+}
 
 def _load_rules_grouped(rules_path=None):
     global _RULES_BY_TABLE
@@ -93,6 +103,7 @@ async def run_sigma_on_batch(session, category: str, rows: List[Dict[str, Any]],
                 "rule_id": f"SIGMA_{(rule.id or rule.title)[:40]}",
                 "severity": int(rule.severity),          # int pakka karo
                 "agent_name": agent,
+                "category": TABLE_TO_CATEGORY.get(table, table),
                 "entity": str(entity) if entity is not None else None,
                 "event_count": len(matched),             # int
                 "first_seen": dts[0] if dts else None,    # datetime, NOT str
@@ -106,10 +117,10 @@ async def run_sigma_on_batch(session, category: str, rows: List[Dict[str, Any]],
         try:
             await session.execute(text("""
                 INSERT INTO security_alerts
-                  (rule_id, severity, agent_name, entity, event_count,
+                  (rule_id, severity, category, agent_name, entity, event_count,
                    first_seen, last_seen, detail, technique, phase)
                 VALUES
-                  (:rule_id, :severity, :agent_name, :entity, :event_count,
+                  (:rule_id, :severity, :category, :agent_name, :entity, :event_count,
                    :first_seen, :last_seen, :detail, :technique, :phase)
                 ON CONFLICT (rule_id, agent_name, entity, first_seen)
                 DO UPDATE SET event_count = EXCLUDED.event_count,
