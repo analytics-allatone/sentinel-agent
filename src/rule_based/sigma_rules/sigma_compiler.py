@@ -196,7 +196,7 @@ class SigmaRule:
         if not where:
             raise UnmappableRule("empty condition")
         return where, params
-     def matches(self, record: dict) -> bool:
+    def matches(self, record: dict) -> bool:
         detection = self.doc.get("detection", {})
         if not detection:
             return False
