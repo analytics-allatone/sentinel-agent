@@ -637,9 +637,8 @@
 } */
 
 .soc2-btn-primary:hover:not(:disabled) {
-  background: #5039d1;
-
-  border-color: #5039d1;
+  background: #1f5fd1;
+border-color: #1f5fd1;
 
   color: #ffffff;
 }

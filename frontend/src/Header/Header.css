@@ -53,8 +53,25 @@
   color: #3498db;
 }
 .nav-link-btn {
-    padding: 8px 20px;
+  height: 36px;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  padding: 0 20px;
+
+  box-sizing: border-box;
+
+  line-height: 1;
 }
+
+.nav-link-btn:hover:not(:disabled) {
+  background: #1f5fd1;
+border-color: #1f5fd1;
+  color: #ffffff;
+}
+
 
 /* Mobile responsive */
 @media (max-width: 768px) {
@@ -77,11 +94,15 @@
     max-height: 300px;
   }
 
-  .nav-menu ul {
-    flex-direction: column;
-    gap: 0;
-    padding: 1rem 2rem;
-  }
+  ..nav-menu ul {
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
 
   .nav-menu a {
     display: block;
