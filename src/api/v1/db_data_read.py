@@ -186,7 +186,7 @@ async def db_data(
     if not data:
         raise HTTPException(404, f"no stored data for {engine} service '{service_name}' "
                                  "(not inspected yet, or name doesn't match what was stored)")
-    data={
+    data= {
   "status": "success",
   "message": "stored database data",
   "data": {
@@ -199,7 +199,7 @@ async def db_data(
         "sessions_current": 1,
         "sessions_active": 1,
         "sessions_blocked": 0,
-        "is_cdb": true,
+        "is_cdb": True,
         "uptime_seconds": 29128,
         "database_role": "PRIMARY",
         "open_mode": "READ WRITE",
@@ -596,15 +596,15 @@ async def db_data(
             "sid": 169,
             "event": "OFS idle",
             "serial": 10141,
-            "sql_id": null,
+            "sql_id": "null",
             "status": "ACTIVE",
             "machine": "274ae7bf37d4",
             "program": "oracle@274ae7bf37d4 (OFSD)",
-            "sql_text": null,
+            "sql_text": "null",
             "username": "SYS",
             "sql_child": 0,
             "wait_class": "Idle",
-            "blocking_session": null,
+            "blocking_session": "null",
             "duration_seconds": 29126
           }
         ],
@@ -614,7 +614,7 @@ async def db_data(
           "dictionary_hit_ratio": 92.72,
           "buffer_cache_hit_ratio": 98.87
         },
-        "memory": null,
+        "memory": "null",
         "resource_limits": [],
         "top_sql_elapsed": [
           {
@@ -1212,7 +1212,7 @@ async def db_data(
               "table_name": "TABPART$"
             }
           ],
-          "not_applicable": true
+          "not_applicable": True
         },
         "wal_checkpoint": [
           {
@@ -1224,8 +1224,8 @@ async def db_data(
         "wraparound_risk": "not applicable to Oracle",
         "replication_primary": "no Data Guard configured",
         "replication_delay": "no Data Guard / standby",
-        "standby_destinations": null,
-        "alert_log_errors": null,
+        "standby_destinations": "null",
+        "alert_log_errors": "null",
         "modified_parameters": [
           {
             "name": "_instance_recovery_bloom_filter_size",
@@ -1337,7 +1337,7 @@ async def db_data(
           }
         ],
         "rman_backups": "no RMAN backup jobs in last 7 days",
-        "system_resources": null,
+        "system_resources": "null",
         "health_summary": {
           "total_sessions": 1,
           "active_sessions": 1,
@@ -1384,8 +1384,8 @@ async def db_data(
             "created": "2026-04-29T01:35:46",
             "profile": "DEFAULT",
             "username": "PDBADMIN",
-            "lock_date": null,
-            "last_login": null,
+            "lock_date": "null",
+            "last_login": "null",
             "expiry_date": "2026-10-26T01:35:46",
             "pwd_life_time": "180",
             "account_status": "OPEN",
@@ -1407,14 +1407,14 @@ async def db_data(
           "inspect",
           "oracle"
         ],
-        "notes": null,
-        "inspected": true,
+        "notes": "null",
+        "inspected": True,
         "health_status": "healthy",
         "target_name": "oracle@141.148.220.11",
         "db_host": "141.148.220.11",
         "db_port": 1521,
         "db_version": "23.26.2.0.0",
-        "current_database": null,
+        "current_database": "null",
         "database_count": 1,
         "table_count": 2522,
         "total_size_bytes": 993001472,
@@ -1425,13 +1425,13 @@ async def db_data(
           }
         ],
         "issues": [],
-        "details": null,
+        "details": "null",
         "timestamp": "2026-09-29T12:20:24.333240+00:00",
         "ingested_at": "2026-09-29T12:20:50.020342+00:00"
       }
     ]
   }
-}    
+}   
     data= json.dumps(data, indent=4)
     return standard_success_response(
         data={"engine": _canon(engine), "service_name": service_name,
