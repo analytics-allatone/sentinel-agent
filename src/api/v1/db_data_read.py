@@ -186,14 +186,53 @@ async def db_data(
     if not data:
         raise HTTPException(404, f"no stored data for {engine} service '{service_name}' "
                                  "(not inspected yet, or name doesn't match what was stored)")
-    data={"status": "success","message": "stored database data","data": {"engine": "oracle","service_name": "freepdb1","matched_on": "service_name","count": 1,"rows": [{
-        "sessions_current": 86,"sessions_active": 86,"sessions_blocked": 0,"is_cdb": True,"uptime_seconds": 1316,"database_role": "PRIMARY","open_mode": "READ WRITE",
-        "cache_hit_pct": 97.74,"library_hit_pct": 88.77,"dict_hit_pct": 90.97,"connectivity_version": {"version": "23.26.2.0.0","log_mode": "ARCHIVELOG",
-          "host_name": "274ae7bf37d4","open_mode": "READ WRITE","server_host": "274ae7bf37d4","current_user": "SYSTEM","database_role": "PRIMARY","instance_name": "FREE",
-          "uptime_seconds": 1316,"instance_status": "OPEN","current_database": "FREEPDB1"},
-        "database_sizes": [{"max_mb": 33554432,"datname": "SYSAUX","free_mb": 53.6,"ts_type": "PERMANENT","used_mb": 466.4,"pct_used": 89.7,
-            "total_mb": 520,"pct_of_max": 0,"size_bytes": 545259520},
-          {"max_mb": 33554432,
+    data={
+  "status": "success",
+  "message": "stored database data",
+  "data": {
+    "engine": "oracle",
+    "service_name": "freepdb1",
+    "matched_on": "service_name",
+    "count": 1,
+    "rows": [
+      {
+        "sessions_current": 1,
+        "sessions_active": 1,
+        "sessions_blocked": 0,
+        "is_cdb": true,
+        "uptime_seconds": 29128,
+        "database_role": "PRIMARY",
+        "open_mode": "READ WRITE",
+        "cache_hit_pct": 98.87,
+        "library_hit_pct": 95.75,
+        "dict_hit_pct": 92.72,
+        "connectivity_version": {
+          "version": "23.26.2.0.0",
+          "log_mode": "ARCHIVELOG",
+          "host_name": "274ae7bf37d4",
+          "open_mode": "READ WRITE",
+          "server_host": "274ae7bf37d4",
+          "current_user": "SYSTEM",
+          "database_role": "PRIMARY",
+          "instance_name": "FREE",
+          "uptime_seconds": 29128,
+          "instance_status": "OPEN",
+          "current_database": "FREEPDB1"
+        },
+        "database_sizes": [
+          {
+            "max_mb": 33554432,
+            "datname": "SYSAUX",
+            "free_mb": 30.1,
+            "ts_type": "PERMANENT",
+            "used_mb": 509.9,
+            "pct_used": 94.43,
+            "total_mb": 540,
+            "pct_of_max": 0,
+            "size_bytes": 566231040
+          },
+          {
+            "max_mb": 33554432,
             "datname": "SYSTEM",
             "free_mb": 1.1,
             "ts_type": "PERMANENT",
@@ -206,10 +245,10 @@ async def db_data(
           {
             "max_mb": 33554432,
             "datname": "UNDOTBS1",
-            "free_mb": 74.8,
+            "free_mb": 78.7,
             "ts_type": "PERMANENT",
-            "used_mb": 25.3,
-            "pct_used": 25.25,
+            "used_mb": 21.3,
+            "pct_used": 21.31,
             "total_mb": 100,
             "pct_of_max": 0,
             "size_bytes": 104857600
@@ -240,7 +279,7 @@ async def db_data(
         "active_connections": [
           {
             "status": "ACTIVE",
-            "connections": 87
+            "connections": 84
           }
         ],
         "session_summary": {
@@ -300,6 +339,12 @@ async def db_data(
           },
           {
             "machine": "274ae7bf37d4",
+            "program": "oracle@274ae7bf37d4 (TT00)",
+            "sessions": 1,
+            "username": "(background)"
+          },
+          {
+            "machine": "274ae7bf37d4",
             "program": "oracle@274ae7bf37d4 (DIAG)",
             "sessions": 1,
             "username": "(background)"
@@ -348,7 +393,13 @@ async def db_data(
           },
           {
             "machine": "274ae7bf37d4",
-            "program": "oracle@274ae7bf37d4 (W001)",
+            "program": "oracle@274ae7bf37d4 (M005)",
+            "sessions": 1,
+            "username": "(background)"
+          },
+          {
+            "machine": "274ae7bf37d4",
+            "program": "oracle@274ae7bf37d4 (M003)",
             "sessions": 1,
             "username": "(background)"
           },
@@ -366,25 +417,19 @@ async def db_data(
           },
           {
             "machine": "274ae7bf37d4",
-            "program": "oracle@274ae7bf37d4 (TT00)",
+            "program": "oracle@274ae7bf37d4 (TT01)",
             "sessions": 1,
             "username": "(background)"
           },
           {
             "machine": "274ae7bf37d4",
-            "program": "oracle@274ae7bf37d4 (TT02)",
+            "program": "oracle@274ae7bf37d4 (ARC0)",
             "sessions": 1,
             "username": "(background)"
           },
           {
             "machine": "274ae7bf37d4",
-            "program": "oracle@274ae7bf37d4 (ARC1)",
-            "sessions": 1,
-            "username": "(background)"
-          },
-          {
-            "machine": "274ae7bf37d4",
-            "program": "oracle@274ae7bf37d4 (ARC3)",
+            "program": "oracle@274ae7bf37d4 (ARC2)",
             "sessions": 1,
             "username": "(background)"
           },
@@ -396,31 +441,25 @@ async def db_data(
           },
           {
             "machine": "274ae7bf37d4",
-            "program": "oracle@274ae7bf37d4 (M002)",
-            "sessions": 1,
-            "username": "(background)"
-          },
-          {
-            "machine": "274ae7bf37d4",
             "program": "oracle@274ae7bf37d4 (M004)",
             "sessions": 1,
             "username": "(background)"
           },
           {
+            "machine": "WINDOWS-EP8PIFQ",
+            "program": "D:\\Final\\sentinel-agent\\agent\\venv\\Scripts\\python.exe",
+            "sessions": 1,
+            "username": "SYSTEM"
+          },
+          {
             "machine": "274ae7bf37d4",
-            "program": "oracle@274ae7bf37d4 (M005)",
+            "program": "oracle@274ae7bf37d4 (QM02)",
             "sessions": 1,
             "username": "(background)"
           },
           {
             "machine": "274ae7bf37d4",
-            "program": "oracle@274ae7bf37d4 (M007)",
-            "sessions": 1,
-            "username": "(background)"
-          },
-          {
-            "machine": "274ae7bf37d4",
-            "program": "oracle@274ae7bf37d4 (Q002)",
+            "program": "oracle@274ae7bf37d4 (M002)",
             "sessions": 1,
             "username": "(background)"
           },
@@ -456,7 +495,7 @@ async def db_data(
           },
           {
             "machine": "274ae7bf37d4",
-            "program": "oracle@274ae7bf37d4 (PMAN)",
+            "program": "oracle@274ae7bf37d4 (GWPD)",
             "sessions": 1,
             "username": "(background)"
           },
@@ -468,7 +507,7 @@ async def db_data(
           },
           {
             "machine": "274ae7bf37d4",
-            "program": "oracle@274ae7bf37d4 (GWPD)",
+            "program": "oracle@274ae7bf37d4 (PMAN)",
             "sessions": 1,
             "username": "(background)"
           },
@@ -480,13 +519,13 @@ async def db_data(
           },
           {
             "machine": "274ae7bf37d4",
-            "program": "oracle@274ae7bf37d4 (SMCO)",
+            "program": "oracle@274ae7bf37d4 (CKPT)",
             "sessions": 1,
             "username": "(background)"
           },
           {
             "machine": "274ae7bf37d4",
-            "program": "oracle@274ae7bf37d4 (CKPT)",
+            "program": "oracle@274ae7bf37d4 (SMCO)",
             "sessions": 1,
             "username": "(background)"
           },
@@ -499,18 +538,6 @@ async def db_data(
           {
             "machine": "274ae7bf37d4",
             "program": "oracle@274ae7bf37d4 (MMNL)",
-            "sessions": 1,
-            "username": "(background)"
-          },
-          {
-            "machine": "WINDOWS-EP8PIFQ",
-            "program": "D:\\Final\\sentinel-agent\\agent\\venv\\Scripts\\python.exe",
-            "sessions": 1,
-            "username": "SYSTEM"
-          },
-          {
-            "machine": "274ae7bf37d4",
-            "program": "oracle@274ae7bf37d4 (M000)",
             "sessions": 1,
             "username": "(background)"
           },
@@ -528,25 +555,37 @@ async def db_data(
           },
           {
             "machine": "274ae7bf37d4",
-            "program": "oracle@274ae7bf37d4 (TT01)",
+            "program": "oracle@274ae7bf37d4 (TT02)",
             "sessions": 1,
             "username": "(background)"
           },
           {
             "machine": "274ae7bf37d4",
-            "program": "oracle@274ae7bf37d4 (ARC0)",
+            "program": "oracle@274ae7bf37d4 (ARC1)",
             "sessions": 1,
             "username": "(background)"
           },
           {
             "machine": "274ae7bf37d4",
-            "program": "oracle@274ae7bf37d4 (ARC2)",
+            "program": "oracle@274ae7bf37d4 (ARC3)",
             "sessions": 1,
             "username": "(background)"
           },
           {
             "machine": "274ae7bf37d4",
             "program": "oracle@274ae7bf37d4 (AQPC)",
+            "sessions": 1,
+            "username": "(background)"
+          },
+          {
+            "machine": "274ae7bf37d4",
+            "program": "oracle@274ae7bf37d4 (W001)",
+            "sessions": 1,
+            "username": "(background)"
+          },
+          {
+            "machine": "274ae7bf37d4",
+            "program": "oracle@274ae7bf37d4 (M007)",
             "sessions": 1,
             "username": "(background)"
           }
@@ -556,269 +595,269 @@ async def db_data(
           {
             "sid": 169,
             "event": "OFS idle",
-            "serial": 27562,
-            "sql_id": "Null",
+            "serial": 10141,
+            "sql_id": null,
             "status": "ACTIVE",
             "machine": "274ae7bf37d4",
             "program": "oracle@274ae7bf37d4 (OFSD)",
-            "sql_text": "Null",
+            "sql_text": null,
             "username": "SYS",
             "sql_child": 0,
             "wait_class": "Idle",
-            "blocking_session": "null",
-            "duration_seconds": 1315
+            "blocking_session": null,
+            "duration_seconds": 29126
           }
         ],
         "locks_blocking": [],
         "cache_hit_ratio": {
-          "library_hit_ratio": 88.77,
-          "dictionary_hit_ratio": 90.97,
-          "buffer_cache_hit_ratio": 97.74
+          "library_hit_ratio": 95.75,
+          "dictionary_hit_ratio": 92.72,
+          "buffer_cache_hit_ratio": 98.87
         },
-        "memory": "null",
+        "memory": null,
         "resource_limits": [],
         "top_sql_elapsed": [
           {
-            "cpu_s": 1.65,
-            "avg_ms": 308.8,
+            "cpu_s": 5.13,
+            "avg_ms": 200.51,
+            "sql_id": "ampw9ddqufjd3",
+            "sql_text": "begin /*KAPI:capture*/ dbms_auto_index_internal.capture_sts; end;",
+            "elapsed_s": 6.42,
+            "disk_reads": 835,
+            "executions": 32,
+            "buffer_gets": 222612,
+            "parsing_schema": "SYS",
+            "rows_processed": 32
+          },
+          {
+            "cpu_s": 5.76,
+            "avg_ms": 8.19,
+            "sql_id": "f6w8rqdkx0bnv",
+            "sql_text": "SELECT * FROM ( SELECT /*+ ordered use_nl(o c cu h) index(u i_user1) index(o i_obj2)                index(ci_obj#) index(cu i_col_usage$)                index(h i_hh_obj#_intcol#)                 OPT_PARAM('_parallel_syspls_obey_force' 'false') */ C.NAME COL_NAME, C.TYPE# COL_TYPE, C.CHARSETFORM COL_CSF, CASE WHEN C.DEFLENGTH <= 32767 THEN C.DEFAULT$ ELSE NULL END COL_DEF, C.NULL$ COL_NULL, C.PROP",
+            "elapsed_s": 5.9,
+            "disk_reads": 1,
+            "executions": 720,
+            "buffer_gets": 282744,
+            "parsing_schema": "SYS",
+            "rows_processed": 11784
+          },
+          {
+            "cpu_s": 4.48,
+            "avg_ms": 62.35,
             "sql_id": "b39m8n96gxk7c",
             "sql_text": "call dbms_autotask_prvt.run_autotask ( :0,:1 )",
-            "elapsed_s": 2.47,
-            "disk_reads": 1055,
-            "executions": 8,
-            "buffer_gets": 70662,
+            "elapsed_s": 5.42,
+            "disk_reads": 1,
+            "executions": 87,
+            "buffer_gets": 190069,
             "parsing_schema": "SYS",
             "rows_processed": 0
           },
           {
-            "cpu_s": 0.26,
-            "avg_ms": 840.33,
-            "sql_id": "cz8wbmy7k5bxn",
-            "sql_text": "begin sys.dbms_aq_inv.internal_purge_queue_table(:1, :2, :3, :4, :5, :6, :7, :8 , FALSE);end;",
-            "elapsed_s": 1.68,
-            "disk_reads": 116,
-            "executions": 2,
-            "buffer_gets": 2582,
+            "cpu_s": 3.16,
+            "avg_ms": 100.37,
+            "sql_id": "avzy19hxu6gg4",
+            "sql_text": "SELECT VALUE(P) FROM TABLE(DBMS_SQLTUNE.SELECT_CURSOR_CACHE( BASIC_FILTER=> q'# (module is null or (module != '#' || :B1 || q'#' and module != '#' || :B2 || q'#')) and sql_text not like 'SELECT /* DS_SVC */%'                  and sql_text not like 'SELECT /* OPT_DYN_SAMP */%'                  and sql_text not like '/*AUTO_INDEX:ddl*/%'                  and sql_text not like '%/*+%dbms_stats%'     ",
+            "elapsed_s": 3.21,
+            "disk_reads": 64,
+            "executions": 32,
+            "buffer_gets": 7847,
             "parsing_schema": "SYS",
-            "rows_processed": 2
+            "rows_processed": 0
           },
           {
-            "cpu_s": 0.07,
-            "avg_ms": 2.76,
+            "cpu_s": 1.97,
+            "avg_ms": 86.5,
+            "sql_id": "afcz0dh295hzp",
+            "sql_text": " SELECT /*+ first_rows(1) */ sql_id, force_matching_signature, sql_text, cast(NULL as SQL_OBJECTS) object_list, bind_data, parsing_schema_name, module, action, elapsed_time, cpu_time, buffer_gets, disk_reads, direct_writes,rows_processed, fetches, executions, end_of_fetch_count, optimizer_cost, optimizer_env,NULL priority, command_type, first_load_time, null stat_period, null active_stat_period, N",
+            "elapsed_s": 1.99,
+            "disk_reads": 0,
+            "executions": 23,
+            "buffer_gets": 4108,
+            "parsing_schema": "SYS",
+            "rows_processed": 0
+          },
+          {
+            "cpu_s": 1.68,
+            "avg_ms": 99.68,
+            "sql_id": "61znfd8fvgha6",
+            "sql_text": "SELECT  new.sql_seq, old.plan_hash_value, sqlset_row(new.sql_id,new.force_matching_signature,  new.sql_text, new.object_list,  new.bind_data, new.parsing_schema_name,  new.module, new.action, new.elapsed_time,  new.cpu_time, new.buffer_gets,  new.disk_reads, new.direct_writes,  new.rows_processed, new.fetches, new.executions,  new.end_of_fetch_count,  new.optimizer_cost, new.optimizer_env,  new.pr",
+            "elapsed_s": 1.69,
+            "disk_reads": 0,
+            "executions": 17,
+            "buffer_gets": 3589,
+            "parsing_schema": "SYS",
+            "rows_processed": 0
+          },
+          {
+            "cpu_s": 0.13,
+            "avg_ms": 1.06,
             "sql_id": "3un99a0zwp4vd",
             "sql_text": "select owner#,name,namespace,remoteowner,linkname,p_timestamp,p_obj#, nvl(property,0),subname,type#,flags,d_attrs from dependency$ d, obj$ o where d_obj#=:1 and p_obj#=obj#(+) order by order#",
-            "elapsed_s": 1.37,
-            "disk_reads": 229,
-            "executions": 495,
-            "buffer_gets": 7315,
+            "elapsed_s": 1.33,
+            "disk_reads": 278,
+            "executions": 1255,
+            "buffer_gets": 12661,
             "parsing_schema": "SYS",
-            "rows_processed": 2948
+            "rows_processed": 4662
           },
           {
-            "cpu_s": 0.09,
-            "avg_ms": 0.83,
-            "sql_id": "2sxqgx5hx76qr",
-            "sql_text": "select /*+ rule */ bucket, endpoint, col#, epvalue, epvalue_raw, ep_repeat_count, endpoint_enc from histgrm$ where obj#=:1 and intcol#=:2 and row#=:3 order by bucket",
-            "elapsed_s": 1.18,
-            "disk_reads": 586,
-            "executions": 1417,
-            "buffer_gets": 4828,
-            "parsing_schema": "SYS",
-            "rows_processed": 19998
-          },
-          {
-            "cpu_s": 0.26,
-            "avg_ms": 532.52,
+            "cpu_s": 0.43,
+            "avg_ms": 242.71,
             "sql_id": "fnx04kam5mqya",
             "sql_text": "SELECT df.tablespace_name AS datname, df.total_bytes AS size_bytes, 'PERMANENT' AS ts_type, ROUND((df.total_bytes-NVL(fs.free_bytes,0))/1048576,1) AS used_mb, ROUND(NVL(fs.free_bytes,0)/1048576,1) AS free_mb, ROUND(df.total_bytes/1048576,1) AS total_mb, ROUND(df.max_bytes/1048576,1) AS max_mb, ROUND((df.total_bytes-NVL(fs.free_bytes,0))*100/NULLIF(df.total_bytes,0),2) AS pct_used, ROUND((df.total_",
-            "elapsed_s": 1.07,
-            "disk_reads": 5079,
-            "executions": 2,
-            "buffer_gets": 14290,
+            "elapsed_s": 1.21,
+            "disk_reads": 11481,
+            "executions": 5,
+            "buffer_gets": 35765,
             "parsing_schema": "SYSTEM",
-            "rows_processed": 8
+            "rows_processed": 20
           },
           {
-            "cpu_s": 0.12,
-            "avg_ms": 0.19,
-            "sql_id": "0sbbcuruzd66f",
-            "sql_text": "select /*+ rule */ bucket_cnt, row_cnt, cache_cnt, null_cnt, timestamp#, sample_size, minimum, maximum, distcnt, lowval, hival, density, col#, spare1, spare2, avgcln, minimum_enc, maximum_enc from hist_head$ where obj#=:1 and intcol#=:2",
-            "elapsed_s": 1.06,
-            "disk_reads": 304,
-            "executions": 5493,
-            "buffer_gets": 15842,
+            "cpu_s": 0.95,
+            "avg_ms": 0.09,
+            "sql_id": "5rurx5xtjwcu2",
+            "sql_text": "SELECT /*+ OPT_PARAM('_parallel_syspls_obey_force' 'false') */ KSPPCV.KSPPSTVL FROM X$KSPPCV KSPPCV, X$KSPPI KSPPI WHERE KSPPI.INDX = KSPPCV.INDX AND KSPPI.KSPPINM = :B1 ",
+            "elapsed_s": 1,
+            "disk_reads": 0,
+            "executions": 11604,
+            "buffer_gets": 86,
             "parsing_schema": "SYS",
-            "rows_processed": 4843
+            "rows_processed": 11604
           },
           {
-            "cpu_s": 0.16,
-            "avg_ms": 511.69,
-            "sql_id": "f69nhnfjp7xrg",
-            "sql_text": "select type from sys.all_queue_tables where owner = :1 and queue_table = :2",
-            "elapsed_s": 1.02,
-            "disk_reads": 8,
-            "executions": 2,
-            "buffer_gets": 325,
+            "cpu_s": 0.33,
+            "avg_ms": 38.05,
+            "sql_id": "b7wvutrbhf7jg",
+            "sql_text": "MERGE INTO SYS.SQLOBJ$BV sbv USING (SELECT 1 FROM SYS.DUAL)  ON (1 = 1)  WHEN MATCHED THEN  UPDATE SET sbv.multi_plans_bv_seg_count = :1,  sbv.plan_existence_bv_seg_count = :2,  sbv.multi_plans_bv = :3,  sbv.plan_existence_bv = :4  WHEN NOT MATCHED THEN  INSERT (multi_plans_bv_seg_count, plan_existence_bv_seg_count,  multi_plans_bv, plan_existence_bv) VALUES  (:5, :6, :7, :8)",
+            "elapsed_s": 0.99,
+            "disk_reads": 0,
+            "executions": 26,
+            "buffer_gets": 53553,
             "parsing_schema": "SYS",
-            "rows_processed": 2
-          },
-          {
-            "cpu_s": 0.16,
-            "avg_ms": 18.81,
-            "sql_id": "bgxtkrz2p3k08",
-            "sql_text": "SELECT VALUE FROM SYS.V_$PARAMETER WHERE CON_ID=:B1 AND NAME = 'compatible'",
-            "elapsed_s": 0.75,
-            "disk_reads": 5,
-            "executions": 40,
-            "buffer_gets": 68,
-            "parsing_schema": "SYS",
-            "rows_processed": 40
-          },
-          {
-            "cpu_s": 0.19,
-            "avg_ms": 276.59,
-            "sql_id": "586577qpbkgnk",
-            "sql_text": "select 1 from DBA_SCHEDULER_JOBS  where JOB_NAME like 'KWQICPOSTMSGDEL_1_%' and  JOB_ACTION = 'DBMS_AQADM_SYS.REMOVE_ORPHMSGS'",
-            "elapsed_s": 0.55,
-            "disk_reads": 3,
-            "executions": 2,
-            "buffer_gets": 842,
-            "parsing_schema": "SYS",
-            "rows_processed": 0
-          },
-          {
-            "cpu_s": 0.06,
-            "avg_ms": 0.31,
-            "sql_id": "f3ww8rgva3hrs",
-            "sql_text": "update /* KSXM:FLUSH COL */ sys.col_usage$ set                  equality_preds    = equality_preds    + decode(bitand(:flag,1),0,0,1),   equijoin_preds    = equijoin_preds    + decode(bitand(:flag,2),0,0,1),   nonequijoin_preds = nonequijoin_preds + decode(bitand(:flag,4),0,0,1),   range_preds       = range_preds       + decode(bitand(:flag,8),0,0,1),   like_preds        = like_preds        + deco",
-            "elapsed_s": 0.42,
-            "disk_reads": 12,
-            "executions": 1357,
-            "buffer_gets": 4619,
-            "parsing_schema": "SYS",
-            "rows_processed": 1357
+            "rows_processed": 26
           }
         ],
         "top_sql_executions": [
           {
-            "cpu_s": 0.12,
-            "avg_ms": 0.19,
-            "sql_id": "0sbbcuruzd66f",
-            "sql_text": "select /*+ rule */ bucket_cnt, row_cnt, cache_cnt, null_cnt, timestamp#, sample_size, minimum, maximum, distcnt, lowval, hival, density, col#, spare1, spare2, avgcln, minimum_enc, maximum_enc from hist_head$ where obj#=:1 and intcol#=:2",
-            "elapsed_s": 1.06,
-            "disk_reads": 304,
-            "executions": 5493,
-            "buffer_gets": 15842,
+            "cpu_s": 0.47,
+            "avg_ms": 0.01,
+            "sql_id": "62yyzw3309d6a",
+            "sql_text": "SELECT VALUE FROM V$SESSION_FIX_CONTROL WHERE BUGNO = :B1 AND SESSION_ID = USERENV('SID')",
+            "elapsed_s": 0.5,
+            "disk_reads": 5,
+            "executions": 47074,
+            "buffer_gets": 149,
             "parsing_schema": "SYS",
-            "rows_processed": 4843
+            "rows_processed": 47074
           },
           {
-            "cpu_s": 0.08,
-            "avg_ms": 0.25,
-            "sql_id": "acmvv4fhdc9zh",
-            "sql_text": "select obj#,type#,ctime,mtime,stime, status, dataobj#, flags, oid$, spare1, spare2, spare3, signature, spare7, spare8, spare9, nvl(dflcollid, 16382), creappid, creverid, modappid, modverid, crepatchid, modpatchid from obj$ where owner#=:1 and name=:2 and namespace=:3 and remoteowner is null and linkname is null and subname is null",
-            "elapsed_s": 0.37,
-            "disk_reads": 187,
-            "executions": 1503,
-            "buffer_gets": 6250,
-            "parsing_schema": "SYS",
-            "rows_processed": 1456
-          },
-          {
-            "cpu_s": 0.09,
-            "avg_ms": 0.83,
-            "sql_id": "2sxqgx5hx76qr",
-            "sql_text": "select /*+ rule */ bucket, endpoint, col#, epvalue, epvalue_raw, ep_repeat_count, endpoint_enc from histgrm$ where obj#=:1 and intcol#=:2 and row#=:3 order by bucket",
-            "elapsed_s": 1.18,
-            "disk_reads": 586,
-            "executions": 1417,
-            "buffer_gets": 4828,
-            "parsing_schema": "SYS",
-            "rows_processed": 19998
-          },
-          {
-            "cpu_s": 0.02,
-            "avg_ms": 0.08,
-            "sql_id": "53saa2zkr6wc3",
-            "sql_text": "select intcol#,nvl(pos#,0),col#,nvl(spare1,0) from ccol$ where con#=:1",
-            "elapsed_s": 0.11,
-            "disk_reads": 21,
-            "executions": 1404,
-            "buffer_gets": 6440,
-            "parsing_schema": "SYS",
-            "rows_processed": 1816
-          },
-          {
-            "cpu_s": 0.06,
-            "avg_ms": 0.31,
-            "sql_id": "f3ww8rgva3hrs",
-            "sql_text": "update /* KSXM:FLUSH COL */ sys.col_usage$ set                  equality_preds    = equality_preds    + decode(bitand(:flag,1),0,0,1),   equijoin_preds    = equijoin_preds    + decode(bitand(:flag,2),0,0,1),   nonequijoin_preds = nonequijoin_preds + decode(bitand(:flag,4),0,0,1),   range_preds       = range_preds       + decode(bitand(:flag,8),0,0,1),   like_preds        = like_preds        + deco",
-            "elapsed_s": 0.42,
-            "disk_reads": 12,
-            "executions": 1357,
-            "buffer_gets": 4619,
-            "parsing_schema": "SYS",
-            "rows_processed": 1357
-          },
-          {
-            "cpu_s": 0.04,
-            "avg_ms": 0.08,
-            "sql_id": "04kug40zbu4dm",
-            "sql_text": "select policy#, action# from aud_object_opt$ where object# = :1 and type = 2",
-            "elapsed_s": 0.07,
-            "disk_reads": 15,
-            "executions": 926,
-            "buffer_gets": 13004,
-            "parsing_schema": "SYS",
-            "rows_processed": 1
-          },
-          {
-            "cpu_s": 0.02,
-            "avg_ms": 0.02,
-            "sql_id": "dkpbcdcp1bwpb",
-            "sql_text": "select policy#, action#, intcol# from sys.aud_objcol_opt$           where object# = :1",
-            "elapsed_s": 0.02,
-            "disk_reads": 1,
-            "executions": 926,
-            "buffer_gets": 959,
+            "cpu_s": 0.29,
+            "avg_ms": 0.03,
+            "sql_id": "g3jx9qzg4mz0t",
+            "sql_text": "SELECT idx_objn, nvl(idx_objd, 0), idx_base_table_objn, idx_spare1, nvl(json_value(idx_spare2, '$.build_scn'), 0) FROM vecsys.vector$index WHERE JSON_VALUE(idx_params, '$.type') = :1",
+            "elapsed_s": 0.33,
+            "disk_reads": 7,
+            "executions": 11799,
+            "buffer_gets": 827,
             "parsing_schema": "SYS",
             "rows_processed": 0
           },
           {
-            "cpu_s": 0.02,
-            "avg_ms": 0.07,
-            "sql_id": "87gaftwrm2h68",
-            "sql_text": "select o.owner#,o.name,o.namespace,o.remoteowner,o.linkname,o.subname from obj$ o where o.obj#=:1",
+            "cpu_s": 0.06,
+            "avg_ms": 0.01,
+            "sql_id": "6h19at4ub9n15",
+            "sql_text": "SELECT /*+ OPT_PARAM('_parallel_syspls_obey_force' 'false') */ COUNT(*) FROM COL$ C WHERE C.OBJ# = :B2 AND C.NAME = :B1 AND (BITAND(PROPERTY, 8796093022208) > 0 OR (EXISTS (SELECT * FROM OBJ$ O WHERE O.OBJ# = :B2 AND O.OWNER# = :B3 AND O.NAME = 'USER$') AND :B1 IN ('SPARE4', 'PASSWORD')))",
             "elapsed_s": 0.06,
-            "disk_reads": 24,
-            "executions": 856,
-            "buffer_gets": 2530,
+            "disk_reads": 0,
+            "executions": 11750,
+            "buffer_gets": 23502,
             "parsing_schema": "SYS",
-            "rows_processed": 808
+            "rows_processed": 11750
           },
           {
-            "cpu_s": 0.01,
-            "avg_ms": 0.03,
-            "sql_id": "0yn07bvqs30qj",
-            "sql_text": "select pctfree_stg, pctused_stg, size_stg,initial_stg, next_stg, minext_stg, maxext_stg, maxsiz_stg, lobret_stg,mintim_stg, pctinc_stg, initra_stg, maxtra_stg, optimal_stg, maxins_stg,frlins_stg, flags_stg, bfp_stg, enc_stg, cmpflag_stg, cmplvl_stg,imcflag_stg, ccflag_stg, flags2_stg from deferred_stg$  where obj# =:1",
-            "elapsed_s": 0.03,
-            "disk_reads": 22,
-            "executions": 832,
-            "buffer_gets": 2496,
-            "parsing_schema": "SYS",
-            "rows_processed": 832
-          },
-          {
-            "cpu_s": 0.02,
+            "cpu_s": 0.95,
             "avg_ms": 0.09,
-            "sql_id": "9tgj4g8y4rwy8",
-            "sql_text": "select type#,blocks,extents,minexts,maxexts,extsize,extpct,user#,iniexts,NVL(lists,65535),NVL(groups,65535),cachehint,hwmincr, NVL(spare1,0),NVL(scanhint,0),NVL(bitmapranges,0) from seg$ where ts#=:1 and file#=:2 and block#=:3",
-            "elapsed_s": 0.07,
-            "disk_reads": 23,
-            "executions": 778,
-            "buffer_gets": 2409,
+            "sql_id": "5rurx5xtjwcu2",
+            "sql_text": "SELECT /*+ OPT_PARAM('_parallel_syspls_obey_force' 'false') */ KSPPCV.KSPPSTVL FROM X$KSPPCV KSPPCV, X$KSPPI KSPPI WHERE KSPPI.INDX = KSPPCV.INDX AND KSPPI.KSPPINM = :B1 ",
+            "elapsed_s": 1,
+            "disk_reads": 0,
+            "executions": 11604,
+            "buffer_gets": 86,
             "parsing_schema": "SYS",
-            "rows_processed": 778
+            "rows_processed": 11604
+          },
+          {
+            "cpu_s": 0.04,
+            "avg_ms": 0,
+            "sql_id": "f6rzrh96swb4h",
+            "sql_text": "SELECT :B1 ",
+            "elapsed_s": 0.05,
+            "disk_reads": 0,
+            "executions": 11176,
+            "buffer_gets": 4,
+            "parsing_schema": "SYS",
+            "rows_processed": 11176
+          },
+          {
+            "cpu_s": 0.07,
+            "avg_ms": 0.01,
+            "sql_id": "4rg3vr6z5yw7m",
+            "sql_text": "select /* KSXM:FIND OWNER */ owner# from sys.obj$ where obj# = :objn",
+            "elapsed_s": 0.08,
+            "disk_reads": 0,
+            "executions": 10554,
+            "buffer_gets": 21117,
+            "parsing_schema": "SYS",
+            "rows_processed": 10554
+          },
+          {
+            "cpu_s": 0.09,
+            "avg_ms": 0.04,
+            "sql_id": "cd5hruubgjzm4",
+            "sql_text": "SELECT using_tableobjn, retention, manual_purgescn,                u.name as owner_name, o.name as table_name           FROM directive$ d                                           JOIN obj$ o ON d.using_tableobjn = o.obj#                   JOIN user$ u ON o.owner# = u.user#                          WHERE d.TYPE# = :1 ",
+            "elapsed_s": 0.24,
+            "disk_reads": 0,
+            "executions": 5588,
+            "buffer_gets": 22,
+            "parsing_schema": "SYS",
+            "rows_processed": 0
+          },
+          {
+            "cpu_s": 0.05,
+            "avg_ms": 0.02,
+            "sql_id": "53saa2zkr6wc3",
+            "sql_text": "select intcol#,nvl(pos#,0),col#,nvl(spare1,0) from ccol$ where con#=:1",
+            "elapsed_s": 0.13,
+            "disk_reads": 21,
+            "executions": 5580,
+            "buffer_gets": 26413,
+            "parsing_schema": "SYS",
+            "rows_processed": 7610
+          },
+          {
+            "cpu_s": 0.13,
+            "avg_ms": 0.03,
+            "sql_id": "aqt2vfxb5b5ad",
+            "sql_text": "SELECT idx_objn, idx_base_table_objn, idx_spare1, json_value(IDX_SPARE2, '$.counter') FROM vecsys.vector$index WHERE JSON_VALUE(idx_params, '$.type') = :1 AND JSON_VALUE(idx_params, '$.vector_dimension') != 0 AND JSON_VALUE(idx_params, '$.vector_type') != 'FLEXIBLE' AND (NOT JSON_EXISTS(idx_params, '$.duplicate') OR  JSON_VALUE(idx_params, '$.duplicate') != 'NONE')",
+            "elapsed_s": 0.14,
+            "disk_reads": 0,
+            "executions": 5516,
+            "buffer_gets": 90,
+            "parsing_schema": "SYS",
+            "rows_processed": 0
+          },
+          {
+            "cpu_s": 0.07,
+            "avg_ms": 0.01,
+            "sql_id": "5c4sr912n136n",
+            "sql_text": "SELECT /*+ OPT_PARAM('_parallel_syspls_obey_force' 'false') */ SPARE4, SVAL1 FROM SYS.OPTSTAT_HIST_CONTROL$ WHERE SNAME = :B1 ",
+            "elapsed_s": 0.07,
+            "disk_reads": 0,
+            "executions": 5343,
+            "buffer_gets": 10693,
+            "parsing_schema": "SYS",
+            "rows_processed": 5343
           }
         ],
         "top_segments": [
@@ -1098,10 +1137,6 @@ async def db_data(
             },
             {
               "owner": "SYS",
-              "table_name": "UNDO$"
-            },
-            {
-              "owner": "SYS",
               "table_name": "SEG$"
             },
             {
@@ -1114,23 +1149,7 @@ async def db_data(
             },
             {
               "owner": "SYS",
-              "table_name": "PDB_STAT$"
-            },
-            {
-              "owner": "SYS",
-              "table_name": "OBJNUM_REUSE"
-            },
-            {
-              "owner": "SYS",
-              "table_name": "SMB$CONFIG"
-            },
-            {
-              "owner": "SYS",
               "table_name": "SQLOBJ$BV"
-            },
-            {
-              "owner": "SYS",
-              "table_name": "SMON_SCN_TIME"
             },
             {
               "owner": "SYS",
@@ -1170,23 +1189,43 @@ async def db_data(
             },
             {
               "owner": "SYS",
-              "table_name": "OPT_FINDING$"
+              "table_name": "OPT_DIRECTIVE_OWN$"
+            },
+            {
+              "owner": "SYS",
+              "table_name": "OPT_DIRECTIVE$"
+            },
+            {
+              "owner": "SYS",
+              "table_name": "OPTSTAT_SNAPSHOT$"
+            },
+            {
+              "owner": "SYS",
+              "table_name": "EXP_HEAD$"
+            },
+            {
+              "owner": "SYS",
+              "table_name": "OPT_SQLSTAT$"
+            },
+            {
+              "owner": "SYS",
+              "table_name": "TABPART$"
             }
           ],
-          "not_applicable": True
+          "not_applicable": true
         },
         "wal_checkpoint": [
           {
-            "actual_redo_blks": 4162,
-            "target_redo_blks": 663552,
-            "recovery_estimated_ios": 154
+            "actual_redo_blks": 107,
+            "target_redo_blks": 27714,
+            "recovery_estimated_ios": 40
           }
         ],
         "wraparound_risk": "not applicable to Oracle",
         "replication_primary": "no Data Guard configured",
         "replication_delay": "no Data Guard / standby",
-        "standby_destinations": "null",
-        "alert_log_errors": "null",
+        "standby_destinations": null,
+        "alert_log_errors": null,
         "modified_parameters": [
           {
             "name": "_instance_recovery_bloom_filter_size",
@@ -1297,15 +1336,65 @@ async def db_data(
             "is_modified": "FALSE"
           }
         ],
-        "rman_backups": [],
-        "system_resources": "null",
+        "rman_backups": "no RMAN backup jobs in last 7 days",
+        "system_resources": null,
         "health_summary": {
-          "total_sessions": 86,
-          "active_sessions": 86,
+          "total_sessions": 1,
+          "active_sessions": 1,
           "blocked_sessions": 0,
-          "total_size_bytes": 972029952
+          "total_size_bytes": 993001472
         },
-        "id": 56,
+        "fast_recovery_area": "no FRA configured",
+        "top_temp_sessions": [],
+        "redo_log_switches": [],
+        "archive_log_daily": [
+          {
+            "day": "2026-09-14",
+            "size_gb": 0.19,
+            "size_mb": 194,
+            "archives": 1,
+            "day_name": "MON"
+          },
+          {
+            "day": "2026-09-18",
+            "size_gb": 0.35,
+            "size_mb": 362.31,
+            "archives": 2,
+            "day_name": "FRI"
+          },
+          {
+            "day": "2026-09-25",
+            "size_gb": 0.18,
+            "size_mb": 182.31,
+            "archives": 1,
+            "day_name": "FRI"
+          },
+          {
+            "day": "2026-09-29",
+            "size_gb": 0.19,
+            "size_mb": 197.65,
+            "archives": 1,
+            "day_name": "TUE"
+          }
+        ],
+        "datafiles_offline": [],
+        "failed_scheduler_jobs": [],
+        "user_accounts": [
+          {
+            "created": "2026-04-29T01:35:46",
+            "profile": "DEFAULT",
+            "username": "PDBADMIN",
+            "lock_date": null,
+            "last_login": null,
+            "expiry_date": "2026-10-26T01:35:46",
+            "pwd_life_time": "180",
+            "account_status": "OPEN",
+            "days_to_expire": 27,
+            "default_tablespace": "USERS",
+            "temporary_tablespace": "TEMP"
+          }
+        ],
+        "id": 2,
         "agent_name": "agent1",
         "service_name": "freepdb1",
         "engine": "oracle",
@@ -1318,17 +1407,17 @@ async def db_data(
           "inspect",
           "oracle"
         ],
-        "notes": "null",
-        "inspected": True,
+        "notes": null,
+        "inspected": true,
         "health_status": "healthy",
         "target_name": "oracle@141.148.220.11",
         "db_host": "141.148.220.11",
         "db_port": 1521,
         "db_version": "23.26.2.0.0",
-        "current_database": "null",
+        "current_database": null,
         "database_count": 1,
         "table_count": 2522,
-        "total_size_bytes": 972029952,
+        "total_size_bytes": 993001472,
         "databases": [
           {
             "name": "FREEPDB1",
@@ -1336,14 +1425,13 @@ async def db_data(
           }
         ],
         "issues": [],
-        "details": "null",
-        "timestamp": "2026-09-23T15:13:50.589468+00:00",
-        "ingested_at": "2026-09-23T15:14:03.128682+00:00"
+        "details": null,
+        "timestamp": "2026-09-29T12:20:24.333240+00:00",
+        "ingested_at": "2026-09-29T12:20:50.020342+00:00"
       }
     ]
   }
-}   
-    
+}    
     data= json.dumps(data, indent=4)
     return standard_success_response(
         data={"engine": _canon(engine), "service_name": service_name,
