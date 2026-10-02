@@ -201,21 +201,38 @@
 
 /* ── buttons ─────────────────────────────────────────────── */
 .capacity-dash__btn {
-  height: 34px;
-  background: var(--cap-panel-hi);
-  border: 1px solid var(--cap-border);
-  border-radius: 6px;
-  color: var(--cap-text);
-  font-family: var(--font-mono);
-  font-size: 12px;
-  padding: 0 11px;
+  height: 38px;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+
+  color: var(--text);
+
+  font-family: var(--font-body);
+  font-size: var(--text-xs);
+  font-weight: 600;
+
+  padding: 0 14px;
+
   cursor: pointer;
   white-space: nowrap;
-  transition: background 0.12s ease, border-color 0.12s ease;
+
+  transition:
+    background 0.18s ease,
+    border-color 0.18s ease,
+    box-shadow 0.18s ease,
+    transform 0.18s ease;
 }
+
 .capacity-dash__btn:hover:not(:disabled) {
-  background: var(--cap-btn-hover);
-  border-color: var(--cap-faint);
+  background: var(--accent-soft);
+  border-color: var(--border-strong);
+  color: var(--accent);
 }
 .capacity-dash__btn:focus-visible {
   outline: 2px solid var(--cap-mem);
@@ -226,12 +243,15 @@
   cursor: default;
 }
 .capacity-dash__btn--primary {
-  background: var(--cap-accent-bg);
-  border-color: var(--cap-accent-border);
-  color: var(--cap-accent-text);
+  background: #0f2447;
+  border-color: #0f2447;
+  color: #ffffff;
 }
+
 .capacity-dash__btn--primary:hover:not(:disabled) {
-  background: var(--cap-accent-border);
+  background: #1f5fd1;
+border-color: #1f5fd1;
+  color: #ffffff;
 }
 .capacity-dash__btn--icon {
   width: 34px;
@@ -1580,14 +1600,15 @@
 /* Primary action button used for Send PDF / Send Report */
 
 .capacity-dash__btn--primary {
-  background: #2563eb;
-  border-color: #2563eb;
+  background: #0f2447;
+  border-color: #0f2447;
   color: #ffffff;
 }
 
 .capacity-dash__btn--primary:hover:not(:disabled) {
-  background: #1d4ed8;
-  border-color: #1d4ed8;
+  background: #1f5fd1;
+border-color: #1f5fd1;
+  color: #ffffff;
 }
 
 .capacity-dash__btn--primary:disabled {

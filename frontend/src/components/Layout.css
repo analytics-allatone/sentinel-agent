@@ -12,8 +12,8 @@
    ========================================= */
 
 .layout.sidebar-open .layout-main {
-  margin-left: 246px;
-  width: calc(100% - 246px);
+  margin-left: var(--sidebar-w);
+  width: calc(100% - var(--sidebar-w));
 }
 
 
@@ -60,12 +60,10 @@
    ========================================= */
 
 @media (max-width: 1280px) {
-
   .layout.sidebar-open .layout-main {
-    margin-left: 220px;
-    width: calc(100% - 220px);
+    margin-left: var(--sidebar-w);
+    width: calc(100% - var(--sidebar-w));
   }
-
 }
 
 

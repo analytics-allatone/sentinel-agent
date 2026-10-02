@@ -1,4 +1,10 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useSearchParams } from "react-router-dom";
 import "./SOC2Report.css";
 
@@ -72,7 +78,13 @@ const TABS = [
 
 function ShieldIcon() {
   return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+    <svg
+      width="20"
+      height="20"
+      viewBox="0 0 24 24"
+      fill="none"
+      aria-hidden="true"
+    >
       <path
         d="M12 2 4 5v6c0 5 3.4 8.5 8 11 4.6-2.5 8-6 8-11V5l-8-3Z"
         fill="#185FA5"
@@ -89,7 +101,10 @@ function ShieldIcon() {
 }
 
 function isCanceled(err) {
-  return Boolean(err) && (err.code === "ERR_CANCELED" || err.name === "CanceledError");
+  return (
+    Boolean(err) &&
+    (err.code === "ERR_CANCELED" || err.name === "CanceledError")
+  );
 }
 
 /**
@@ -114,15 +129,12 @@ export default function SOC2Report() {
   const [searchParams, setSearchParams] = useSearchParams();
   const initialAgents = useMemo(
     () =>
-      [
-        ...searchParams.getAll("agent"),
-        ...searchParams.getAll("agent_name"),
-      ]
+      [...searchParams.getAll("agent"), ...searchParams.getAll("agent_name")]
         .map((n) => n.trim())
         .filter(Boolean),
     // read once, on arrival: later edits come from the controls, not the URL
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    []
+    [],
   );
 
   // `?from=`/`?to=` (IST datetime-local values, "YYYY-MM-DDTHH:mm") arrive with
@@ -132,7 +144,8 @@ export default function SOC2Report() {
     const from = (searchParams.get("from") || "").trim();
     const to = (searchParams.get("to") || "").trim();
     const shape = /^d{4}-d{2}-d{2}Td{2}:d{2}$/;
-    if (shape.test(from) && shape.test(to) && from < to) return { from, to, custom: true };
+    if (shape.test(from) && shape.test(to) && from < to)
+      return { from, to, custom: true };
     return { from: initialWindow.from, to: initialWindow.to, custom: false };
     // read once, on arrival: later edits come from the controls, not the URL
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -140,14 +153,16 @@ export default function SOC2Report() {
 
   // The agents the report covers, by name. Every agent is ticked once the
   // list arrives (see below), unless the URL named specific ones.
-  const [selectedNames, setSelectedNames] = useState(() => new Set(initialAgents));
+  const [selectedNames, setSelectedNames] = useState(
+    () => new Set(initialAgents),
+  );
   const [agentPickerOpen, setAgentPickerOpen] = useState(false);
   // a window that came in on the URL is by definition not one of the presets
   const [preset, setPreset] = useState(initialRange.custom ? "custom" : "12");
   const [fromLocal, setFromLocal] = useState(initialRange.from);
   const [toLocal, setToLocal] = useState(initialRange.to);
   const [bucket, setBucket] = useState(() =>
-    defaultBucket(spanHours(initialRange.from, initialRange.to))
+    defaultBucket(spanHours(initialRange.from, initialRange.to)),
   );
 
   const [agents, setAgents] = useState([]);
@@ -166,35 +181,35 @@ export default function SOC2Report() {
   const [exporting, setExporting] = useState(false);
 
   const [sendModalOpen, setSendModalOpen] = useState(false);
-const [sendSubject, setSendSubject] = useState("");
-const [sendBody, setSendBody] = useState("");
+  const [sendSubject, setSendSubject] = useState("");
+  const [sendBody, setSendBody] = useState("");
 
-const [channels, setChannels] = useState([]);
-const [channelAccounts, setChannelAccounts] = useState([]);
-const [channelsLoading, setChannelsLoading] = useState(false);
+  const [channels, setChannels] = useState([]);
+  const [channelAccounts, setChannelAccounts] = useState([]);
+  const [channelsLoading, setChannelsLoading] = useState(false);
 
-const [selectedAccountId, setSelectedAccountId] = useState(null);
-const [selectedChannelIds, setSelectedChannelIds] = useState([]);
+  const [selectedAccountId, setSelectedAccountId] = useState(null);
+  const [selectedChannelIds, setSelectedChannelIds] = useState([]);
 
-const [sendingPdf, setSendingPdf] = useState(false);
-const [sendError, setSendError] = useState("");
-const [sendSuccess, setSendSuccess] = useState("");
+  const [sendingPdf, setSendingPdf] = useState(false);
+  const [sendError, setSendError] = useState("");
+  const [sendSuccess, setSendSuccess] = useState("");
 
-useEffect(() => {
-  if (!sendSuccess && !sendError) {
-    return undefined;
-  }
+  useEffect(() => {
+    if (!sendSuccess && !sendError) {
+      return undefined;
+    }
 
-  const timer = window.setTimeout(() => {
-    setSendSuccess("");
-    setSendError("");
-  }, 5000);
+    const timer = window.setTimeout(() => {
+      setSendSuccess("");
+      setSendError("");
+    }, 5000);
 
-  return () => window.clearTimeout(timer);
-}, [sendSuccess, sendError]);
+    return () => window.clearTimeout(timer);
+  }, [sendSuccess, sendError]);
 
-const [sendReportReady, setSendReportReady] = useState(false);
-const sendReportRef = useRef(null);
+  const [sendReportReady, setSendReportReady] = useState(false);
+  const sendReportRef = useRef(null);
 
   const abortRef = useRef(null);
   const runRef = useRef(0);
@@ -230,8 +245,9 @@ const sendReportRef = useRef(null);
    * whole estate back at it. Untick any agent and the rest are sent as a list.
    */
   const scopeNames = useCallback(
-    (names) => (agents.length > 0 && names.length === agents.length ? [] : names),
-    [agents.length]
+    (names) =>
+      agents.length > 0 && names.length === agents.length ? [] : names,
+    [agents.length],
   );
 
   /** The current controls as the API's parameter object. */
@@ -242,7 +258,7 @@ const sendReportRef = useRef(null);
       toDt: istInputToApi(toLocal, "59"),
       bucket,
     }),
-    [scopeNames, selectedNames, fromLocal, toLocal, bucket]
+    [scopeNames, selectedNames, fromLocal, toLocal, bucket],
   );
 
   /**
@@ -276,7 +292,9 @@ const sendReportRef = useRef(null);
     setStatus("loading");
     setErrorMsg("");
     setSectionErrors([]);
-    setSectionStatus(SOC2_SECTIONS.reduce((acc, s) => ({ ...acc, [s]: "loading" }), {}));
+    setSectionStatus(
+      SOC2_SECTIONS.reduce((acc, s) => ({ ...acc, [s]: "loading" }), {}),
+    );
     setLoadedParams(params);
     // the shell, with every domain marked pending, so loaders show immediately
     setReport(buildSoc2View({}, params, { pending: SOC2_SECTIONS }));
@@ -291,8 +309,13 @@ const sendReportRef = useRef(null);
           if (!isCurrent()) return;
           waiting.delete(section);
           if (data) arrived[section] = data;
-          setSectionStatus((prev) => ({ ...prev, [section]: error ? "error" : "ok" }));
-          setReport(buildSoc2View(arrived, params, { pending: Array.from(waiting) }));
+          setSectionStatus((prev) => ({
+            ...prev,
+            [section]: error ? "error" : "ok",
+          }));
+          setReport(
+            buildSoc2View(arrived, params, { pending: Array.from(waiting) }),
+          );
         },
       });
       if (!isCurrent()) return;
@@ -387,7 +410,7 @@ const sendReportRef = useRef(null);
       }
       setSearchParams(next, { replace: true });
     },
-    [searchParams, setSearchParams, agents.length]
+    [searchParams, setSearchParams, agents.length],
   );
 
   const onSubmit = (e) => {
@@ -423,7 +446,9 @@ const sendReportRef = useRef(null);
   /** One click for the whole list — the picker's header control. */
   const toggleAllAgents = () => {
     setSelectedNames((prev) =>
-      prev.size === agents.length ? new Set() : new Set(agents.map((a) => a.name))
+      prev.size === agents.length
+        ? new Set()
+        : new Set(agents.map((a) => a.name)),
     );
   };
 
@@ -433,7 +458,8 @@ const sendReportRef = useRef(null);
     const i = keys.indexOf(activeTab);
     let next = null;
     if (e.key === "ArrowRight") next = keys[(i + 1) % keys.length];
-    else if (e.key === "ArrowLeft") next = keys[(i - 1 + keys.length) % keys.length];
+    else if (e.key === "ArrowLeft")
+      next = keys[(i - 1 + keys.length) % keys.length];
     else if (e.key === "Home") next = keys[0];
     else if (e.key === "End") next = keys[keys.length - 1];
     if (!next) return;
@@ -453,430 +479,415 @@ const sendReportRef = useRef(null);
   };
 
   // ============================================================
-// SEND PDF
-// ============================================================
+  // SEND PDF
+  // ============================================================
 
-const openSendModal = async () => {
-  if (!report || sendingPdf) return;
+  const openSendModal = async () => {
+    if (!report || sendingPdf) return;
 
-  setSendModalOpen(true);
-  setSendError("");
-  setSendSuccess("");
-  setChannelsLoading(true);
+    setSendModalOpen(true);
+    setSendError("");
+    setSendSuccess("");
+    setChannelsLoading(true);
 
-  try {
-    const [channelList, accountList] = await Promise.all([
-      fetchChannels(),
-      fetchChannelAccounts(),
-    ]);
+    try {
+      const [channelList, accountList] = await Promise.all([
+        fetchChannels(),
+        fetchChannelAccounts(),
+      ]);
 
-    setChannels(channelList || []);
+      setChannels(channelList || []);
 
-    // Only active and verified sender accounts
-    setChannelAccounts(
-      (accountList || []).filter(
-        (account) =>
-          account.is_active !== false &&
-          account.is_verified !== false,
-      ),
+      // Only active and verified sender accounts
+      setChannelAccounts(
+        (accountList || []).filter(
+          (account) =>
+            account.is_active !== false && account.is_verified !== false,
+        ),
+      );
+
+      setSelectedAccountId(null);
+      setSelectedChannelIds([]);
+
+      setSendSubject("SOC 2 Evidence Report");
+
+      setSendBody(
+        `SOC 2 Evidence Report for ${scopeAgent}. Reporting period: ${scopeWindow}.`,
+      );
+    } catch (err) {
+      setSendError(
+        err?.message ||
+          "Unable to load sender accounts or communication channels.",
+      );
+    } finally {
+      setChannelsLoading(false);
+    }
+  };
+
+  const closeSendModal = () => {
+    if (sendingPdf) return;
+
+    setSendModalOpen(false);
+    setSendError("");
+    setSendSuccess("");
+  };
+
+  const toggleChannelSelection = (channelId) => {
+    setSelectedChannelIds((current) =>
+      current.includes(channelId)
+        ? current.filter((id) => id !== channelId)
+        : [...current, channelId],
     );
+  };
 
-    setSelectedAccountId(null);
+  const handleAccountSelection = (accountId) => {
+    const nextAccountId = Number(accountId);
+
+    setSelectedAccountId(nextAccountId);
     setSelectedChannelIds([]);
 
-    setSendSubject("SOC 2 Evidence Report");
+    setSendError("");
+    setSendSuccess("");
+  };
 
-    setSendBody(
-      `SOC 2 Evidence Report for ${scopeAgent}. Reporting period: ${scopeWindow}.`,
-    );
-  } catch (err) {
-    setSendError(
-      err?.message ||
-        "Unable to load sender accounts or communication channels.",
-    );
-  } finally {
-    setChannelsLoading(false);
-  }
-};
-
-const closeSendModal = () => {
-  if (sendingPdf) return;
-
-  setSendModalOpen(false);
-  setSendError("");
-  setSendSuccess("");
-};
-
-const toggleChannelSelection = (channelId) => {
-  setSelectedChannelIds((current) =>
-    current.includes(channelId)
-      ? current.filter((id) => id !== channelId)
-      : [...current, channelId],
+  const selectedSenderAccount = channelAccounts.find(
+    (account) => account.id === Number(selectedAccountId),
   );
-};
 
-const handleAccountSelection = (accountId) => {
-  const nextAccountId = Number(accountId);
+  const compatibleChannels = useMemo(() => {
+    if (!selectedSenderAccount) {
+      return [];
+    }
 
-  setSelectedAccountId(nextAccountId);
-  setSelectedChannelIds([]);
-
-  setSendError("");
-  setSendSuccess("");
-};
-
-const selectedSenderAccount = channelAccounts.find(
-  (account) => account.id === Number(selectedAccountId),
-);
-
-const compatibleChannels = useMemo(() => {
-  if (!selectedSenderAccount) {
-    return [];
-  }
-
-  const senderType = String(
-    selectedSenderAccount.channel_type || "",
-  ).toLowerCase();
-
-  return channels.filter((channel) => {
-    const recipientType = String(
-      channel.type || "",
+    const senderType = String(
+      selectedSenderAccount.channel_type || "",
     ).toLowerCase();
 
-    // Gmail sender -> email/gmail recipient
-    if (senderType === "gmail") {
-      return ["email", "gmail"].includes(recipientType);
-    }
+    return channels.filter((channel) => {
+      const recipientType = String(channel.type || "").toLowerCase();
 
-    // Outlook sender -> outlook recipient
-    if (senderType === "outlook365") {
-      return recipientType === "outlook";
-    }
+      // Gmail sender -> email/gmail recipient
+      if (senderType === "gmail") {
+        return ["email", "gmail"].includes(recipientType);
+      }
 
-    // Telegram sender -> telegram recipient
-    if (senderType === "telegram") {
-      return recipientType === "telegram";
-    }
+      // Outlook sender -> outlook recipient
+      if (senderType === "outlook365") {
+        return recipientType === "outlook";
+      }
 
-    // WhatsApp sender -> WhatsApp recipient
-    if (senderType === "whatsapp") {
-      return recipientType === "whatsapp";
-    }
+      // Telegram sender -> telegram recipient
+      if (senderType === "telegram") {
+        return recipientType === "telegram";
+      }
 
-    // SMS sender -> SMS recipient
-    if (senderType === "sms") {
-      return recipientType === "sms";
-    }
+      // WhatsApp sender -> WhatsApp recipient
+      if (senderType === "whatsapp") {
+        return recipientType === "whatsapp";
+      }
 
-    // Jira sender -> Jira recipient
-    if (senderType === "jira") {
-      return recipientType === "jira";
-    }
+      // SMS sender -> SMS recipient
+      if (senderType === "sms") {
+        return recipientType === "sms";
+      }
 
-    return false;
-   });
-}, [channels, selectedSenderAccount]);
+      // Jira sender -> Jira recipient
+      if (senderType === "jira") {
+        return recipientType === "jira";
+      }
 
-const waitForSoc2ReportRender = () =>
-  new Promise((resolve) => {
-    window.requestAnimationFrame(() => {
+      return false;
+    });
+  }, [channels, selectedSenderAccount]);
+
+  const waitForSoc2ReportRender = () =>
+    new Promise((resolve) => {
       window.requestAnimationFrame(() => {
-        // Allow React + charts/SVG layout to finish.
-        window.setTimeout(resolve, 250);
+        window.requestAnimationFrame(() => {
+          // Allow React + charts/SVG layout to finish.
+          window.setTimeout(resolve, 250);
+        });
       });
     });
-  });
 
-const buildSoc2PdfBlob = async () => {
-  setSendReportReady(true);
+  const buildSoc2PdfBlob = async () => {
+    setSendReportReady(true);
 
-  await waitForSoc2ReportRender();
+    await waitForSoc2ReportRender();
 
-  const reportElement = sendReportRef.current;
+    const reportElement = sendReportRef.current;
 
-  if (!reportElement) {
-    throw new Error(
-      "The SOC 2 report could not be prepared for sending.",
-    );
-  }
-
-  /*
-   * IMPORTANT:
-   * PrintableReport contains:
-   *
-   * 1. Cover page
-   * 2. Executive summary
-   * 3. TOC
-   * 4. Multiple report sections
-   *
-   * Browser print automatically splits the sections into
-   * multiple A4 pages, but html2canvas does not know about
-   * browser print pagination.
-   *
-   * Therefore we capture every top-level report element and
-   * manually split large sections into A4-sized PDF pages.
-   */
-
- const captureTargets = Array.from(
-  reportElement.querySelectorAll(
-    ".soc2-print-page, .soc2-print-section",
-  ),
-);
-
-  if (!captureTargets.length) {
-    throw new Error(
-      "No SOC 2 report pages or sections were available to create the PDF.",
-    );
-  }
-
-  console.log(
-    "SOC2 Send PDF capture targets:",
-    captureTargets.map((element, index) => ({
-      index: index + 1,
-      className: element.className,
-      width: element.scrollWidth,
-      height: element.scrollHeight,
-    })),
-  );
-
-  const pdf = new jsPDF({
-    orientation: "portrait",
-    unit: "mm",
-    format: "a4",
-    compress: true,
-  });
-
-  const PDF_WIDTH_MM = 210;
-  const PDF_HEIGHT_MM = 297;
-
-  /*
-   * Small margin around every generated PDF page.
-   */
-  const PDF_MARGIN_MM = 4;
-
-  const CONTENT_WIDTH_MM =
-    PDF_WIDTH_MM - PDF_MARGIN_MM * 2;
-
-  const CONTENT_HEIGHT_MM =
-    PDF_HEIGHT_MM - PDF_MARGIN_MM * 2;
-
-  let pdfPageAdded = false;
-
-  /*
-   * ---------------------------------------------------------
-   * Capture one report element
-   * ---------------------------------------------------------
-   */
-  const captureElement = async (element) => {
-    if (!element) {
-      return null;
+    if (!reportElement) {
+      throw new Error("The SOC 2 report could not be prepared for sending.");
     }
 
-    const rect = element.getBoundingClientRect();
+    /*
+     * IMPORTANT:
+     * PrintableReport contains:
+     *
+     * 1. Cover page
+     * 2. Executive summary
+     * 3. TOC
+     * 4. Multiple report sections
+     *
+     * Browser print automatically splits the sections into
+     * multiple A4 pages, but html2canvas does not know about
+     * browser print pagination.
+     *
+     * Therefore we capture every top-level report element and
+     * manually split large sections into A4-sized PDF pages.
+     */
 
-    if (!rect.width || !rect.height) {
-      return null;
+    const captureTargets = Array.from(
+      reportElement.querySelectorAll(".soc2-print-page, .soc2-print-section"),
+    );
+
+    if (!captureTargets.length) {
+      throw new Error(
+        "No SOC 2 report pages or sections were available to create the PDF.",
+      );
     }
 
-    const canvas = await html2canvas(element, {
-      scale: 2,
-      useCORS: true,
-      allowTaint: false,
-      backgroundColor: "#ffffff",
-      logging: false,
+    console.log(
+      "SOC2 Send PDF capture targets:",
+      captureTargets.map((element, index) => ({
+        index: index + 1,
+        className: element.className,
+        width: element.scrollWidth,
+        height: element.scrollHeight,
+      })),
+    );
 
-      width: Math.ceil(rect.width),
+    const pdf = new jsPDF({
+      orientation: "portrait",
+      unit: "mm",
+      format: "a4",
+      compress: true,
+    });
 
-      height: Math.ceil(
-        element.scrollHeight || rect.height,
-      ),
+    const PDF_WIDTH_MM = 210;
+    const PDF_HEIGHT_MM = 297;
 
-      windowWidth: Math.max(
-        document.documentElement.clientWidth,
-        Math.ceil(rect.width),
-      ),
+    /*
+     * Small margin around every generated PDF page.
+     */
+    const PDF_MARGIN_MM = 4;
 
-      windowHeight: Math.max(
-        document.documentElement.clientHeight,
-        Math.ceil(rect.height),
-      ),
+    const CONTENT_WIDTH_MM = PDF_WIDTH_MM - PDF_MARGIN_MM * 2;
 
-      onclone: (clonedDocument) => {
-        // let printCss = "";
+    const CONTENT_HEIGHT_MM = PDF_HEIGHT_MM - PDF_MARGIN_MM * 2;
 
-        // /*
-        //  * Copy print CSS rules into the html2canvas clone.
-        //  */
-        // Array.from(document.styleSheets).forEach(
-        //   (styleSheet) => {
-        //     try {
-        //       Array.from(styleSheet.cssRules).forEach(
-        //         (rule) => {
-        //           if (
-        //             rule instanceof CSSMediaRule &&
-        //             rule.media &&
-        //             rule.media.mediaText.includes("print")
-        //           ) {
-        //             Array.from(rule.cssRules).forEach(
-        //               (printRule) => {
-        //                 printCss += `${printRule.cssText}\n`;
-        //               },
-        //             );
-        //           }
-        //         },
-        //       );
-        //     } catch (error) {
-        //       /*
-        //        * Ignore inaccessible cross-origin stylesheets.
-        //        */
-        //     }
-        //   },
-        // );
+    let pdfPageAdded = false;
 
-        // const printStyle =
-        //   clonedDocument.createElement("style");
+    /*
+     * ---------------------------------------------------------
+     * Capture one report element
+     * ---------------------------------------------------------
+     */
+    const captureElement = async (element) => {
+      if (!element) {
+        return null;
+      }
 
-        // printStyle.setAttribute(
-        //   "data-soc2-send-pdf-print-styles",
-        //   "true",
-        // );
+      const rect = element.getBoundingClientRect();
 
-        // printStyle.textContent = printCss;
+      if (!rect.width || !rect.height) {
+        return null;
+      }
 
-        // clonedDocument.head.appendChild(printStyle);
+      const canvas = await html2canvas(element, {
+        scale: 2,
+        useCORS: true,
+        allowTaint: false,
+        backgroundColor: "#ffffff",
+        logging: false,
 
-        /*
-         * Send-PDF-specific CSS.
-         *
-         * IMPORTANT:
-         * Do not use:
-         *
-         * .soc2-send-report-capture .soc2-print-page
-         *
-         * because html2canvas is capturing the individual
-         * page/section element, not necessarily its parent.
-         *
-         * Therefore target the report classes directly.
-         */
-//         const overrideStyle =
-//           clonedDocument.createElement("style");
+        width: Math.ceil(rect.width),
 
-//         overrideStyle.setAttribute(
-//           "data-soc2-send-pdf-overrides",
-//           "true",
-//         );
+        height: Math.ceil(element.scrollHeight || rect.height),
 
-//         overrideStyle.textContent = `
-//           html,
-//           body {
-//             margin: 0 !important;
-//             padding: 0 !important;
-//             background: #ffffff !important;
-//           }
+        windowWidth: Math.max(
+          document.documentElement.clientWidth,
+          Math.ceil(rect.width),
+        ),
 
-//           .soc2-print-page,
-//           .soc2-print-section {
-//             display: block !important;
-//             visibility: visible !important;
-//             position: relative !important;
+        windowHeight: Math.max(
+          document.documentElement.clientHeight,
+          Math.ceil(rect.height),
+        ),
 
-//             width: 210mm !important;
+        onclone: (clonedDocument) => {
+          // let printCss = "";
 
-//             height: auto !important;
-//             min-height: 0 !important;
-//             max-height: none !important;
+          // /*
+          //  * Copy print CSS rules into the html2canvas clone.
+          //  */
+          // Array.from(document.styleSheets).forEach(
+          //   (styleSheet) => {
+          //     try {
+          //       Array.from(styleSheet.cssRules).forEach(
+          //         (rule) => {
+          //           if (
+          //             rule instanceof CSSMediaRule &&
+          //             rule.media &&
+          //             rule.media.mediaText.includes("print")
+          //           ) {
+          //             Array.from(rule.cssRules).forEach(
+          //               (printRule) => {
+          //                 printCss += `${printRule.cssText}\n`;
+          //               },
+          //             );
+          //           }
+          //         },
+          //       );
+          //     } catch (error) {
+          //       /*
+          //        * Ignore inaccessible cross-origin stylesheets.
+          //        */
+          //     }
+          //   },
+          // );
 
-//             margin: 0 !important;
+          // const printStyle =
+          //   clonedDocument.createElement("style");
 
-//             overflow: visible !important;
+          // printStyle.setAttribute(
+          //   "data-soc2-send-pdf-print-styles",
+          //   "true",
+          // );
 
-//             background: #ffffff !important;
+          // printStyle.textContent = printCss;
 
-//             break-before: auto !important;
-//             break-after: auto !important;
-//             break-inside: auto !important;
+          // clonedDocument.head.appendChild(printStyle);
 
-//             page-break-before: auto !important;
-//             page-break-after: auto !important;
-//             page-break-inside: auto !important;
-//           }
+          /*
+           * Send-PDF-specific CSS.
+           *
+           * IMPORTANT:
+           * Do not use:
+           *
+           * .soc2-send-report-capture .soc2-print-page
+           *
+           * because html2canvas is capturing the individual
+           * page/section element, not necessarily its parent.
+           *
+           * Therefore target the report classes directly.
+           */
+          //         const overrideStyle =
+          //           clonedDocument.createElement("style");
 
-//           .soc2-print-page,
-// .soc2-print-section,
-// .soc2-print-section-heading,
-// .soc2-print-section-body {
-//   box-sizing: border-box !important;
-//   min-width: 0 !important;
-//   max-width: 210mm !important;
-// }
+          //         overrideStyle.setAttribute(
+          //           "data-soc2-send-pdf-overrides",
+          //           "true",
+          //         );
 
-// .soc2-print-section-body {
-//   width: 100% !important;
-//   overflow-x: hidden !important;
-// }
+          //         overrideStyle.textContent = `
+          //           html,
+          //           body {
+          //             margin: 0 !important;
+          //             padding: 0 !important;
+          //             background: #ffffff !important;
+          //           }
 
-// .soc2-print-section-process .inc-table,
-// .soc2-print-section-change .inc-table {
-//   width: 100% !important;
-//   max-width: 100% !important;
-//   min-width: 0 !important;
-//   table-layout: fixed !important;
-//   box-sizing: border-box !important;
-// }
+          //           .soc2-print-page,
+          //           .soc2-print-section {
+          //             display: block !important;
+          //             visibility: visible !important;
+          //             position: relative !important;
 
-// .soc2-print-section-process .inc-table-wrap,
-// .soc2-print-section-change .inc-table-wrap {
-//   width: 100% !important;
-//   max-width: 100% !important;
-//   min-width: 0 !important;
-//   overflow-x: hidden !important;
-//   box-sizing: border-box !important;
-// }
+          //             width: 210mm !important;
 
-// .soc2-print-section-process .inc-table th,
-// .soc2-print-section-process .inc-table td,
-// .soc2-print-section-change .inc-table th,
-// .soc2-print-section-change .inc-table td {
-//   min-width: 0 !important;
-//   max-width: none !important;
-//   overflow-wrap: anywhere !important;
-//   word-break: break-word !important;
-// }
+          //             height: auto !important;
+          //             min-height: 0 !important;
+          //             max-height: none !important;
 
-//           .soc2-screen-only,
-// .soc2-spinner {
-//   display: none !important;
-// }
+          //             margin: 0 !important;
 
-// .soc2-tabbar {
-//   position: static !important;
-// }
+          //             overflow: visible !important;
 
-// /* html2canvas can fail on CSS gradients when a cloned
-//    element has a non-finite gradient dimension/stop. */
-// .soc2-bd-fill {
-//   background: #6045e8 !important;
-//   background-image: none !important;
-// }
+          //             background: #ffffff !important;
 
-// .soc2-tabbar *,
-// .soc2-print-section * {
-//   transition: none !important;
-// }
-//         `;
+          //             break-before: auto !important;
+          //             break-after: auto !important;
+          //             break-inside: auto !important;
 
-//         clonedDocument.head.appendChild(
-//           overrideStyle,
-//         );
-const overrideStyle =
-  clonedDocument.createElement("style");
+          //             page-break-before: auto !important;
+          //             page-break-after: auto !important;
+          //             page-break-inside: auto !important;
+          //           }
 
-overrideStyle.setAttribute(
-  "data-soc2-send-pdf-overrides",
-  "true",
-);
+          //           .soc2-print-page,
+          // .soc2-print-section,
+          // .soc2-print-section-heading,
+          // .soc2-print-section-body {
+          //   box-sizing: border-box !important;
+          //   min-width: 0 !important;
+          //   max-width: 210mm !important;
+          // }
 
-overrideStyle.textContent = `
+          // .soc2-print-section-body {
+          //   width: 100% !important;
+          //   overflow-x: hidden !important;
+          // }
+
+          // .soc2-print-section-process .inc-table,
+          // .soc2-print-section-change .inc-table {
+          //   width: 100% !important;
+          //   max-width: 100% !important;
+          //   min-width: 0 !important;
+          //   table-layout: fixed !important;
+          //   box-sizing: border-box !important;
+          // }
+
+          // .soc2-print-section-process .inc-table-wrap,
+          // .soc2-print-section-change .inc-table-wrap {
+          //   width: 100% !important;
+          //   max-width: 100% !important;
+          //   min-width: 0 !important;
+          //   overflow-x: hidden !important;
+          //   box-sizing: border-box !important;
+          // }
+
+          // .soc2-print-section-process .inc-table th,
+          // .soc2-print-section-process .inc-table td,
+          // .soc2-print-section-change .inc-table th,
+          // .soc2-print-section-change .inc-table td {
+          //   min-width: 0 !important;
+          //   max-width: none !important;
+          //   overflow-wrap: anywhere !important;
+          //   word-break: break-word !important;
+          // }
+
+          //           .soc2-screen-only,
+          // .soc2-spinner {
+          //   display: none !important;
+          // }
+
+          // .soc2-tabbar {
+          //   position: static !important;
+          // }
+
+          // /* html2canvas can fail on CSS gradients when a cloned
+          //    element has a non-finite gradient dimension/stop. */
+          // .soc2-bd-fill {
+          //   background: #6045e8 !important;
+          //   background-image: none !important;
+          // }
+
+          // .soc2-tabbar *,
+          // .soc2-print-section * {
+          //   transition: none !important;
+          // }
+          //         `;
+
+          //         clonedDocument.head.appendChild(
+          //           overrideStyle,
+          //         );
+          const overrideStyle = clonedDocument.createElement("style");
+
+          overrideStyle.setAttribute("data-soc2-send-pdf-overrides", "true");
+
+          overrideStyle.textContent = `
   html,
   body {
     margin: 0 !important;
@@ -1098,397 +1109,308 @@ overrideStyle.textContent = `
   }
 `;
 
-clonedDocument.head.appendChild(overrideStyle);
-      },
-    });
+          clonedDocument.head.appendChild(overrideStyle);
+        },
+      });
 
-    if (
-      !canvas ||
-      !canvas.width ||
-      !canvas.height ||
-      !Number.isFinite(canvas.width) ||
-      !Number.isFinite(canvas.height)
-    ) {
-      throw new Error(
-        `Could not generate SOC 2 canvas. ` +
-          `Canvas size: ${canvas?.width || 0} × ${
-            canvas?.height || 0
-          }`,
-      );
-    }
-
-    return canvas;
-  };
-
-  /*
-   * ---------------------------------------------------------
-   * Add a canvas slice to the PDF
-   * ---------------------------------------------------------
-   */
-  const addCanvasSliceToPdf = (
-    canvas,
-    sourceTopPx,
-    sourceHeightPx,
-  ) => {
-    if (
-      !canvas ||
-      !canvas.width ||
-      !canvas.height ||
-      sourceHeightPx <= 0
-    ) {
-      return;
-    }
-
-    /*
-     * Temporary canvas containing only the current A4 slice.
-     */
-    const sliceCanvas =
-      document.createElement("canvas");
-
-    sliceCanvas.width = canvas.width;
-    sliceCanvas.height = sourceHeightPx;
-
-    const context =
-      sliceCanvas.getContext("2d");
-
-    if (!context) {
-      throw new Error(
-        "Could not create the PDF canvas context.",
-      );
-    }
-
-    context.fillStyle = "#ffffff";
-
-    context.fillRect(
-      0,
-      0,
-      sliceCanvas.width,
-      sliceCanvas.height,
-    );
-
-    context.drawImage(
-      canvas,
-
-      0,
-      sourceTopPx,
-      canvas.width,
-      sourceHeightPx,
-
-      0,
-      0,
-      sliceCanvas.width,
-      sliceCanvas.height,
-    );
-
-    const imageData =
-      sliceCanvas.toDataURL(
-        "image/jpeg",
-        0.92,
-      );
-
-    /*
-     * Fit slice into A4.
-     */
-    const imageWidth =
-      CONTENT_WIDTH_MM;
-
-    const imageHeight =
-      (sliceCanvas.height /
-        sliceCanvas.width) *
-      imageWidth;
-
-    const x = PDF_MARGIN_MM;
-
-    const y =
-      PDF_MARGIN_MM +
-      Math.max(
-        0,
-        (CONTENT_HEIGHT_MM -
-          imageHeight) /
-          2,
-      );
-
-    if (pdfPageAdded) {
-      pdf.addPage();
-    }
-
-    pdf.addImage(
-      imageData,
-      "JPEG",
-      x,
-      y,
-      imageWidth,
-      imageHeight,
-      undefined,
-      "FAST",
-    );
-
-    pdfPageAdded = true;
-  };
-
-  /*
-   * ---------------------------------------------------------
-   * Process all report pages / sections
-   * ---------------------------------------------------------
-   */
-  for (
-    let index = 0;
-    index < captureTargets.length;
-    index += 1
-  ) {
-    const target = captureTargets[index];
-
-    console.log(
-      `Generating SOC2 Send PDF section ${index + 1}/${captureTargets.length}`,
-      {
-        className: target.className,
-        height: target.scrollHeight,
-      },
-    );
-
-    const canvas =
-      await captureElement(target);
-
-    if (!canvas) {
-      console.warn(
-        `Skipping empty SOC2 report section ${index + 1}`,
-      );
-
-      continue;
-    }
-
-    console.log(
-      `SOC2 section ${index + 1} canvas:`,
-      {
-        width: canvas.width,
-        height: canvas.height,
-      },
-    );
-
-    /*
-     * Determine how many source pixels correspond
-     * to one millimetre in the PDF.
-     */
-    const sourcePixelsPerMm =
-      canvas.width /
-      PDF_WIDTH_MM;
-
-    /*
-     * Maximum canvas height that fits into one
-     * printable A4 page.
-     */
-    const maxSliceHeightPx =
-      Math.floor(
-        CONTENT_HEIGHT_MM *
-          sourcePixelsPerMm,
-      );
-
-    if (
-      !Number.isFinite(
-        maxSliceHeightPx,
-      ) ||
-      maxSliceHeightPx <= 0
-    ) {
-      throw new Error(
-        `Invalid PDF slice size for SOC 2 section ${
-          index + 1
-        }.`,
-      );
-    }
-
-    /*
-     * Split a large section into multiple
-     * A4-sized PDF pages.
-     */
-    let topPx = 0;
-
-    let sliceNumber = 0;
-
-    while (topPx < canvas.height) {
-      sliceNumber += 1;
-
-      const remainingPx =
-        canvas.height - topPx;
-
-      const sliceHeightPx =
-        Math.min(
-          maxSliceHeightPx,
-          remainingPx,
+      if (
+        !canvas ||
+        !canvas.width ||
+        !canvas.height ||
+        !Number.isFinite(canvas.width) ||
+        !Number.isFinite(canvas.height)
+      ) {
+        throw new Error(
+          `Could not generate SOC 2 canvas. ` +
+            `Canvas size: ${canvas?.width || 0} × ${canvas?.height || 0}`,
         );
+      }
+
+      return canvas;
+    };
+
+    /*
+     * ---------------------------------------------------------
+     * Add a canvas slice to the PDF
+     * ---------------------------------------------------------
+     */
+    const addCanvasSliceToPdf = (canvas, sourceTopPx, sourceHeightPx) => {
+      if (!canvas || !canvas.width || !canvas.height || sourceHeightPx <= 0) {
+        return;
+      }
+
+      /*
+       * Temporary canvas containing only the current A4 slice.
+       */
+      const sliceCanvas = document.createElement("canvas");
+
+      sliceCanvas.width = canvas.width;
+      sliceCanvas.height = sourceHeightPx;
+
+      const context = sliceCanvas.getContext("2d");
+
+      if (!context) {
+        throw new Error("Could not create the PDF canvas context.");
+      }
+
+      context.fillStyle = "#ffffff";
+
+      context.fillRect(0, 0, sliceCanvas.width, sliceCanvas.height);
+
+      context.drawImage(
+        canvas,
+
+        0,
+        sourceTopPx,
+        canvas.width,
+        sourceHeightPx,
+
+        0,
+        0,
+        sliceCanvas.width,
+        sliceCanvas.height,
+      );
+
+      const imageData = sliceCanvas.toDataURL("image/jpeg", 0.92);
+
+      /*
+       * Fit slice into A4.
+       */
+      const imageWidth = CONTENT_WIDTH_MM;
+
+      const imageHeight = (sliceCanvas.height / sliceCanvas.width) * imageWidth;
+
+      const x = PDF_MARGIN_MM;
+
+      const y =
+        PDF_MARGIN_MM + Math.max(0, (CONTENT_HEIGHT_MM - imageHeight) / 2);
+
+      if (pdfPageAdded) {
+        pdf.addPage();
+      }
+
+      pdf.addImage(
+        imageData,
+        "JPEG",
+        x,
+        y,
+        imageWidth,
+        imageHeight,
+        undefined,
+        "FAST",
+      );
+
+      pdfPageAdded = true;
+    };
+
+    /*
+     * ---------------------------------------------------------
+     * Process all report pages / sections
+     * ---------------------------------------------------------
+     */
+    for (let index = 0; index < captureTargets.length; index += 1) {
+      const target = captureTargets[index];
 
       console.log(
-        `Adding SOC2 PDF page slice ${sliceNumber}`,
+        `Generating SOC2 Send PDF section ${index + 1}/${captureTargets.length}`,
         {
-          section: index + 1,
-          topPx,
-          sliceHeightPx,
+          className: target.className,
+          height: target.scrollHeight,
         },
       );
 
-      addCanvasSliceToPdf(
-        canvas,
-        topPx,
-        sliceHeightPx,
+      const canvas = await captureElement(target);
+
+      if (!canvas) {
+        console.warn(`Skipping empty SOC2 report section ${index + 1}`);
+
+        continue;
+      }
+
+      console.log(`SOC2 section ${index + 1} canvas:`, {
+        width: canvas.width,
+        height: canvas.height,
+      });
+
+      /*
+       * Determine how many source pixels correspond
+       * to one millimetre in the PDF.
+       */
+      const sourcePixelsPerMm = canvas.width / PDF_WIDTH_MM;
+
+      /*
+       * Maximum canvas height that fits into one
+       * printable A4 page.
+       */
+      const maxSliceHeightPx = Math.floor(
+        CONTENT_HEIGHT_MM * sourcePixelsPerMm,
       );
 
-      topPx += sliceHeightPx;
+      if (!Number.isFinite(maxSliceHeightPx) || maxSliceHeightPx <= 0) {
+        throw new Error(
+          `Invalid PDF slice size for SOC 2 section ${index + 1}.`,
+        );
+      }
+
+      /*
+       * Split a large section into multiple
+       * A4-sized PDF pages.
+       */
+      let topPx = 0;
+
+      let sliceNumber = 0;
+
+      while (topPx < canvas.height) {
+        sliceNumber += 1;
+
+        const remainingPx = canvas.height - topPx;
+
+        const sliceHeightPx = Math.min(maxSliceHeightPx, remainingPx);
+
+        console.log(`Adding SOC2 PDF page slice ${sliceNumber}`, {
+          section: index + 1,
+          topPx,
+          sliceHeightPx,
+        });
+
+        addCanvasSliceToPdf(canvas, topPx, sliceHeightPx);
+
+        topPx += sliceHeightPx;
+      }
+
+      /*
+       * Release the large canvas before moving
+       * to the next section.
+       */
+      canvas.width = 1;
+      canvas.height = 1;
+
+      /*
+       * Give the browser a frame to release memory.
+       */
+      await new Promise((resolve) => {
+        window.requestAnimationFrame(resolve);
+      });
     }
 
-    /*
-     * Release the large canvas before moving
-     * to the next section.
-     */
-    canvas.width = 1;
-    canvas.height = 1;
+    if (!pdfPageAdded) {
+      throw new Error("The SOC 2 report did not contain any renderable pages.");
+    }
 
-    /*
-     * Give the browser a frame to release memory.
-     */
-    await new Promise((resolve) => {
-      window.requestAnimationFrame(
-        resolve,
-      );
+    console.log("SOC2 Send PDF generation completed.", {
+      pagesGenerated: pdf.getNumberOfPages(),
     });
-  }
 
-  if (!pdfPageAdded) {
-    throw new Error(
-      "The SOC 2 report did not contain any renderable pages.",
-    );
-  }
+    return pdf.output("blob");
+  };
 
-  console.log(
-    "SOC2 Send PDF generation completed.",
-    {
-      pagesGenerated:
-        pdf.getNumberOfPages(),
-    },
-  );
+  const sendSoc2Pdf = async () => {
+    if (sendingPdf) return;
 
-  return pdf.output("blob");
-};
+    setSendError("");
+    setSendSuccess("");
 
-const sendSoc2Pdf = async () => {
-  if (sendingPdf) return;
+    if (!report) {
+      setSendError("Please generate the SOC 2 report first.");
+      return;
+    }
 
-  setSendError("");
-  setSendSuccess("");
+    if (!sendSubject.trim()) {
+      setSendError("Please enter a subject.");
+      return;
+    }
 
-  if (!report) {
-    setSendError("Please generate the SOC 2 report first.");
-    return;
-  }
+    if (!sendBody.trim()) {
+      setSendError("Please enter a message body.");
+      return;
+    }
 
-  if (!sendSubject.trim()) {
-    setSendError("Please enter a subject.");
-    return;
-  }
+    if (!selectedAccountId) {
+      setSendError("Please select a sender account.");
+      return;
+    }
 
-  if (!sendBody.trim()) {
-    setSendError("Please enter a message body.");
-    return;
-  }
+    if (!selectedChannelIds.length) {
+      setSendError("Please select at least one recipient.");
+      return;
+    }
 
-  if (!selectedAccountId) {
-    setSendError("Please select a sender account.");
-    return;
-  }
+    setSendingPdf(true);
 
-  if (!selectedChannelIds.length) {
-    setSendError("Please select at least one recipient.");
-    return;
-  }
+    try {
+      const pdfBlob = await buildSoc2PdfBlob();
 
-  setSendingPdf(true);
+      console.log("SOC2 PDF generated:", {
+        sizeBytes: pdfBlob.size,
+        sizeMB: (pdfBlob.size / (1024 * 1024)).toFixed(2),
+        type: pdfBlob.type,
+      });
 
-  try {
-    const pdfBlob = await buildSoc2PdfBlob();
+      const safeAgentName = String(scopeAgent || "all-agents")
+        .replace(/[^a-z0-9]+/gi, "_")
+        .replace(/^_+|_+$/g, "")
+        .toLowerCase();
 
-    console.log("SOC2 PDF generated:", {
-  sizeBytes: pdfBlob.size,
-  sizeMB: (pdfBlob.size / (1024 * 1024)).toFixed(2),
-  type: pdfBlob.type,
-});
+      const pdfFile = new File(
+        [pdfBlob],
+        `soc2_evidence_report_${safeAgentName}.pdf`,
+        {
+          type: "application/pdf",
+        },
+      );
 
-    const safeAgentName = String(
-      scopeAgent || "all-agents",
-    )
-      .replace(/[^a-z0-9]+/gi, "_")
-      .replace(/^_+|_+$/g, "")
-      .toLowerCase();
+      const results = [];
 
-    const pdfFile = new File(
-      [pdfBlob],
-      `soc2_evidence_report_${safeAgentName}.pdf`,
-      {
-        type: "application/pdf",
-      },
-    );
-
-    const results = [];
-
-    for (const channelId of selectedChannelIds) {
-      try {
-        await sendFileViaChannelAccount(
-          selectedAccountId,
-          {
+      for (const channelId of selectedChannelIds) {
+        try {
+          await sendFileViaChannelAccount(selectedAccountId, {
             subject: sendSubject.trim(),
             body: sendBody.trim(),
             communication_channel_id: channelId,
             file: pdfFile,
-          },
-        );
+          });
 
-        results.push({
-          channelId,
-          success: true,
-        });
-      } catch (err) {
-        results.push({
-          channelId,
-          success: false,
-          error:
-            err?.message ||
-            "Failed to send report.",
-        });
+          results.push({
+            channelId,
+            success: true,
+          });
+        } catch (err) {
+          results.push({
+            channelId,
+            success: false,
+            error: err?.message || "Failed to send report.",
+          });
+        }
       }
+
+      const successCount = results.filter((item) => item.success).length;
+
+      const failedCount = results.length - successCount;
+
+      if (successCount === results.length) {
+        setSendSuccess(
+          `SOC 2 report sent successfully to ${successCount} recipient${
+            successCount === 1 ? "" : "s"
+          }.`,
+        );
+      } else if (successCount > 0) {
+        setSendSuccess(
+          `SOC 2 report sent to ${successCount} recipient${
+            successCount === 1 ? "" : "s"
+          }, but ${failedCount} failed.`,
+        );
+      } else {
+        setSendError(
+          "The SOC 2 report could not be sent to any selected recipient.",
+        );
+      }
+    } catch (err) {
+      setSendError(err?.message || "Unable to generate or send the SOC 2 PDF.");
+    } finally {
+      setSendingPdf(false);
+      setSendReportReady(false);
     }
-
-    const successCount = results.filter(
-      (item) => item.success,
-    ).length;
-
-    const failedCount =
-      results.length - successCount;
-
-    if (successCount === results.length) {
-      setSendSuccess(
-        `SOC 2 report sent successfully to ${successCount} recipient${
-          successCount === 1 ? "" : "s"
-        }.`,
-      );
-    } else if (successCount > 0) {
-      setSendSuccess(
-        `SOC 2 report sent to ${successCount} recipient${
-          successCount === 1 ? "" : "s"
-        }, but ${failedCount} failed.`,
-      );
-    } else {
-      setSendError(
-        "The SOC 2 report could not be sent to any selected recipient.",
-      );
-    }
-  } catch (err) {
-    setSendError(
-      err?.message ||
-        "Unable to generate or send the SOC 2 PDF.",
-    );
-  } finally {
-    setSendingPdf(false);
-    setSendReportReady(false);
-  }
-};
-
+  };
 
   const loading = status === "loading";
   const periodText = `${fromLocal.replace("T", " ")} – ${toLocal.replace("T", " ")} IST`;
@@ -1511,9 +1433,14 @@ const sendSoc2Pdf = async () => {
     if (status === "error" && !report) {
       return (
         <div className="soc2-empty-state">
-          <div className="soc2-empty-title soc2-error-title">Could not load report</div>
+          <div className="soc2-empty-title soc2-error-title">
+            Could not load report
+          </div>
           <div className="soc2-empty-sub">{errorMsg}</div>
-          <button className="soc2-btn soc2-btn-primary phi-btn" onClick={() => load(toParams())}>
+          <button
+            className="soc2-btn soc2-btn-primary phi-btn"
+            onClick={() => load(toParams())}
+          >
             Retry
           </button>
         </div>
@@ -1526,8 +1453,12 @@ const sendSoc2Pdf = async () => {
           <div className="soc2-empty-icon">
             <ShieldIcon />
           </div>
-          <div className="soc2-empty-title">{loading ? "Generating report…" : "No report generated yet"}</div>
-          <div className="soc2-empty-sub">Set the agent and window, then click Generate.</div>
+          <div className="soc2-empty-title">
+            {loading ? "Generating report…" : "No report generated yet"}
+          </div>
+          <div className="soc2-empty-sub">
+            Set the agent and window, then click Generate.
+          </div>
         </div>
       );
     }
@@ -1551,7 +1482,10 @@ const sendSoc2Pdf = async () => {
         return (
           <div className="soc2-tab-body">
             <PendingNote pending={pending} what="incidents" />
-            <IncidentsTable incidents={report.incidents} loading={nothingYet && pending > 0} />
+            <IncidentsTable
+              incidents={report.incidents}
+              loading={nothingYet && pending > 0}
+            />
           </div>
         );
       case "agents":
@@ -1567,7 +1501,10 @@ const sendSoc2Pdf = async () => {
         return (
           <div className="soc2-tab-body">
             <PendingNote pending={pending} what="findings" />
-            <RecommendationsTab items={report.recommendations} loading={nothingYet && pending > 0} />
+            <RecommendationsTab
+              items={report.recommendations}
+              loading={nothingYet && pending > 0}
+            />
           </div>
         );
       default:
@@ -1614,7 +1551,11 @@ const sendSoc2Pdf = async () => {
             </button>
 
             {agentPickerOpen && (
-              <div className="soc2-agentpicker-menu" role="group" aria-label="Agents to report on">
+              <div
+                className="soc2-agentpicker-menu"
+                role="group"
+                aria-label="Agents to report on"
+              >
                 <div className="soc2-agentpicker-head">
                   <label className="soc2-agentpicker-row">
                     <input
@@ -1639,7 +1580,9 @@ const sendSoc2Pdf = async () => {
 
                 <div className="soc2-agentpicker-list">
                   {agents.length === 0 ? (
-                    <div className="soc2-agentpicker-empty">No agents registered.</div>
+                    <div className="soc2-agentpicker-empty">
+                      No agents registered.
+                    </div>
                   ) : (
                     agents.map((a) => (
                       <label key={a.id} className="soc2-agentpicker-row">
@@ -1651,7 +1594,9 @@ const sendSoc2Pdf = async () => {
                         <span className="soc2-agentpicker-name" title={a.name}>
                           {a.name}
                         </span>
-                        <span className={`soc2-agentpicker-dot soc2-dot-${a.status}`} />
+                        <span
+                          className={`soc2-agentpicker-dot soc2-dot-${a.status}`}
+                        />
                       </label>
                     ))
                   )}
@@ -1666,7 +1611,9 @@ const sendSoc2Pdf = async () => {
               className="soc2-select phi-input"
               value={preset}
               onChange={(e) =>
-                e.target.value === "custom" ? setPreset("custom") : applyPreset(Number(e.target.value))
+                e.target.value === "custom"
+                  ? setPreset("custom")
+                  : applyPreset(Number(e.target.value))
               }
             >
               {PRESET_HOURS.map((h) => (
@@ -1720,13 +1667,13 @@ const sendSoc2Pdf = async () => {
 
           <div className="soc2-actions">
             <button
-  className="soc2-btn soc2-btn-primary phi-btn"
-  type="submit"
-  disabled={loading}
->
-  <LuPlay />
-  {loading ? "Generating…" : "Generate"}
-</button>
+              className="soc2-btn soc2-btn-primary phi-btn"
+              type="submit"
+              disabled={loading}
+            >
+              <LuPlay />
+              {loading ? "Generating…" : "Generate"}
+            </button>
             <button
               className="soc2-btn phi-btn phi-btn--secondary"
               type="button"
@@ -1736,13 +1683,13 @@ const sendSoc2Pdf = async () => {
               {exporting ? "…" : "Export PDF"}
             </button>
             <button
-  className="soc2-btn"
-  type="button"
-  onClick={openSendModal}
-  disabled={!report || sendingPdf}
->
-  {sendingPdf ? "Sending…" : "Send PDF"}
-</button>
+              className="soc2-btn phi-btn phi-btn--secondary"
+              type="button"
+              onClick={openSendModal}
+              disabled={!report || sendingPdf}
+            >
+              {sendingPdf ? "Sending…" : "Send PDF"}
+            </button>
           </div>
         </form>
       </div>
@@ -1766,7 +1713,11 @@ const sendSoc2Pdf = async () => {
       {status === "error" && report && (
         <div className="soc2-errorbar" role="alert">
           <span>{errorMsg} Showing the last window that loaded.</span>
-          <button className="soc2-btn soc2-btn-sm phi-btn phi-btn--sm phi-btn--secondary" type="button" onClick={() => load(toParams())}>
+          <button
+            className="soc2-btn soc2-btn-sm phi-btn phi-btn--sm phi-btn--secondary"
+            type="button"
+            onClick={() => load(toParams())}
+          >
             Retry
           </button>
         </div>
@@ -1785,7 +1736,12 @@ const sendSoc2Pdf = async () => {
       )}
 
       {/* ── tab bar — each domain tab carries its own request's state ── */}
-      <div className="soc2-tabbar" role="tablist" aria-label="Report sections" onKeyDown={onTabKeyDown}>
+      <div
+        className="soc2-tabbar"
+        role="tablist"
+        aria-label="Report sections"
+        onKeyDown={onTabKeyDown}
+      >
         {TABS.map((t) => {
           const state = sectionStatus[t.key];
           const selected = activeTab === t.key;
@@ -1804,9 +1760,14 @@ const sendSoc2Pdf = async () => {
               onClick={() => setActiveTab(t.key)}
             >
               {t.label}
-              {state === "loading" && <Spinner label={`${t.label} report loading`} />}
+              {state === "loading" && (
+                <Spinner label={`${t.label} report loading`} />
+              )}
               {state === "error" && (
-                <span className="soc2-tab-dot" title="This report did not load" />
+                <span
+                  className="soc2-tab-dot"
+                  title="This report did not load"
+                />
               )}
             </button>
           );
@@ -1834,339 +1795,308 @@ const sendSoc2Pdf = async () => {
 
       {/* ── printable full report (all tabs) — visible only when printing ── */}
       {report && (
-        <PrintableReport report={report} agents={agents} scopeText={scopeText} />
+        <PrintableReport
+          report={report}
+          agents={agents}
+          scopeText={scopeText}
+        />
       )}
 
       {/* Send PDF capture only */}
-{report && sendReportReady && (
-  <div
-    ref={sendReportRef}
-    className="soc2-send-report-capture"
-    aria-hidden="true"
-  >
-    <PrintableReport
-      report={report}
-      agents={agents}
-      scopeText={scopeText}
-    />
-  </div>
-)}
+      {report && sendReportReady && (
+        <div
+          ref={sendReportRef}
+          className="soc2-send-report-capture"
+          aria-hidden="true"
+        >
+          <PrintableReport
+            report={report}
+            agents={agents}
+            scopeText={scopeText}
+          />
+        </div>
+      )}
 
       {sendModalOpen && (
-  <div
-    className="capacity-dash__send-overlay"
-    role="dialog"
-    aria-modal="true"
-    aria-labelledby="soc2-send-title"
-  >
-    <section className="capacity-dash__send-modal">
-      <header className="capacity-dash__send-header">
-        <div>
-          <div className="capacity-dash__send-eyebrow">
-            SOC 2 REPORT
-          </div>
-
-          <h2
-            id="soc2-send-title"
-            className="capacity-dash__send-title"
-          >
-            Send SOC 2 Report
-          </h2>
-
-          <p className="capacity-dash__send-subtitle">
-            Select the sender account and recipients
-            for this SOC 2 Evidence Report.
-          </p>
-        </div>
-
-        <button
-          type="button"
-          className="capacity-dash__send-close"
-          onClick={closeSendModal}
-          disabled={sendingPdf}
-          aria-label="Close"
+        <div
+          className="capacity-dash__send-overlay"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="soc2-send-title"
         >
-          ×
-        </button>
-      </header>
+          <section className="capacity-dash__send-modal">
+            <header className="capacity-dash__send-header">
+              <div>
+                <div className="capacity-dash__send-eyebrow">SOC 2 REPORT</div>
 
-      <div className="capacity-dash__send-body">
-       {sendError && (
-  <div className="capacity-dash__send-error" role="alert">
-    {sendError}
-  </div>
-)}
+                <h2 id="soc2-send-title" className="capacity-dash__send-title">
+                  Send SOC 2 Report
+                </h2>
 
-{sendSuccess && (
-  <div className="capacity-dash__send-success" role="status">
-    {sendSuccess}
-  </div>
-)}
-
-        {channelsLoading ? (
-          <div className="capacity-dash__send-loading">
-            Loading sender accounts and recipients…
-          </div>
-        ) : (
-          <>
-            {/* MESSAGE */}
-            <section className="capacity-dash__message-section">
-              <div className="capacity-dash__send-section-heading">
-                <div className="capacity-dash__step-number">
-                  1
-                </div>
-
-                <div>
-                  <h3 className="capacity-dash__send-section-title">
-                    Message
-                  </h3>
-
-                  <p className="capacity-dash__send-section-subtitle">
-                    Enter the subject and message that will
-                    accompany the SOC 2 PDF.
-                  </p>
-                </div>
+                <p className="capacity-dash__send-subtitle">
+                  Select the sender account and recipients for this SOC 2
+                  Evidence Report.
+                </p>
               </div>
 
-              <label className="capacity-dash__message-field">
-                <span className="capacity-dash__message-label">
-                  Subject
-                </span>
+              <button
+                type="button"
+                className="capacity-dash__send-close"
+                onClick={closeSendModal}
+                disabled={sendingPdf}
+                aria-label="Close"
+              >
+                ×
+              </button>
+            </header>
 
-                <input
-                  className="capacity-dash__message-input"
-                  type="text"
-                  value={sendSubject}
-                  onChange={(e) =>
-                    setSendSubject(e.target.value)
-                  }
-                  placeholder="Enter subject"
-                  disabled={sendingPdf}
-                />
-              </label>
-
-              <label className="capacity-dash__message-field">
-                <span className="capacity-dash__message-label">
-                  Body
-                </span>
-
-                <textarea
-                  className="capacity-dash__message-textarea"
-                  value={sendBody}
-                  onChange={(e) =>
-                    setSendBody(e.target.value)
-                  }
-                  placeholder="Enter message"
-                  rows={5}
-                  disabled={sendingPdf}
-                />
-              </label>
-            </section>
-
-            {/* SENDER ACCOUNT */}
-            <section className="capacity-dash__sender-section">
-              <div className="capacity-dash__send-section-heading">
-                <div className="capacity-dash__step-number">
-                  2
+            <div className="capacity-dash__send-body">
+              {sendError && (
+                <div className="capacity-dash__send-error" role="alert">
+                  {sendError}
                 </div>
+              )}
 
-                <div>
-                  <h3 className="capacity-dash__send-section-title">
-                    Sender account
-                  </h3>
-
-                  <p className="capacity-dash__send-section-subtitle">
-                    Choose the configured account that will
-                    send this report.
-                  </p>
+              {sendSuccess && (
+                <div className="capacity-dash__send-success" role="status">
+                  {sendSuccess}
                 </div>
-              </div>
+              )}
 
-              {channelAccounts.length === 0 ? (
-                <div className="capacity-dash__send-empty">
-                  No active and verified sender accounts
-                  are available.
+              {channelsLoading ? (
+                <div className="capacity-dash__send-loading">
+                  Loading sender accounts and recipients…
                 </div>
               ) : (
-                <div className="capacity-dash__sender-list">
-                  {channelAccounts.map((account) => (
-                    <label
-                      key={account.id}
-                      className={`capacity-dash__sender-account ${
-                        Number(selectedAccountId) ===
-                        Number(account.id)
-                          ? "capacity-dash__sender-account--selected"
-                          : ""
-                      }`}
-                    >
-                      <input
-                        type="radio"
-                        name="soc2-sender-account"
-                        value={account.id}
-                        checked={
-                          Number(selectedAccountId) ===
-                          Number(account.id)
-                        }
-                        onChange={(e) =>
-                          handleAccountSelection(
-                            e.target.value,
-                          )
-                        }
-                        disabled={sendingPdf}
-                      />
+                <>
+                  {/* MESSAGE */}
+                  <section className="capacity-dash__message-section">
+                    <div className="capacity-dash__send-section-heading">
+                      <div className="capacity-dash__step-number">1</div>
 
                       <div>
-                        <div className="capacity-dash__sender-account-label">
-                          {account.label ||
-                            account.channel_type}
-                        </div>
+                        <h3 className="capacity-dash__send-section-title">
+                          Message
+                        </h3>
 
-                        <div className="capacity-dash__sender-account-identifier">
-                          {account.identifier ||
-                            account.email ||
-                            account.username ||
-                            account.channel_type}
-                        </div>
+                        <p className="capacity-dash__send-section-subtitle">
+                          Enter the subject and message that will accompany the
+                          SOC 2 PDF.
+                        </p>
                       </div>
-                    </label>
-                  ))}
-                </div>
-              )}
-            </section>
+                    </div>
 
-            {/* RECIPIENTS */}
-            <section className="capacity-dash__recipient-section">
-              <div className="capacity-dash__send-section-heading">
-                <div className="capacity-dash__step-number">
-                  3
-                </div>
+                    <label className="capacity-dash__message-field">
+                      <span className="capacity-dash__message-label">
+                        Subject
+                      </span>
 
-                <div>
-                  <h3 className="capacity-dash__send-section-title">
-                    Recipients
-                  </h3>
-
-                  <p className="capacity-dash__send-section-subtitle">
-                    Select where the SOC 2 PDF should be
-                    delivered.
-                  </p>
-                </div>
-
-                {selectedSenderAccount && (
-                  <span className="capacity-dash__recipient-count">
-                    {selectedChannelIds.length} selected
-                  </span>
-                )}
-              </div>
-
-              {!selectedSenderAccount ? (
-                <div className="capacity-dash__send-empty">
-                  Select a sender account to view compatible
-                  recipients.
-                </div>
-              ) : compatibleChannels.length === 0 ? (
-                <div className="capacity-dash__send-empty">
-                  No compatible communication channels are
-                  available for this sender account.
-                </div>
-              ) : (
-                <div className="capacity-dash__channel-list">
-                  {compatibleChannels.map((channel) => (
-                    <label
-                      key={channel.id}
-                      className={`capacity-dash__channel ${
-                        selectedChannelIds.includes(
-                          channel.id,
-                        )
-                          ? "capacity-dash__channel--selected"
-                          : ""
-                      }`}
-                    >
                       <input
-                        type="checkbox"
-                        checked={selectedChannelIds.includes(
-                          channel.id,
-                        )}
-                        onChange={() =>
-                          toggleChannelSelection(
-                            channel.id,
-                          )
-                        }
+                        className="capacity-dash__message-input"
+                        type="text"
+                        value={sendSubject}
+                        onChange={(e) => setSendSubject(e.target.value)}
+                        placeholder="Enter subject"
                         disabled={sendingPdf}
                       />
-
-                      <div className="capacity-dash__channel-main">
-                        <div className="capacity-dash__channel-name">
-                          {channel.name}
-                        </div>
-
-                        <div className="capacity-dash__channel-value">
-                          {channel.value}
-                        </div>
-
-                        <div className="capacity-dash__channel-meta">
-                          <span className="capacity-dash__channel-type">
-                            {channel.type}
-                          </span>
-                        </div>
-                      </div>
                     </label>
-                  ))}
-                </div>
+
+                    <label className="capacity-dash__message-field">
+                      <span className="capacity-dash__message-label">Body</span>
+
+                      <textarea
+                        className="capacity-dash__message-textarea"
+                        value={sendBody}
+                        onChange={(e) => setSendBody(e.target.value)}
+                        placeholder="Enter message"
+                        rows={5}
+                        disabled={sendingPdf}
+                      />
+                    </label>
+                  </section>
+
+                  {/* SENDER ACCOUNT */}
+                  <section className="capacity-dash__sender-section">
+                    <div className="capacity-dash__send-section-heading">
+                      <div className="capacity-dash__step-number">2</div>
+
+                      <div>
+                        <h3 className="capacity-dash__send-section-title">
+                          Sender account
+                        </h3>
+
+                        <p className="capacity-dash__send-section-subtitle">
+                          Choose the configured account that will send this
+                          report.
+                        </p>
+                      </div>
+                    </div>
+
+                    {channelAccounts.length === 0 ? (
+                      <div className="capacity-dash__send-empty">
+                        No active and verified sender accounts are available.
+                      </div>
+                    ) : (
+                      <div className="capacity-dash__sender-list">
+                        {channelAccounts.map((account) => (
+                          <label
+                            key={account.id}
+                            className={`capacity-dash__sender-account ${
+                              Number(selectedAccountId) === Number(account.id)
+                                ? "capacity-dash__sender-account--selected"
+                                : ""
+                            }`}
+                          >
+                            <input
+                              type="radio"
+                              name="soc2-sender-account"
+                              value={account.id}
+                              checked={
+                                Number(selectedAccountId) === Number(account.id)
+                              }
+                              onChange={(e) =>
+                                handleAccountSelection(e.target.value)
+                              }
+                              disabled={sendingPdf}
+                            />
+
+                            <div>
+                              <div className="capacity-dash__sender-account-label">
+                                {account.label || account.channel_type}
+                              </div>
+
+                              <div className="capacity-dash__sender-account-identifier">
+                                {account.identifier ||
+                                  account.email ||
+                                  account.username ||
+                                  account.channel_type}
+                              </div>
+                            </div>
+                          </label>
+                        ))}
+                      </div>
+                    )}
+                  </section>
+
+                  {/* RECIPIENTS */}
+                  <section className="capacity-dash__recipient-section">
+                    <div className="capacity-dash__send-section-heading">
+                      <div className="capacity-dash__step-number">3</div>
+
+                      <div>
+                        <h3 className="capacity-dash__send-section-title">
+                          Recipients
+                        </h3>
+
+                        <p className="capacity-dash__send-section-subtitle">
+                          Select where the SOC 2 PDF should be delivered.
+                        </p>
+                      </div>
+
+                      {selectedSenderAccount && (
+                        <span className="capacity-dash__recipient-count">
+                          {selectedChannelIds.length} selected
+                        </span>
+                      )}
+                    </div>
+
+                    {!selectedSenderAccount ? (
+                      <div className="capacity-dash__send-empty">
+                        Select a sender account to view compatible recipients.
+                      </div>
+                    ) : compatibleChannels.length === 0 ? (
+                      <div className="capacity-dash__send-empty">
+                        No compatible communication channels are available for
+                        this sender account.
+                      </div>
+                    ) : (
+                      <div className="capacity-dash__channel-list">
+                        {compatibleChannels.map((channel) => (
+                          <label
+                            key={channel.id}
+                            className={`capacity-dash__channel ${
+                              selectedChannelIds.includes(channel.id)
+                                ? "capacity-dash__channel--selected"
+                                : ""
+                            }`}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={selectedChannelIds.includes(channel.id)}
+                              onChange={() =>
+                                toggleChannelSelection(channel.id)
+                              }
+                              disabled={sendingPdf}
+                            />
+
+                            <div className="capacity-dash__channel-main">
+                              <div className="capacity-dash__channel-name">
+                                {channel.name}
+                              </div>
+
+                              <div className="capacity-dash__channel-value">
+                                {channel.value}
+                              </div>
+
+                              <div className="capacity-dash__channel-meta">
+                                <span className="capacity-dash__channel-type">
+                                  {channel.type}
+                                </span>
+                              </div>
+                            </div>
+                          </label>
+                        ))}
+                      </div>
+                    )}
+                  </section>
+                </>
               )}
-            </section>
-          </>
-        )}
-      </div>
+            </div>
 
-      <footer className="capacity-dash__send-footer">
-        <div className="capacity-dash__send-selection">
-          <div>
-            Sender:{" "}
-            <strong>
-              {selectedSenderAccount
-                ? selectedSenderAccount.label
-                : "Not selected"}
-            </strong>
-          </div>
+            <footer className="capacity-dash__send-footer">
+              <div className="capacity-dash__send-selection">
+                <div>
+                  Sender:{" "}
+                  <strong>
+                    {selectedSenderAccount
+                      ? selectedSenderAccount.label
+                      : "Not selected"}
+                  </strong>
+                </div>
 
-          <div>
-            Recipients: {selectedChannelIds.length}
-          </div>
+                <div>Recipients: {selectedChannelIds.length}</div>
+              </div>
+
+              <div className="capacity-dash__send-actions">
+                <button
+                  className="capacity-dash__btn"
+                  type="button"
+                  onClick={closeSendModal}
+                  disabled={sendingPdf}
+                >
+                  Cancel
+                </button>
+
+                <button
+                  className="capacity-dash__btn capacity-dash__btn--primary"
+                  type="button"
+                  onClick={sendSoc2Pdf}
+                  disabled={
+                    channelsLoading ||
+                    !selectedAccountId ||
+                    !selectedChannelIds.length ||
+                    !sendSubject.trim() ||
+                    !sendBody.trim() ||
+                    sendingPdf
+                  }
+                >
+                  {sendingPdf ? "Generating & Sending…" : "Send Report"}
+                </button>
+              </div>
+            </footer>
+          </section>
         </div>
-
-        <div className="capacity-dash__send-actions">
-          <button
-            className="capacity-dash__btn"
-            type="button"
-            onClick={closeSendModal}
-            disabled={sendingPdf}
-          >
-            Cancel
-          </button>
-
-          <button
-            className="capacity-dash__btn capacity-dash__btn--primary"
-            type="button"
-            onClick={sendSoc2Pdf}
-            disabled={
-              channelsLoading ||
-              !selectedAccountId ||
-              !selectedChannelIds.length ||
-              !sendSubject.trim() ||
-              !sendBody.trim() ||
-              sendingPdf
-            }
-          >
-            {sendingPdf
-              ? "Generating & Sending…"
-              : "Send Report"}
-          </button>
-        </div>
-      </footer>
-    </section>
-  </div>
-)}
+      )}
     </div>
   );
 }
@@ -2257,7 +2187,9 @@ function printSections(report, agents) {
       lead: `Findings derived from this window's own numbers, most serious first. These are
         prompts for review rather than conclusions: each one names a figure an auditor would
         expect to see explained, evidenced, or remediated before the next reporting period.`,
-      body: <RecommendationsTab items={report.recommendations} loading={false} />,
+      body: (
+        <RecommendationsTab items={report.recommendations} loading={false} />
+      ),
     },
   ];
 }
@@ -2325,14 +2257,10 @@ function PrintableReport({ report, agents, scopeText }) {
 
   return (
     <div className="soc2-print-root" aria-hidden="true">
-
-      
-
       {/* =========================================================
           COVER PAGE
       ========================================================= */}
       <section className="soc2-print-page soc2-print-cover">
-
         <div className="soc2-print-cover-top">
           <div className="soc2-print-brand">
             <span className="soc2-print-logo">
@@ -2340,9 +2268,7 @@ function PrintableReport({ report, agents, scopeText }) {
             </span>
 
             <div>
-              <div className="soc2-print-brand-name">
-                GUARDLYNX
-              </div>
+              <div className="soc2-print-brand-name">GUARDLYNX</div>
 
               <div className="soc2-print-brand-subtitle">
                 Security & Compliance Monitoring
@@ -2350,43 +2276,28 @@ function PrintableReport({ report, agents, scopeText }) {
             </div>
           </div>
 
-          <div className="soc2-print-classification">
-            CONFIDENTIAL
-          </div>
+          <div className="soc2-print-classification">CONFIDENTIAL</div>
         </div>
 
         <div className="soc2-print-cover-main">
+          <div className="soc2-print-eyebrow">COMPLIANCE EVIDENCE REPORT</div>
 
-          <div className="soc2-print-eyebrow">
-            COMPLIANCE EVIDENCE REPORT
-          </div>
-
-          <h1 className="soc2-print-cover-title">
-            SOC 2 Evidence Report
-          </h1>
+          <h1 className="soc2-print-cover-title">SOC 2 Evidence Report</h1>
 
           <p className="soc2-print-cover-description">
-            Security and compliance evidence collected from
-            Guardlynx monitored agents during the selected
-            reporting period.
+            Security and compliance evidence collected from Guardlynx monitored
+            agents during the selected reporting period.
           </p>
 
           <div className="soc2-print-period-card">
-            <div className="soc2-print-period-label">
-              REPORTING PERIOD
-            </div>
+            <div className="soc2-print-period-label">REPORTING PERIOD</div>
 
-            <div className="soc2-print-period-value">
-              {scopeText}
-            </div>
+            <div className="soc2-print-period-value">{scopeText}</div>
           </div>
 
           <div className="soc2-print-meta-grid">
-
             <div className="soc2-print-meta-box">
-              <span className="soc2-print-meta-key">
-                Agent Scope
-              </span>
+              <span className="soc2-print-meta-key">Agent Scope</span>
 
               <span className="soc2-print-meta-val">
                 {report.meta.agentName || "All agents"}
@@ -2394,9 +2305,7 @@ function PrintableReport({ report, agents, scopeText }) {
             </div>
 
             <div className="soc2-print-meta-box">
-              <span className="soc2-print-meta-key">
-                Generated
-              </span>
+              <span className="soc2-print-meta-key">Generated</span>
 
               <span className="soc2-print-meta-val">
                 {report.meta.generatedAt !== "—"
@@ -2406,9 +2315,7 @@ function PrintableReport({ report, agents, scopeText }) {
             </div>
 
             <div className="soc2-print-meta-box">
-              <span className="soc2-print-meta-key">
-                Total Events
-              </span>
+              <span className="soc2-print-meta-key">Total Events</span>
 
               <span className="soc2-print-meta-val">
                 {fmtInt(report.summary.totalEvents)}
@@ -2416,62 +2323,41 @@ function PrintableReport({ report, agents, scopeText }) {
             </div>
 
             <div className="soc2-print-meta-box">
-              <span className="soc2-print-meta-key">
-                Timezone
-              </span>
+              <span className="soc2-print-meta-key">Timezone</span>
 
-              <span className="soc2-print-meta-val">
-                IST (UTC+5:30)
-              </span>
+              <span className="soc2-print-meta-val">IST (UTC+5:30)</span>
             </div>
-
           </div>
-
         </div>
 
         <div className="soc2-print-cover-bottom">
-          <div>
-            Generated from Guardlynx agent telemetry.
-          </div>
+          <div>Generated from Guardlynx agent telemetry.</div>
 
-          <div>
-            SOC 2 Evidence Report
-          </div>
+          <div>SOC 2 Evidence Report</div>
         </div>
-
       </section>
-
 
       {/* =========================================================
           EXECUTIVE SUMMARY
       ========================================================= */}
       <PrintExecutiveSummary report={report} />
 
-
       {/* =========================================================
           TABLE OF CONTENTS
       ========================================================= */}
       <section className="soc2-print-page soc2-print-toc-page">
+        <div className="soc2-print-page-eyebrow">REPORT STRUCTURE</div>
 
-        <div className="soc2-print-page-eyebrow">
-          REPORT STRUCTURE
-        </div>
-
-        <h2 className="soc2-print-toc-title">
-          Contents
-        </h2>
+        <h2 className="soc2-print-toc-title">Contents</h2>
 
         <p className="soc2-print-toc-description">
           Sections included in this SOC 2 evidence report.
         </p>
 
         <ol className="soc2-print-toc-list">
-
           <li>
             <span className="soc2-toc-number">01</span>
-            <span className="soc2-toc-label">
-              Executive Summary
-            </span>
+            <span className="soc2-toc-label">Executive Summary</span>
           </li>
 
           {sections.map((s, i) => (
@@ -2480,16 +2366,11 @@ function PrintableReport({ report, agents, scopeText }) {
                 {String(i + 2).padStart(2, "0")}
               </span>
 
-              <span className="soc2-toc-label">
-                {s.title}
-              </span>
+              <span className="soc2-toc-label">{s.title}</span>
             </li>
           ))}
-
         </ol>
-
       </section>
-
 
       {/* =========================================================
           REPORT SECTIONS
@@ -2504,7 +2385,6 @@ function PrintableReport({ report, agents, scopeText }) {
           {s.body}
         </PrintSection>
       ))}
-
     </div>
   );
 }
@@ -2525,31 +2405,21 @@ function PrintExecutiveSummary({ report }) {
 
   return (
     <section className="soc2-print-page soc2-print-executive">
+      <div className="soc2-print-page-eyebrow">01 · EXECUTIVE SUMMARY</div>
 
-      <div className="soc2-print-page-eyebrow">
-        01 · EXECUTIVE SUMMARY
-      </div>
-
-      <h2 className="soc2-print-executive-title">
-        Executive Summary
-      </h2>
+      <h2 className="soc2-print-executive-title">Executive Summary</h2>
 
       <p className="soc2-print-executive-lead">
-        This summary provides a high-level view of the security
-        and compliance evidence recorded during the selected
-        reporting period.
+        This summary provides a high-level view of the security and compliance
+        evidence recorded during the selected reporting period.
       </p>
-
 
       {/* =======================================================
           KPI AREA
       ======================================================= */}
       <div className="soc2-print-kpi-grid">
-
         <div className="soc2-print-kpi">
-          <span className="soc2-print-kpi-label">
-            Total Events
-          </span>
+          <span className="soc2-print-kpi-label">Total Events</span>
 
           <strong className="soc2-print-kpi-value">
             {fmtInt(summary.totalEvents)}
@@ -2560,11 +2430,8 @@ function PrintExecutiveSummary({ report }) {
           </span>
         </div>
 
-
         <div className="soc2-print-kpi">
-          <span className="soc2-print-kpi-label">
-            High Severity
-          </span>
+          <span className="soc2-print-kpi-label">High Severity</span>
 
           <strong className="soc2-print-kpi-value">
             {fmtInt(summary.highSeverity)}
@@ -2572,22 +2439,15 @@ function PrintExecutiveSummary({ report }) {
 
           <span
             className={`soc2-print-kpi-sub ${
-              Number(summary.highSeverity)
-                ? "danger"
-                : "success"
+              Number(summary.highSeverity) ? "danger" : "success"
             }`}
           >
-            {Number(summary.highSeverity)
-              ? "Requires review"
-              : "None recorded"}
+            {Number(summary.highSeverity) ? "Requires review" : "None recorded"}
           </span>
         </div>
 
-
         <div className="soc2-print-kpi">
-          <span className="soc2-print-kpi-label">
-            Anomalies
-          </span>
+          <span className="soc2-print-kpi-label">Anomalies</span>
 
           <strong className="soc2-print-kpi-value">
             {fmtInt(summary.anomalies)}
@@ -2598,16 +2458,11 @@ function PrintExecutiveSummary({ report }) {
           </span>
         </div>
 
-
         <div className="soc2-print-kpi soc2-print-kpi-score">
-          <span className="soc2-print-kpi-label">
-            Compliance
-          </span>
+          <span className="soc2-print-kpi-label">Compliance</span>
 
           <strong className="soc2-print-kpi-score-value">
-            {compliance != null
-              ? `${compliance}%`
-              : "—"}
+            {compliance != null ? `${compliance}%` : "—"}
           </strong>
 
           <span
@@ -2624,42 +2479,28 @@ function PrintExecutiveSummary({ report }) {
             {complianceStatus}
           </span>
         </div>
-
       </div>
-
 
       {/* =======================================================
           COMPLIANCE OVERVIEW
       ======================================================= */}
       <div className="soc2-print-summary-grid">
-
         <div className="soc2-print-summary-card">
-
-          <div className="soc2-print-card-eyebrow">
-            COMPLIANCE OVERVIEW
-          </div>
+          <div className="soc2-print-card-eyebrow">COMPLIANCE OVERVIEW</div>
 
           <div className="soc2-print-compliance">
-
             <div className="soc2-print-compliance-score">
-              {compliance != null
-                ? `${compliance}%`
-                : "—"}
+              {compliance != null ? `${compliance}%` : "—"}
             </div>
 
             <div className="soc2-print-compliance-copy">
-
-              <strong>
-                Overall compliance score
-              </strong>
+              <strong>Overall compliance score</strong>
 
               <span>
-                Mean score across scored trust service
-                criteria for the selected reporting window.
+                Mean score across scored trust service criteria for the selected
+                reporting window.
               </span>
-
             </div>
-
           </div>
 
           {compliance != null && (
@@ -2667,46 +2508,32 @@ function PrintExecutiveSummary({ report }) {
               <div
                 className="soc2-print-compliance-fill"
                 style={{
-                  width: `${Math.max(
-                    0,
-                    Math.min(100, Number(compliance))
-                  )}%`,
+                  width: `${Math.max(0, Math.min(100, Number(compliance)))}%`,
                 }}
               />
             </div>
           )}
-
         </div>
 
-
         <div className="soc2-print-summary-card">
-
-          <div className="soc2-print-card-eyebrow">
-            REPORT SCOPE
-          </div>
+          <div className="soc2-print-card-eyebrow">REPORT SCOPE</div>
 
           <div className="soc2-print-scope-row">
             <span>Agent</span>
 
-            <strong>
-              {report.meta.agentName || "All agents"}
-            </strong>
+            <strong>{report.meta.agentName || "All agents"}</strong>
           </div>
 
           <div className="soc2-print-scope-row">
             <span>Events</span>
 
-            <strong>
-              {fmtInt(summary.totalEvents)}
-            </strong>
+            <strong>{fmtInt(summary.totalEvents)}</strong>
           </div>
 
           <div className="soc2-print-scope-row">
             <span>Timezone</span>
 
-            <strong>
-              IST (UTC+5:30)
-            </strong>
+            <strong>IST (UTC+5:30)</strong>
           </div>
 
           <div className="soc2-print-scope-row">
@@ -2718,20 +2545,14 @@ function PrintExecutiveSummary({ report }) {
                 : "—"}
             </strong>
           </div>
-
         </div>
-
       </div>
-
 
       {/* =======================================================
           TRUST SERVICE CRITERIA
       ======================================================= */}
       <div className="soc2-print-summary-section">
-
-        <div className="soc2-print-card-eyebrow">
-          TRUST SERVICE CRITERIA
-        </div>
+        <div className="soc2-print-card-eyebrow">TRUST SERVICE CRITERIA</div>
 
         <h3 className="soc2-print-summary-heading">
           Compliance by monitored domain
@@ -2746,22 +2567,18 @@ function PrintExecutiveSummary({ report }) {
             No scored domains were recorded in this window.
           </div>
         )}
-
       </div>
-
 
       {/* =======================================================
           NOTE
       ======================================================= */}
       {(summary.silentDomains || []).length > 0 && (
         <div className="soc2-print-summary-note">
-          <strong>Note:</strong>{" "}
-          The following domains were not scored because
+          <strong>Note:</strong> The following domains were not scored because
           no events were recorded during this window:{" "}
           {summary.silentDomains.join(", ")}.
         </div>
       )}
-
     </section>
   );
 }
@@ -2779,7 +2596,6 @@ function PrintExecutiveSummary({ report }) {
 // }
 
 function PrintSection({ number, title, lead, children }) {
-
   const sectionClass =
     title === "System operations (CC7)"
       ? "soc2-print-section soc2-print-section-process"
@@ -2788,33 +2604,19 @@ function PrintSection({ number, title, lead, children }) {
         : "soc2-print-section";
   return (
     <section className={sectionClass}>
-
       <div className="soc2-print-section-number">
         {String(number).padStart(2, "0")}
       </div>
 
       <div className="soc2-print-section-heading">
+        <div className="soc2-print-page-eyebrow">SOC 2 EVIDENCE</div>
 
-        <div className="soc2-print-page-eyebrow">
-          SOC 2 EVIDENCE
-        </div>
+        <h2 className="soc2-print-h2">{title}</h2>
 
-        <h2 className="soc2-print-h2">
-          {title}
-        </h2>
-
-        {lead && (
-          <p className="soc2-print-lead">
-            {lead}
-          </p>
-        )}
-
+        {lead && <p className="soc2-print-lead">{lead}</p>}
       </div>
 
-      <div className="soc2-print-section-body">
-        {children}
-      </div>
-
+      <div className="soc2-print-section-body">{children}</div>
     </section>
   );
 }
@@ -2845,7 +2647,9 @@ function Disclosure({ title, hint, children, open = false }) {
 
 /** Small inline spinner, for anything that is waiting on a request. */
 function Spinner({ label }) {
-  return <span className="soc2-spinner" role="img" aria-label={label || "Loading"} />;
+  return (
+    <span className="soc2-spinner" role="img" aria-label={label || "Loading"} />
+  );
 }
 
 /**
@@ -2859,7 +2663,8 @@ function PendingNote({ pending, what = "data" }) {
   return (
     <div className="soc2-note soc2-note-loading">
       <Spinner />
-      Loading {pending} of {SOC2_SECTIONS.length} reports — {what} will fill in as they arrive.
+      Loading {pending} of {SOC2_SECTIONS.length} reports — {what} will fill in
+      as they arrive.
     </div>
   );
 }
@@ -2881,7 +2686,8 @@ function StatRow({ children }) {
 export function BreakdownList({ items = [], copyable = false }) {
   const [flash, copy] = useCopyFlash();
   const max = items.reduce((m, i) => Math.max(m, Number(i.count) || 0), 0);
-  if (items.length === 0) return <div className="evt-empty">Nothing recorded.</div>;
+  if (items.length === 0)
+    return <div className="evt-empty">Nothing recorded.</div>;
 
   return (
     <div className="soc2-bd-list">
@@ -2907,7 +2713,9 @@ export function BreakdownList({ items = [], copyable = false }) {
             <span className="soc2-bd-track">
               <span
                 className="soc2-bd-fill"
-                style={{ width: `${max ? ((Number(i.count) || 0) / max) * 100 : 0}%` }}
+                style={{
+                  width: `${max ? ((Number(i.count) || 0) / max) * 100 : 0}%`,
+                }}
               />
             </span>
             <span className="soc2-bd-count">{fmtInt(i.count)}</span>
@@ -3020,10 +2828,7 @@ export function DataTable({ columns = [], rows = [], maxRows = 50 }) {
   const isCategoryColumn = (key, label) => {
     const value = `${key || ""} ${label || ""}`.toLowerCase();
 
-    return (
-      value.includes("category") ||
-      value.includes("domain")
-    );
+    return value.includes("category") || value.includes("domain");
   };
 
   const normalizeSeverity = (value) => {
@@ -3045,10 +2850,7 @@ export function DataTable({ columns = [], rows = [], maxRows = 50 }) {
       .toLowerCase()
       .replace(/\s+/g, "-");
 
-    if (
-      normalized.includes("auth") ||
-      normalized.includes("access")
-    ) {
+    if (normalized.includes("auth") || normalized.includes("access")) {
       return "auth";
     }
 
@@ -3056,24 +2858,15 @@ export function DataTable({ columns = [], rows = [], maxRows = 50 }) {
       return "network";
     }
 
-    if (
-      normalized.includes("file") ||
-      normalized.includes("change")
-    ) {
+    if (normalized.includes("file") || normalized.includes("change")) {
       return "file";
     }
 
-    if (
-      normalized.includes("process") ||
-      normalized.includes("system")
-    ) {
+    if (normalized.includes("process") || normalized.includes("system")) {
       return "process";
     }
 
-    if (
-      normalized.includes("usb") ||
-      normalized.includes("removable")
-    ) {
+    if (normalized.includes("usb") || normalized.includes("removable")) {
       return "usb";
     }
 
@@ -3083,13 +2876,10 @@ export function DataTable({ columns = [], rows = [], maxRows = 50 }) {
   return (
     <div className="inc-table-wrap">
       <table className="inc-table soc2-tbl">
-
         <thead>
           <tr>
             {columns.map((c) => (
-              <th key={c.key}>
-                {c.label}
-              </th>
+              <th key={c.key}>{c.label}</th>
             ))}
           </tr>
         </thead>
@@ -3097,23 +2887,18 @@ export function DataTable({ columns = [], rows = [], maxRows = 50 }) {
         <tbody>
           {shown.map((r, i) => (
             <tr key={i}>
-
               {columns.map((c) => {
                 const rawValue = r[c.key];
                 const displayValue =
-                  rawValue == null || rawValue === ""
-                    ? "—"
-                    : rawValue;
+                  rawValue == null || rawValue === "" ? "—" : rawValue;
 
-                const severity =
-                  isSeverityColumn(c.key, c.label)
-                    ? normalizeSeverity(rawValue)
-                    : "";
+                const severity = isSeverityColumn(c.key, c.label)
+                  ? normalizeSeverity(rawValue)
+                  : "";
 
-                const category =
-                  isCategoryColumn(c.key, c.label)
-                    ? normalizeCategory(rawValue)
-                    : "";
+                const category = isCategoryColumn(c.key, c.label)
+                  ? normalizeCategory(rawValue)
+                  : "";
 
                 // `<key>Full` carries the value behind an abbreviated cell, when
                 // the two differ (a USB transfer shows the file name, copies the
@@ -3141,7 +2926,11 @@ export function DataTable({ columns = [], rows = [], maxRows = 50 }) {
                       >
                         <span className="soc2-copy-text">{displayValue}</span>
                         <span className="soc2-copy-flag" aria-hidden="true">
-                          {state === "copied" ? "✓" : state === "failed" ? "⚠" : "⧉"}
+                          {state === "copied"
+                            ? "✓"
+                            : state === "failed"
+                              ? "⚠"
+                              : "⧉"}
                         </span>
                       </button>
                       <span className="soc2-sr-only" aria-live="polite">
@@ -3164,15 +2953,11 @@ export function DataTable({ columns = [], rows = [], maxRows = 50 }) {
                     }
                   >
                     {severity ? (
-                      <span
-                        className={`sev-badge sev-${severity}`}
-                      >
+                      <span className={`sev-badge sev-${severity}`}>
                         {String(rawValue).toUpperCase()}
                       </span>
                     ) : category ? (
-                      <span
-                        className={`cat-badge cat-${category}`}
-                      >
+                      <span className={`cat-badge cat-${category}`}>
                         {String(rawValue)}
                       </span>
                     ) : (
@@ -3181,11 +2966,9 @@ export function DataTable({ columns = [], rows = [], maxRows = 50 }) {
                   </td>
                 );
               })}
-
             </tr>
           ))}
         </tbody>
-
       </table>
 
       {rows.length > shown.length && (
@@ -3193,7 +2976,6 @@ export function DataTable({ columns = [], rows = [], maxRows = 50 }) {
           Showing {shown.length} of {fmtInt(rows.length)} rows.
         </div>
       )}
-
     </div>
   );
 }
@@ -3202,7 +2984,11 @@ function SkelLines({ n = 4 }) {
   return (
     <div className="soc2-skel-lines">
       {Array.from({ length: n }).map((_, i) => (
-        <div key={i} className="stat-skel" style={{ height: 14, margin: "8px 0" }} />
+        <div
+          key={i}
+          className="stat-skel"
+          style={{ height: 14, margin: "8px 0" }}
+        />
       ))}
     </div>
   );
@@ -3226,22 +3012,16 @@ function SectionView({ view, expanded = false }) {
       <div className="soc2-tab-body soc2-domain-section">
         {/* <div className="soc2-section-head">{view.heading}</div> */}
         <div className="soc2-section-head soc2-domain-heading">
-  <span className="soc2-domain-eyebrow">
-    SOC 2 EVIDENCE
-  </span>
+          <span className="soc2-domain-eyebrow">SOC 2 EVIDENCE</span>
 
-  <span className="soc2-domain-title">
-    {view.heading}
-  </span>
-</div>
+          <span className="soc2-domain-title">{view.heading}</span>
+        </div>
         <div className="soc2-note soc2-note-loading">
           <Spinner />
           Loading this report…
         </div>
 
-        <div className="soc2-print-domain-label">
-  KEY METRICS
-</div>
+        <div className="soc2-print-domain-label">KEY METRICS</div>
         <StatRow>
           {[0, 1, 2, 3].map((i) => (
             <StatCard key={i} loading />
@@ -3266,10 +3046,12 @@ function SectionView({ view, expanded = false }) {
       <div className="soc2-tab-body">
         <div className="soc2-section-head">{view.heading}</div>
         <div className="soc2-note">
-          This domain's report did not load, so it is excluded from the scores and the
-          incident list — treat the window as having no evidence for this control rather
-          than as a clean result.{" "}
-          <span className="soc2-screen-only">Click Generate to try the window again.</span>
+          This domain's report did not load, so it is excluded from the scores
+          and the incident list — treat the window as having no evidence for
+          this control rather than as a clean result.{" "}
+          <span className="soc2-screen-only">
+            Click Generate to try the window again.
+          </span>
         </div>
       </div>
     );
@@ -3277,7 +3059,9 @@ function SectionView({ view, expanded = false }) {
 
   // Past the two branches above the payload is in hand, so nothing here is in a
   // loading state.
-  const charts = (view.charts || []).filter((c) => c.series.some((s) => s.data.length > 0));
+  const charts = (view.charts || []).filter((c) =>
+    c.series.some((s) => s.data.length > 0),
+  );
 
   return (
     <div className="soc2-tab-body">
@@ -3285,17 +3069,23 @@ function SectionView({ view, expanded = false }) {
 
       <StatRow>
         {view.stats.map((s) => (
-          <StatCard key={s.label} label={s.label} value={s.value} sub={s.sub} subColor={s.subColor} />
+          <StatCard
+            key={s.label}
+            label={s.label}
+            value={s.value}
+            sub={s.sub}
+            subColor={s.subColor}
+          />
         ))}
       </StatRow>
 
       {view.total === 0 && (
-        <div className="soc2-note">No events of this type were recorded in the selected window.</div>
+        <div className="soc2-note">
+          No events of this type were recorded in the selected window.
+        </div>
       )}
 
-      <div className="soc2-print-domain-label">
-  KEY ACTIVITY
-</div>
+      <div className="soc2-print-domain-label">KEY ACTIVITY</div>
 
       <div className="soc2-two-col">
         <Section title={view.bars.title}>
@@ -3315,47 +3105,47 @@ function SectionView({ view, expanded = false }) {
       </div>
 
       {charts.length > 0 && (
-  <div className="soc2-print-domain-label">
-    EVIDENCE
-  </div>
-)}
+        <div className="soc2-print-domain-label">EVIDENCE</div>
+      )}
 
       {charts.map((c) => (
         <Section key={c.title} title={c.title} wide>
-          <TimeSeriesChart series={c.series} yMax={c.yMax} unit={c.unit} height={200}  minimap={false}/>
+          <TimeSeriesChart
+            series={c.series}
+            yMax={c.yMax}
+            unit={c.unit}
+            height={200}
+            minimap={false}
+          />
         </Section>
       ))}
 
       {/* The detail is the bulk of the page, so it stays folded away until it is
           asked for — the printed report opens everything instead. */}
       {view.breakdowns.length > 0 && (
-         <>
-    <div className="soc2-print-domain-label">
-      BREAKDOWNS
-    </div>
-        <Disclosure
-          title="Breakdowns"
-          hint={`${view.breakdowns.length} lists`}
-          open={expanded}
-        >
-          <div className="soc2-card-grid">
-            {view.breakdowns.map((b) => (
-              <Section key={b.title} title={b.title}>
-                {/* every breakdown row copies its label on click — paths,
+        <>
+          <div className="soc2-print-domain-label">BREAKDOWNS</div>
+          <Disclosure
+            title="Breakdowns"
+            hint={`${view.breakdowns.length} lists`}
+            open={expanded}
+          >
+            <div className="soc2-card-grid">
+              {view.breakdowns.map((b) => (
+                <Section key={b.title} title={b.title}>
+                  {/* every breakdown row copies its label on click — paths,
                     users, techniques alike; they all get pasted somewhere */}
-                <BreakdownList items={b.items} copyable />
-              </Section>
-            ))}
-          </div>
-        </Disclosure>
+                  <BreakdownList items={b.items} copyable />
+                </Section>
+              ))}
+            </div>
+          </Disclosure>
         </>
       )}
 
       {view.tables.length > 0 && (
-  <div className="soc2-print-domain-label">
-    EVIDENCE DETAILS
-  </div>
-)}
+        <div className="soc2-print-domain-label">EVIDENCE DETAILS</div>
+      )}
 
       {view.tables.map((t) => (
         <Disclosure
@@ -3383,7 +3173,13 @@ function OverviewTab({ summary, views, onOpenDomain, loading }) {
     <div className="soc2-tab-body">
       <PendingNote pending={m.pendingCount} what="the totals and scores" />
       <StatRow>
-        <StatCard loading={loading} label="Total events" value={fmtInt(m.totalEvents)} sub="all five domains" subColor="muted" />
+        <StatCard
+          loading={loading}
+          label="Total events"
+          value={fmtInt(m.totalEvents)}
+          sub="all five domains"
+          subColor="muted"
+        />
         <StatCard
           loading={loading}
           label="High severity"
@@ -3396,13 +3192,19 @@ function OverviewTab({ summary, views, onOpenDomain, loading }) {
           label="Anomalies"
           value={fmtInt(m.anomalies)}
           sub={`${fmtInt(m.iocMatches)} IOC matches`}
-          subColor={Number(m.anomalies) || Number(m.iocMatches) ? "warning" : "success"}
+          subColor={
+            Number(m.anomalies) || Number(m.iocMatches) ? "warning" : "success"
+          }
         />
         <StatCard
           loading={loading}
           label="Compliance"
           value={m.complianceScore != null ? `${m.complianceScore}%` : "—"}
-          sub={m.complianceScore != null ? "mean of scored domains" : "no events to score"}
+          sub={
+            m.complianceScore != null
+              ? "mean of scored domains"
+              : "no events to score"
+          }
           subColor={
             m.complianceScore == null
               ? "muted"
@@ -3424,18 +3226,27 @@ function OverviewTab({ summary, views, onOpenDomain, loading }) {
               {(m.criteria || []).length > 0 ? (
                 <CriteriaScores scores={m.criteria} />
               ) : (
-                <div className="evt-empty">No domain recorded any events in this window.</div>
+                <div className="evt-empty">
+                  No domain recorded any events in this window.
+                </div>
               )}
               {/* an empty domain is an absence of evidence, not a passing control */}
               {(m.silentDomains || []).length > 0 && (
                 <div className="soc2-hint soc2-hint-foot">
-                  Not scored — no events in this window: {m.silentDomains.join(", ")}.
+                  Not scored — no events in this window:{" "}
+                  {m.silentDomains.join(", ")}.
                 </div>
               )}
             </>
           )}
         </Section>
-        <Section title={onOpenDomain ? "Domains — open one for the detail" : "Events by domain"}>
+        <Section
+          title={
+            onOpenDomain
+              ? "Domains — open one for the detail"
+              : "Events by domain"
+          }
+        >
           {loading ? (
             <SkelLines n={5} />
           ) : onOpenDomain ? (
@@ -3447,7 +3258,11 @@ function OverviewTab({ summary, views, onOpenDomain, loading }) {
       </div>
 
       <Section title="Most recent notable events" wide>
-        {loading ? <SkelLines n={6} /> : <EventList events={m.recentEvents || []} maxItems={10} />}
+        {loading ? (
+          <SkelLines n={6} />
+        ) : (
+          <EventList events={m.recentEvents || []} maxItems={10} />
+        )}
       </Section>
     </div>
   );
@@ -3460,7 +3275,8 @@ function OverviewTab({ summary, views, onOpenDomain, loading }) {
  */
 function DomainList({ views = {}, onOpen }) {
   const domains = TABS.filter((t) => views[t.key]);
-  if (domains.length === 0) return <div className="evt-empty">No domain reports yet.</div>;
+  if (domains.length === 0)
+    return <div className="evt-empty">No domain reports yet.</div>;
 
   return (
     <div className="soc2-domains">
@@ -3478,12 +3294,18 @@ function DomainList({ views = {}, onOpen }) {
             <span className="soc2-domain-name">{t.label}</span>
             <span className="soc2-domain-meta">
               {state === "pending" && <Spinner />}
-              {state === "error" && <span className="soc2-domain-failed">did not load</span>}
+              {state === "error" && (
+                <span className="soc2-domain-failed">did not load</span>
+              )}
               {state === "ok" && (
                 <>
-                  <span className="soc2-domain-count">{fmtInt(v.total)} events</span>
+                  <span className="soc2-domain-count">
+                    {fmtInt(v.total)} events
+                  </span>
                   {v.score != null && (
-                    <span className={`soc2-domain-score soc2-domain-score-${scoreTone(v.score)}`}>
+                    <span
+                      className={`soc2-domain-score soc2-domain-score-${scoreTone(v.score)}`}
+                    >
                       {v.score}%
                     </span>
                   )}
@@ -3519,10 +3341,34 @@ function AgentsTab({ agents, loading, onSelect, selectedNames }) {
     <div className="soc2-tab-body">
       <div className="soc2-section-head">Agent status and health</div>
       <StatRow>
-        <StatCard loading={loading} label="Total agents" value={counts.total} sub="registered" subColor="muted" />
-        <StatCard loading={loading} label="Online" value={counts.online} sub="active" subColor="success" />
-        <StatCard loading={loading} label="Pending" value={counts.degraded} sub="watch" subColor="warning" />
-        <StatCard loading={loading} label="Offline" value={counts.offline} sub="needs attention" subColor="danger" />
+        <StatCard
+          loading={loading}
+          label="Total agents"
+          value={counts.total}
+          sub="registered"
+          subColor="muted"
+        />
+        <StatCard
+          loading={loading}
+          label="Online"
+          value={counts.online}
+          sub="active"
+          subColor="success"
+        />
+        <StatCard
+          loading={loading}
+          label="Pending"
+          value={counts.degraded}
+          sub="watch"
+          subColor="warning"
+        />
+        <StatCard
+          loading={loading}
+          label="Offline"
+          value={counts.offline}
+          sub="needs attention"
+          subColor="danger"
+        />
       </StatRow>
       <Section title="Agent inventory" wide>
         {onSelect && (
@@ -3653,9 +3499,7 @@ function RecommendationsTab({ items, loading }) {
   if (recommendations.length === 0) {
     return (
       <div className="soc2-tab-body">
-        <div className="soc2-section-head">
-          Recommendations and remediation
-        </div>
+        <div className="soc2-section-head">Recommendations and remediation</div>
 
         <div className="soc2-recommendation-empty">
           No recommendations were generated for the selected reporting window.
@@ -3666,9 +3510,7 @@ function RecommendationsTab({ items, loading }) {
 
   return (
     <div className="soc2-tab-body">
-      <div className="soc2-section-head">
-        Recommendations and remediation
-      </div>
+      <div className="soc2-section-head">Recommendations and remediation</div>
 
       <div className="soc2-recommendation-list">
         {recommendations.map((r, i) => {
@@ -3711,9 +3553,7 @@ function RecommendationsTab({ items, loading }) {
               <div className="soc2-recommendation-divider" />
 
               <div className="soc2-recommendation-block">
-                <div className="soc2-recommendation-label">
-                  Finding
-                </div>
+                <div className="soc2-recommendation-label">Finding</div>
 
                 <div className="soc2-recommendation-text">
                   {r.finding || r.text || "No finding description available."}
@@ -3721,9 +3561,7 @@ function RecommendationsTab({ items, loading }) {
               </div>
 
               <div className="soc2-recommendation-block">
-                <div className="soc2-recommendation-label">
-                  Evidence
-                </div>
+                <div className="soc2-recommendation-label">Evidence</div>
 
                 <div className="soc2-recommendation-evidence">
                   {r.evidence || "No supporting evidence was recorded."}
