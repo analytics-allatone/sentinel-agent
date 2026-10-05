@@ -175,17 +175,17 @@ async def db_data(
         stmt = stmt.where(model.agent_name == agent_name)
     stmt = stmt.order_by(model.timestamp.desc()).limit(limit)
 
-    try:
-        rows = (await db.execute(stmt)).scalars().all()
-    except Exception as ex:                      # noqa: BLE001
-        await db.rollback()                      # don't hand a poisoned session back to the pool
-        log.exception("db_data query failed for %s", engine)
-        raise HTTPException(500, f"query failed for {engine}: {ex}")
+    # try:
+    #     rows = (await db.execute(stmt)).scalars().all()
+    # except Exception as ex:                      # noqa: BLE001
+    #     await db.rollback()                      # don't hand a poisoned session back to the pool
+    #     log.exception("db_data query failed for %s", engine)
+    #     raise HTTPException(500, f"query failed for {engine}: {ex}")
 
-    data = [_row_to_dict(r, model, compact) for r in rows]
-    if not data:
-        raise HTTPException(404, f"no stored data for {engine} service '{service_name}' "
-                                 "(not inspected yet, or name doesn't match what was stored)")
+    # data = [_row_to_dict(r, model, compact) for r in rows]
+    # if not data:
+    #     raise HTTPException(404, f"no stored data for {engine} service '{service_name}' "
+    #                              "(not inspected yet, or name doesn't match what was stored)")
     data= {
   "status": "success",
   "message": "stored database data",
@@ -1432,7 +1432,6 @@ async def db_data(
     ]
   }
 }   
-    data= json.dumps(data, indent=4)
     return standard_success_response(
         data={"engine": _canon(engine), "service_name": service_name,
               "matched_on": svc.key, "count": len(data),"rows": data},
