@@ -186,15 +186,7 @@ async def db_data(
     # if not data:
     #     raise HTTPException(404, f"no stored data for {engine} service '{service_name}' "
     #                              "(not inspected yet, or name doesn't match what was stored)")
-    data= {
-  "status": "success",
-  "message": "stored database data",
-  "data": {
-    "engine": "oracle",
-    "service_name": "freepdb1",
-    "matched_on": "service_name",
-    "count": 1,
-    "rows": [
+    data=[
       {
         "sessions_current": 1,
         "sessions_active": 1,
@@ -590,7 +582,12 @@ async def db_data(
             "username": "(background)"
           }
         ],
-        "idle_sessions": [],
+        "idle_sessions": [{"sid": 201,"serial": 332,
+      "username": "APP",
+      "machine": "appsrv01",
+      "program": "JDBC Thin Client",
+      "status": "INACTIVE",
+      "idle_seconds": 940 } ],
         "long_running_queries": [
           {
             "sid": 169,
@@ -608,14 +605,45 @@ async def db_data(
             "duration_seconds": 29126
           }
         ],
-        "locks_blocking": [],
+        "locks_blocking": {"blocked": [ {
+        "blocked_sid": 145,
+        "blocking_sid": 302,
+        "username": "APP",
+        "event": "enq: TX - row lock contention",
+        "wait_class": "Application",
+        "seconds_in_wait": 87  } ]  
+                          },
         "cache_hit_ratio": {
           "library_hit_ratio": 95.75,
           "dictionary_hit_ratio": 92.72,
           "buffer_cache_hit_ratio": 98.87
         },
-        "memory": "null",
-        "resource_limits": [],
+        "memory":{"sga_total_bytes": 2147483648, "buffer_cache_bytes": 1073741824,
+            "shared_pool_bytes": 536870912,
+            "pga_allocated_bytes": 805306368,
+            "pga_inuse_bytes": 603979776,
+            "sga_target": "2147483648",
+            "memory_target": "0" },
+        "resource_limits":  [
+            {
+            "resource_name": "processes",
+            "current_utilization": 88,
+            "max_utilization": 120,
+            "limit_value": "300"
+            },
+            {
+            "resource_name": "sessions",
+            "current_utilization": 95,
+            "max_utilization": 140,
+            "limit_value": "472"
+            },
+            {
+            "resource_name": "transactions",
+            "current_utilization": 4,
+            "max_utilization": 18,
+            "limit_value": "519"
+            }
+                ],
         "top_sql_elapsed": [
           {
             "cpu_s": 5.13,
@@ -1126,7 +1154,10 @@ async def db_data(
         ],
         "index_usage": {
           "monitoring_note": "per-index usage needs ALTER INDEX ... MONITORING USAGE",
-          "unusable_indexes": []
+          "unusable_indexes": [
+      {"owner": "APP", "index_name": "IDX_ORDERS_CUSTID", "status": "UNUSABLE"},
+      {"owner": "HR",  "index_name": "IDX_EMP_DEPT",      "status": "UNUSABLE"}
+        ]
         },
         "dead_tuples_vacuum": {
           "reason": "Oracle uses undo/redo, not vacuum",
@@ -1222,10 +1253,37 @@ async def db_data(
           }
         ],
         "wraparound_risk": "not applicable to Oracle",
-        "replication_primary": "no Data Guard configured",
-        "replication_delay": "no Data Guard / standby",
-        "standby_destinations": "null",
-        "alert_log_errors": "null",
+        "replication_primary": {
+            "status": [
+            {"name": "transport lag",  "value": "+00 00:00:03", "unit": "day(2) to second(0) interval"},
+            {"name": "apply lag",      "value": "+00 00:00:05", "unit": "day(2) to second(0) interval"},
+            {"name": "apply finish time", "value": "+00 00:00:00.300", "unit": "interval"}
+            ],
+            "standby_destinations": [
+                {"dest_id": 2, "destination": "standby_db", "status": "VALID",
+                "target": "STANDBY", "error": "null"}
+                    ]
+        },
+        "replication_delay":{
+                "status": [
+            {"name": "apply lag", "value": "+00 00:00:05", "unit": "day(2) to second(0) interval"}
+            ]
+        },
+        "standby_destinations":[{"dest_id": 2, "destination": "service=standby_db", "status": "VALID","target": "STANDBY", "error": "null"},
+            {"dest_id": 3, "destination": "service=dr_site", "status": "ERROR","target": "STANDBY", "error": "ORA-16047: DGID mismatch"}
+        ],
+        "alert_log_errors": [
+            {
+            "event_time": "2026-10-07T04:12:00",
+            "level": 1,
+            "message": "ORA-00600: internal error code, arguments: [kdsgrp1]"
+            },
+            {
+            "event_time": "2026-10-07T03:40:11",
+            "level": 2,
+            "message": "ORA-01555: snapshot too old"
+            }
+        ] ,
         "modified_parameters": [
           {
             "name": "_instance_recovery_bloom_filter_size",
@@ -1336,17 +1394,61 @@ async def db_data(
             "is_modified": "FALSE"
           }
         ],
-        "rman_backups": "no RMAN backup jobs in last 7 days",
-        "system_resources": "null",
+        "rman_backups": [{"input_type": "DB FULL",
+      "status": "COMPLETED",
+      "start_time": "2026-10-06T01:00:00",
+      "end_time": "2026-10-06T01:18:30"
+        } ],
+        "system_resources":{
+            "cpu_percent": 34.5,
+            "memory_total_bytes": 16777216000,
+            "memory_used_bytes": 11005853184,
+            "memory_percent": 65.6,
+            "disk_total_bytes": 536870912000,
+            "disk_used_bytes": 268435456000,
+            "disk_percent": 50.0,
+            "load_avg_1_5_15": [
+            0.8,
+            0.6,
+            0.5
+            ]  
+        },
         "health_summary": {
           "total_sessions": 1,
           "active_sessions": 1,
           "blocked_sessions": 0,
           "total_size_bytes": 993001472
         },
-        "fast_recovery_area": "no FRA configured",
-        "top_temp_sessions": [],
-        "redo_log_switches": [],
+        "fast_recovery_area": {
+            "name": "+FRA",
+            "limit_mb": 10240,
+            "used_mb": 7800,
+            "reclaimable_mb": 1200,
+            "number_of_files": 42,
+            "pct_used": 64.45
+        },
+        "top_temp_sessions": [{
+            "sid": 145,
+            "serial": 5521,
+            "username": "APP",
+            "osuser": "oracle",
+            "machine": "appsrv01",
+            "program": "JDBC Thin Client",
+            "status": "ACTIVE",
+            "tablespace": "TEMP",
+            "temp_sql_id": "a1b2c3d4e5f6g",
+            "temp_used_mb": 320.5,
+            "sql_text": "SELECT * FROM orders ORDER BY order_date"
+            }
+        ],
+        "redo_log_switches": [{
+            "hour": "2026-10-07 04",
+            "log_switches": 3 },
+            {
+            "hour": "2026-10-07 05",
+            "log_switches": 2
+            }
+        ],
         "archive_log_daily": [
           {
             "day": "2026-09-14",
@@ -1377,15 +1479,27 @@ async def db_data(
             "day_name": "TUE"
           }
         ],
-        "datafiles_offline": [],
-        "failed_scheduler_jobs": [],
+        "datafiles_offline": [
+            {"file#": 7, "name": "/u01/app/oracle/oradata/ORCL/users02.dbf", "status": "RECOVER"},
+            {"file#": 12, "name": "/u01/app/oracle/oradata/ORCL/apps03.dbf", "status": "OFFLINE"}
+        ],
+        "failed_scheduler_jobs": [
+            {
+            "owner": "APP",
+            "job_name": "NIGHTLY_ETL",
+            "status": "FAILED",
+            "actual_start_date": "2026-10-07T02:00:00",
+            "error#": 20001,
+            "info": "ORA-20001: source table missing"
+            }
+        ],
         "user_accounts": [
           {
             "created": "2026-04-29T01:35:46",
             "profile": "DEFAULT",
             "username": "PDBADMIN",
             "lock_date": "null",
-            "last_login": "null",
+            "last_login":"2026-10-07T05:10:00",
             "expiry_date": "2026-10-26T01:35:46",
             "pwd_life_time": "180",
             "account_status": "OPEN",
@@ -1393,6 +1507,48 @@ async def db_data(
             "default_tablespace": "USERS",
             "temporary_tablespace": "TEMP"
           }
+        ],
+      "wait_events": [
+        {
+        "event": "db file sequential read",
+        "wait_class": "User I/O",
+        "total_waits": 4200000,
+        "time_waited_sec": 3800,
+        "avg_wait_ms": 0.9
+        },
+            {
+            "event": "log file sync",
+            "wait_class": "Commit",
+            "total_waits": 880000,
+            "time_waited_sec": 420,
+            "avg_wait_ms": 0.48
+            }
+        ],
+        "long_operations": [
+            {
+            "sid": 145,
+            "serial": 5521,
+            "username": "APP",
+            "opname": "Table Scan",
+            "target": "APP.ORDERS",
+            "sofar": 82000,
+            "totalwork": 120000,
+            "pct_done": 68.3,
+            "elapsed_seconds": 95,
+            "time_remaining": 44
+            }
+        ],
+        "invalid_objects": [
+            {
+            "owner": "APP",
+            "object_type": "VIEW",
+            "invalid_count": 2
+            },
+            {
+            "owner": "APP",
+            "object_type": "PACKAGE BODY",
+            "invalid_count": 1
+            }
         ],
         "id": 2,
         "agent_name": "agent1",
@@ -1424,15 +1580,16 @@ async def db_data(
             "open_mode": "READ WRITE"
           }
         ],
-        "issues": [],
-        "details": "null",
+         "issues": [{"severity": "high",
+            "section": "alert_log_errors",
+            "message": "ORA-00600 internal error in last 24h"
+            } ],
+        "details": {},
         "timestamp": "2026-09-29T12:20:24.333240+00:00",
         "ingested_at": "2026-09-29T12:20:50.020342+00:00"
       }
     ]
-  }
-}   
     return standard_success_response(
         data={"engine": _canon(engine), "service_name": service_name,
-              "matched_on": svc.key, "count": len(data),"rows": data},
+              "matched_on": svc.key, "count": len(data),"data": data},
         message="stored database data")
