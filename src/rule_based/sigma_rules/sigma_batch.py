@@ -124,7 +124,8 @@ async def run_sigma_on_batch(session, category: str, rows: List[Dict[str, Any]],
                    :first_seen, :last_seen, :detail, :technique, :phase)
                 ON CONFLICT (rule_id, agent_name, entity, first_seen)
                 DO UPDATE SET event_count = EXCLUDED.event_count,
-                              last_seen   = EXCLUDED.last_seen
+                              last_seen   = EXCLUDED.last_seen,
+                              category    = EXCLUDED.category
             """), alerts)
             await session.commit()
         except Exception as e:
