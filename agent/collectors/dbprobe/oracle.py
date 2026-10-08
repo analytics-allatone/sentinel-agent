@@ -293,7 +293,7 @@ def inspect(params: Dict[str, Any]) -> Dict[str, Any]:
         "FROM dba_users u "
         "LEFT JOIN dba_profiles p ON p.profile=u.profile AND p.resource_name='PASSWORD_LIFE_TIME' "
         "LEFT JOIN dba_profiles d ON d.profile='DEFAULT' AND d.resource_name='PASSWORD_LIFE_TIME' "
-        f"WHERE ({1 if params.get('include_oracle_users') else 0}=1 OR u.oracle_maintained='N') "
+        "WHERE u.oracle_maintained='N'"
         "ORDER BY u.expiry_date NULLS LAST, u.username"))
     # CDB / PDB enumeration
     is_cdb = safe(lambda: showq("SELECT cdb FROM v$database")[0].get("cdb"))
