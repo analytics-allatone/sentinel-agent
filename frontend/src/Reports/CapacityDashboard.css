@@ -1769,7 +1769,9 @@ border-color: #1f5fd1;
 .capacity-dash__send-body {
   flex: 1;
   min-height: 0;
-  padding: 0 30px 26px;
+
+  padding: 14px 18px 22px;
+
   overflow-y: auto;
 
   background: var(--accent-soft);
