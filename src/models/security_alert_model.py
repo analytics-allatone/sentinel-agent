@@ -5,6 +5,7 @@ class SecurityAlerts(Base):
     __tablename__ = "security_alerts"
 
     id          = Column(BigInteger, primary_key=True, autoincrement=True)
+    category    = Column(String)
     rule_id     = Column(String)
     severity    = Column(Integer)
     agent_name  = Column(String)

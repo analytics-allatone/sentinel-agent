@@ -8,10 +8,11 @@ ORACLE_SECTIONS = [
     "sessions_by_user", "idle_sessions", "long_running_queries", "locks_blocking",
     "cache_hit_ratio", "memory", "resource_limits", "top_sql_elapsed", "top_sql_executions",
     "top_segments", "table_bloat", "index_usage", "dead_tuples_vacuum", "wal_checkpoint",
-    "wraparound_risk", "replication_primary", "replication_delay", "standby_destinations",
-    "alert_log_errors", "modified_parameters", "rman_backups", "system_resources", "health_summary",
+    "replication_primary", "replication_delay", "standby_destinations",
+    "alert_log_errors", "modified_parameters", "rman_backups", "health_summary",
     "fast_recovery_area","top_temp_sessions","redo_log_switches","archive_log_daily", "datafiles_offline",
-    "failed_scheduler_jobs","user_accounts"
+    "failed_scheduler_jobs","user_accounts","wait_events", "long_operations", "invalid_objects",
+    "workload_counters","sql_patches","key_parameters",
 ]
 
 
@@ -51,23 +52,28 @@ class OracleDbEvent(BaseDbEvent):
     index_usage: Optional[Any] = None
     dead_tuples_vacuum: Optional[Any] = None
     wal_checkpoint: Optional[Any] = None
-    wraparound_risk: Optional[Any] = None
+    # wraparound_risk: Optional[Any] = None
     replication_primary: Optional[Any] = None
     replication_delay: Optional[Any] = None
     standby_destinations: Optional[Any] = None
     alert_log_errors: Optional[Any] = None
     modified_parameters: Optional[Any] = None
     rman_backups: Optional[Any] = None
-    system_resources: Optional[Any] = None
+    # system_resources: Optional[Any] = None
     health_summary: Optional[Any] = None
-    fast_recovery_area:    Optional[Any] = None
-    top_temp_sessions:     Optional[Any] = None
-    redo_log_switches:     Optional[Any] = None
-    archive_log_daily:     Optional[Any] = None
-    datafiles_offline:     Optional[Any] = None
+    fast_recovery_area:Optional[Any] = None
+    top_temp_sessions:Optional[Any] = None
+    redo_log_switches:Optional[Any] = None
+    archive_log_daily:Optional[Any] = None
+    datafiles_offline:Optional[Any] = None
     failed_scheduler_jobs: Optional[Any] = None
-    user_accounts:         Optional[Any] = None
-
+    user_accounts:Optional[Any] = None
+    wait_events:Optional[Any] = None
+    long_operations:Optional[Any] = None
+    invalid_objects:Optional[Any] = None
+    workload_counters:Optional[Any] = None
+    sql_patches:Optional[Any] = None
+    key_parameters:Optional[Any] = None
     SECTIONS: ClassVar[List[str]] = ORACLE_SECTIONS
     METRICS: ClassVar[List[tuple]] = [
         ("sessions_current", "sessions_current"), ("sessions_active", "sessions_active"),
@@ -75,4 +81,8 @@ class OracleDbEvent(BaseDbEvent):
         ("uptime_seconds", "uptime_seconds"), ("database_role", "database_role"),
         ("open_mode", "open_mode"), ("cache_hit_pct", "cache_hit_pct"),
         ("library_hit_pct", "library_hit_pct"), ("dict_hit_pct", "dict_hit_pct"),
+        ("commits_total","commits_total"),("execs_total","execs_total"),
+        ("redo_bytes_total","redo_bytes_total"),("logical_reads_total","logical_reads_total"),
+        ("phys_reads_total","phys_reads_total"),("db_time_us","db_time_us"),
+        ("db_cpu_us","db_cpu_us"),("invalid_objects_ct","invalid_objects_ct"),
     ]

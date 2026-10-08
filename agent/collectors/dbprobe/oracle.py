@@ -118,7 +118,7 @@ def inspect(params: Dict[str, Any]) -> Dict[str, Any]:
         "unusable_indexes": showq("SELECT owner, index_name, status FROM dba_indexes WHERE status='UNUSABLE' FETCH FIRST 50 ROWS ONLY")})
 
     # 11) wraparound (N/A)
-    sec["wraparound_risk"] = na("not applicable to Oracle")
+    # sec["wraparound_risk"] = na("not applicable to Oracle")
 
     # 12) redo / checkpoint
     sec["wal_checkpoint"] = safe(lambda: showq(
@@ -131,7 +131,7 @@ def inspect(params: Dict[str, Any]) -> Dict[str, Any]:
         f"ORDER BY bytes DESC FETCH FIRST {top_tab} ROWS ONLY"))
 
     # 14) host resources (set by collector via psutil)
-    sec["system_resources"] = None
+    # sec["system_resources"] = None
 
     # sec["health_summary"] = safe(lambda: showq(
     #     "SELECT (SELECT COUNT(*) FROM v$session) AS total_sessions, "
@@ -179,7 +179,7 @@ def inspect(params: Dict[str, Any]) -> Dict[str, Any]:
         "THEN ROUND(current_utilization*100/TO_NUMBER(TRIM(limit_value)),1) END AS pct_used "
         "FROM v$resource_limit WHERE resource_name IN ('processes','sessions','transactions')"))
     sec["memory"] = safe(lambda: showq(
-        "SELECT (SELECT NVL(SUM(bytes),0) FROM v$sga) AS sga_total_bytes, "
+        "SELECT (SELECT NVL(SUM(value),0) FROM v$sga) AS sga_total_bytes, "
         "(SELECT bytes FROM v$sgainfo WHERE name='Buffer Cache Size') AS buffer_cache_bytes, "
         "(SELECT bytes FROM v$sgainfo WHERE name='Shared Pool Size') AS shared_pool_bytes, "
         "(SELECT value FROM v$pgastat WHERE name='total PGA allocated') AS pga_allocated_bytes, "
@@ -293,8 +293,64 @@ def inspect(params: Dict[str, Any]) -> Dict[str, Any]:
         "FROM dba_users u "
         "LEFT JOIN dba_profiles p ON p.profile=u.profile AND p.resource_name='PASSWORD_LIFE_TIME' "
         "LEFT JOIN dba_profiles d ON d.profile='DEFAULT' AND d.resource_name='PASSWORD_LIFE_TIME' "
-        f"WHERE ({1 if params.get('include_oracle_users') else 0}=1 OR u.oracle_maintained='N') "
+        "WHERE u.oracle_maintained='N'"
         "ORDER BY u.expiry_date NULLS LAST, u.username"))
+    # A) Top wait events (non-idle, since instance startup) — where time goes
+    sec["wait_events"] = safe(lambda: showq(
+        "SELECT * FROM (SELECT event, wait_class, total_waits, "
+        "ROUND(time_waited_micro/1e6) AS time_waited_sec, "
+        "ROUND(time_waited_micro/NULLIF(total_waits,0)/1000,2) AS avg_wait_ms "
+        "FROM v$system_event WHERE wait_class <> 'Idle' "
+        f"ORDER BY time_waited_micro DESC) WHERE ROWNUM <= {top_sql}"))
+ 
+    # B) Long running OPERATIONS (v$session_longops) — backups/index builds/scans
+    #    NOTE: different from long_running_queries (which is long-active sessions).
+    sec["long_operations"] = safe(lambda: showq(
+        "SELECT sid, serial# AS serial, username, opname, target, sofar, totalwork, "
+        "ROUND(sofar*100/NULLIF(totalwork,0),1) AS pct_done, "
+        "elapsed_seconds, time_remaining "
+        "FROM v$session_longops WHERE time_remaining > 0 "
+        "ORDER BY elapsed_seconds DESC"))
+ 
+    # C) Invalid objects (broken packages/views/triggers), grouped
+    sec["invalid_objects"] = safe(lambda: showq(
+        "SELECT owner, object_type, COUNT(*) AS invalid_count "
+        "FROM dba_objects WHERE status='INVALID' "
+        "GROUP BY owner, object_type ORDER BY invalid_count DESC"))
+    
+    # 22) workload counters (v$sysstat + v$sys_time_model). RAW cumulative counters —
+    #     rate (tps, redo/s, execs/s, cache-hit%, AAS) is computed in Postgres from
+    #     the delta between two rows. Do NOT treat these as per-second here.
+    sec["workload_counters"] = safe(lambda: {
+        **(showq(
+            "SELECT MAX(CASE WHEN name='user commits' THEN value END) AS commits, "
+            "MAX(CASE WHEN name='user rollbacks' THEN value END) AS rollbacks, "
+            "MAX(CASE WHEN name='execute count' THEN value END) AS execs, "
+            "MAX(CASE WHEN name='redo size' THEN value END) AS redo_bytes, "
+            "MAX(CASE WHEN name='physical read total bytes' THEN value END) AS phys_read_bytes, "
+            "MAX(CASE WHEN name='physical write total bytes' THEN value END) AS phys_write_bytes, "
+            "MAX(CASE WHEN name='session logical reads' THEN value END) AS logical_reads, "
+            "MAX(CASE WHEN name='physical reads' THEN value END) AS phys_reads, "
+            "MAX(CASE WHEN name='logons cumulative' THEN value END) AS logons "
+            "FROM v$sysstat")[0]),
+        **(showq(
+            "SELECT MAX(CASE WHEN stat_name='DB time' THEN value END) AS db_time_us, "
+            "MAX(CASE WHEN stat_name='DB CPU' THEN value END) AS db_cpu_us "
+            "FROM v$sys_time_model")[0]),
+    })
+    # 25) SQL patch / registry history (is the DB patched — compliance)
+    sec["sql_patches"] = safe(lambda: showq(
+        "SELECT * FROM (SELECT patch_id, action, status, description, action_time "
+        "FROM dba_registry_sqlpatch ORDER BY action_time DESC) WHERE ROWNUM <= 10")
+        or na("no sqlpatch registry / not applicable"))
+    
+     # 27) key init parameters (curated — your modified_parameters only shows changed ones)
+    sec["key_parameters"] = safe(lambda: showq(
+        "SELECT name, display_value FROM v$parameter WHERE name IN ("
+        "'sga_target','sga_max_size','pga_aggregate_target','pga_aggregate_limit','memory_target',"
+        "'processes','sessions','cpu_count','open_cursors','db_recovery_file_dest_size',"
+        "'undo_retention','archive_lag_target','control_management_pack_access','compatible',"
+        "'statistics_level','log_archive_dest_1') ORDER BY name"))
     # CDB / PDB enumeration
     is_cdb = safe(lambda: showq("SELECT cdb FROM v$database")[0].get("cdb"))
     databases = []
@@ -311,6 +367,8 @@ def inspect(params: Dict[str, Any]) -> Dict[str, Any]:
     hs = sec.get("health_summary") or {}
     ss = sec.get("session_summary") or {}
     ch = sec.get("cache_hit_ratio") or {}
+    wl  = sec.get("workload_counters") or {}
+    inv = sec.get("invalid_objects") or []
     metrics = {"sessions_current": hs.get("total_sessions"),
                "sessions_active": hs.get("active_sessions"),
                "sessions_blocked": hs.get("blocked_sessions") or ss.get("blocked"),
@@ -320,7 +378,13 @@ def inspect(params: Dict[str, Any]) -> Dict[str, Any]:
                "open_mode": cv.get("open_mode"),
                "cache_hit_pct": ch.get("buffer_cache_hit_ratio"),
                "library_hit_pct": ch.get("library_hit_ratio"),
-               "dict_hit_pct": ch.get("dictionary_hit_ratio")}
+               "dict_hit_pct": ch.get("dictionary_hit_ratio"),
+               "commits_total": wl.get("commits"), "execs_total":wl.get("execs"),
+               "redo_bytes_total":wl.get("redo_bytes"),"logical_reads_total": wl.get("logical_reads"),
+               "phys_reads_total":wl.get("phys_reads"),"db_time_us":wl.get("db_time_us"),
+               "db_cpu_us":wl.get("db_cpu_us"),
+               "invalid_objects_ct":sum((r.get("invalid_count") or 0) for r in inv) if isinstance(inv, list) else None
+              }
     points= {
         # 1 — basic_connectivity  (was sections.connectivity_version)
         "basic_connectivity": {
