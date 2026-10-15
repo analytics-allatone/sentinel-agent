@@ -29,6 +29,7 @@ import {
  */
 const ROUTED_PATHS = new Set([
   "/dashboard",
+  "/alerts",
   "/grafanaDashboard",
   "/messages",
   "/reports/soc2",

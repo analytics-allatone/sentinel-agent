@@ -82,8 +82,20 @@ async function statValue(label) {
   return stat.querySelector(".dbh-stat-value").textContent;
 }
 
-/** The check card with this title. */
-async function checkCard(title) {
+/**
+ * Open the tab holding a group of checks.
+ *
+ * The detail lives behind six tabs now, so a card is only in the document when
+ * its own tab is the open one.
+ */
+async function openTab(label) {
+  const tabs = await region(".dbh-tabs");
+  fireEvent.click(within(tabs).getByRole("tab", { name: new RegExp(label, "i") }));
+}
+
+/** The check card with this title, opening its tab first. */
+async function checkCard(title, tab) {
+  if (tab) await openTab(tab);
   const cards = await region(".dbh-cards");
   return within(cards).getByText(title).closest("section");
 }
@@ -135,7 +147,7 @@ test("sizes are shown as sizes and uptime as a duration, not raw numbers", async
 test("a list of objects inside a check becomes a table", async () => {
   renderPage();
 
-  const card = await checkCard("Database size");
+  const card = await checkCard("Database size", "Storage");
   const table = within(card).getByRole("table");
   expect(within(table).getByText("mysql")).toBeInTheDocument();
   expect(within(table).getByText("2.6 MB")).toBeInTheDocument(); // 2736128 bytes
@@ -144,12 +156,13 @@ test("a list of objects inside a check becomes a table", async () => {
 test("an empty check says so rather than rendering nothing", async () => {
   renderPage();
 
-  const card = await checkCard("Locks blocking");
+  const card = await checkCard("Locks blocking", "Sessions");
   expect(within(card).getByText(/nothing reported/i)).toBeInTheDocument();
 });
 
 test("a check the page has no special knowledge of still renders", async () => {
   renderPage();
+  await openTab("Performance");
 
   expect(await screen.findByText("Transaction wraparound")).toBeInTheDocument();
   expect(screen.getByText(/No XID wraparound concept/)).toBeInTheDocument();
@@ -195,7 +208,10 @@ test("several readings offer a picker, and it switches record", async () => {
   });
   renderPage();
 
-  const tabs = await screen.findAllByRole("tab");
+  // Two tablists share this page now — the readings and the check groups — so
+  // the readings are asked for by the name their list carries.
+  const readings = await screen.findByRole("tablist", { name: "Stored readings" });
+  const tabs = within(readings).getAllByRole("tab");
   expect(tabs).toHaveLength(2);
 
   fireEvent.click(tabs[1]);
