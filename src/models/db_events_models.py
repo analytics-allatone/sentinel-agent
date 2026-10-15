@@ -113,14 +113,14 @@ class OracleDbEvents(DbEventCommon, Base):
     index_usage = Column(JSONB)
     dead_tuples_vacuum = Column(JSONB)
     wal_checkpoint = Column(JSONB)
-    wraparound_risk = Column(JSONB)
+    # wraparound_risk = Column(JSONB)
     replication_primary = Column(JSONB)
     replication_delay = Column(JSONB)
     standby_destinations = Column(JSONB)
     alert_log_errors = Column(JSONB)
     modified_parameters = Column(JSONB)
     rman_backups = Column(JSONB)
-    system_resources = Column(JSONB)
+    # system_resources = Column(JSONB)
     health_summary = Column(JSONB)
     fast_recovery_area= Column(JSONB)
     top_temp_sessions= Column(JSONB)
@@ -129,7 +129,12 @@ class OracleDbEvents(DbEventCommon, Base):
     datafiles_offline= Column(JSONB)
     failed_scheduler_jobs= Column(JSONB)
     user_accounts= Column(JSONB)
-
+    wait_events=Column(JSONB)
+    long_operations=Column(JSONB)
+    invalid_objects=Column(JSONB)
+    workload_counters=Column(JSONB)
+    sql_patches=Column(JSONB)
+    key_parameters=Column(JSONB)
 
 class RedisDbEvents(DbEventCommon, Base):
     __tablename__ = "redis_db_events"

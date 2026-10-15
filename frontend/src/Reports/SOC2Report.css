@@ -3083,47 +3083,109 @@ border-color: #1f5fd1;
 }
 
 /* ============================================================
-   CHANGE MANAGEMENT COLUMN WIDTHS
+   CHANGE MANAGEMENT (CC8) - PDF TABLE ONLY
    ============================================================ */
+
+.soc2-print-section-change .inc-table {
+  width: 100% !important;
+  max-width: 100% !important;
+  table-layout: fixed !important;
+  border-collapse: collapse !important;
+}
+
+/* ------------------------------------------------------------
+   TIME
+   ------------------------------------------------------------ */
 
 .soc2-print-section-change .inc-table th:nth-child(1),
 .soc2-print-section-change .inc-table td:nth-child(1) {
-  width: 10%;
+  width: 13% !important;
+  min-width: 13% !important;
+  max-width: 13% !important;
+
+  white-space: nowrap !important;
+  word-break: normal !important;
+  overflow-wrap: normal !important;
 }
 
 
-/* File */
+/* ------------------------------------------------------------
+   FILE
+   ------------------------------------------------------------ */
+
 .soc2-print-section-change .inc-table th:nth-child(2),
 .soc2-print-section-change .inc-table td:nth-child(2) {
-  width: 24%;
+  width: 25% !important;
+  min-width: 25% !important;
+  max-width: 25% !important;
+
+  white-space: normal !important;
+  overflow-wrap: anywhere !important;
+  word-break: break-word !important;
 }
 
 
-/* Previous path */
+/* ------------------------------------------------------------
+   PREVIOUS PATH
+   ------------------------------------------------------------ */
+
 .soc2-print-section-change .inc-table th:nth-child(3),
 .soc2-print-section-change .inc-table td:nth-child(3) {
-  width: 24%;
+  width: 22% !important;
+  min-width: 22% !important;
+  max-width: 22% !important;
+
+  white-space: normal !important;
+  overflow-wrap: anywhere !important;
+  word-break: break-word !important;
 }
 
 
-/* SHA-256 */
+/* ------------------------------------------------------------
+   SHA-256
+   ------------------------------------------------------------ */
+
 .soc2-print-section-change .inc-table th:nth-child(4),
 .soc2-print-section-change .inc-table td:nth-child(4) {
-  width: 16%;
+  width: 14% !important;
+  min-width: 14% !important;
+  max-width: 14% !important;
+
+  white-space: normal !important;
+  overflow-wrap: anywhere !important;
+  word-break: break-word !important;
 }
 
 
-/* Previous SHA-256 */
+/* ------------------------------------------------------------
+   PREVIOUS SHA-256
+   ------------------------------------------------------------ */
+
 .soc2-print-section-change .inc-table th:nth-child(5),
 .soc2-print-section-change .inc-table td:nth-child(5) {
-  width: 16%;
+  width: 14% !important;
+  min-width: 14% !important;
+  max-width: 14% !important;
+
+  white-space: normal !important;
+  overflow-wrap: anywhere !important;
+  word-break: break-word !important;
 }
 
 
-/* User */
+/* ------------------------------------------------------------
+   USER - LAST COLUMN
+   ------------------------------------------------------------ */
+
 .soc2-print-section-change .inc-table th:nth-child(6),
 .soc2-print-section-change .inc-table td:nth-child(6) {
-  width: 10%;
+  width: 12% !important;
+  min-width: 12% !important;
+  max-width: 12% !important;
+
+  white-space: normal !important;
+  overflow-wrap: anywhere !important;
+  word-break: break-word !important;
 }
 
 
