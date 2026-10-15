@@ -12,6 +12,7 @@ class AlertData(BaseModel):
     severity: Optional[int] = None
     severity_label: Optional[str] = None    
     agent_name: Optional[str] = None
+    agent_ip: Optional[str] = None
     entity: Optional[str] = None
     event_count: Optional[int] = None
     first_seen: Optional[datetime] = None
