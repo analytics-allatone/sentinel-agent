@@ -9,6 +9,7 @@ class SecurityAlerts(Base):
     rule_id     = Column(String)
     severity    = Column(Integer)
     agent_name  = Column(String)
+    agent_ip    = Column(String)
     entity      = Column(String)
     event_count = Column(BigInteger)
     first_seen  = Column(DateTime(timezone=True))
