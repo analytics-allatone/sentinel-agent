@@ -10,6 +10,7 @@
  * empty list, and the caller shows what it has.
  */
 import api from "./api";
+import { once, requestKey } from "./inflight";
 
 /**
  * @typedef {Object} AgentSummary
@@ -27,11 +28,14 @@ import api from "./api";
  */
 export async function fetchAgents(options = {}) {
   try {
-    const res = await api.get("/get-agents", {
-      signal: options.signal,
-      // callers render their own loaders; the blocking overlay would cover them
-      skipGlobalLoader: true,
-    });
+    // Several screens ask for this list at once; one of them is enough.
+    const res = await once(requestKey("/get-agents", {}), () =>
+      api.get("/get-agents", {
+        signal: options.signal,
+        // callers render their own loaders; the blocking overlay would cover them
+        skipGlobalLoader: true,
+      })
+    );
     const list = (res.data && res.data.data && res.data.data.agents) || [];
     return list.map((a, i) => ({
       id: a.id ?? i,

@@ -1,19 +1,38 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
 import api from "../api/api";
 import {
+  blockedSessions,
   columnsOf,
+  groupChecks,
+  formatBytes,
+  formatDuration,
   formatTimestamp,
   formatValue,
   healthTone,
+  hitRatios,
   inspectionNotice,
+  isProseNote,
   isRowArray,
+  memoryBreakdown,
   partitionFields,
   pickStats,
+  resourceLimits,
   splitRecord,
+  tablespaces,
   titleOf,
+  unusableIndexes,
+  unwrapRows,
 } from "./dbHealthFormat";
+import { DayColumns, RankedBars } from "./DbHealthCharts";
+import {
+  archiveSeries,
+  expiringAccounts,
+  topSegments,
+  topSqlByRuns,
+  topSqlByTime,
+} from "./chartData";
 import "./DbHealthPage.css";
 
 /**
@@ -31,6 +50,24 @@ import "./DbHealthPage.css";
 const LIMIT_MIN = 1;
 const LIMIT_MAX = 500;
 const DEFAULT_LIMIT = 1;
+
+/**
+ * Checks that are drawn as a reading of their own further up the page.
+ *
+ * Skipped by the generic renderer only when that reading actually appeared: a
+ * check that was run and came back empty still has something to say, and
+ * "Locks blocking — nothing reported" is the page saying it. Dropping the card
+ * as well as the alarm would turn "nobody is waiting" into silence.
+ */
+function ownSection({ ratios, spaces, blocked, limits, memory }) {
+  const drawn = [];
+  if (ratios.length) drawn.push("cache_hit_ratio");
+  if (spaces.length) drawn.push("database_sizes");
+  if (blocked.length) drawn.push("locks_blocking");
+  if (limits.length) drawn.push("resource_limits");
+  if (memory) drawn.push("memory");
+  return drawn;
+}
 
 /** Checks worth showing first — the rest keep the order the API sent. */
 const LEAD_CHECKS = [
@@ -51,32 +88,66 @@ function Stat({ label, value, sub, tone }) {
   );
 }
 
-/** A list of objects, as a table. */
+/**
+ * How many rows of a check are worth showing before the reader asks for more.
+ *
+ * `sessions_by_user` arrives 50 rows long and `top_segments` 20; printed in
+ * full they push everything else off the page, and the tail of a list that is
+ * already sorted by size is the part nobody came for.
+ */
+const ROW_PREVIEW = 8;
+
+/** A list of objects, as a table — long ones folded until asked. */
 function RowTable({ rows }) {
+  const [expanded, setExpanded] = useState(false);
   const columns = columnsOf(rows);
+  const folded = rows.length > ROW_PREVIEW && !expanded;
+  const visible = folded ? rows.slice(0, ROW_PREVIEW) : rows;
+
   return (
-    <div className="dbh-table-wrap">
-      <table className="dbh-table">
-        <thead>
-          <tr>
-            {columns.map((c) => (
-              <th key={c}>{titleOf(c)}</th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((row, i) => (
-            <tr key={i}>
+    <>
+      <div className="dbh-table-wrap">
+        <table className="dbh-table">
+          <thead>
+            <tr>
               {columns.map((c) => (
-                <td key={c} title={String(row[c] ?? "")}>
-                  {formatValue(c, row[c])}
-                </td>
+                <th key={c}>{titleOf(c)}</th>
               ))}
             </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+          </thead>
+          <tbody>
+            {visible.map((row, i) => (
+              <tr key={i}>
+                {columns.map((c) => {
+                  const raw = row[c];
+                  // SQL text runs to 400 characters; it is clamped to a few
+                  // lines rather than allowed to set the row height.
+                  const long = typeof raw === "string" && raw.length > 90;
+                  return (
+                    <td key={c} className={long ? "dbh-cell--long" : ""} title={String(raw ?? "")}>
+                      {formatValue(c, raw)}
+                    </td>
+                  );
+                })}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {rows.length > ROW_PREVIEW && (
+        <button
+          type="button"
+          className="dbh-more phi-btn phi-btn--sm phi-btn--secondary"
+          onClick={() => setExpanded((v) => !v)}
+          aria-expanded={expanded}
+        >
+          {expanded
+            ? `Show fewer`
+            : `Show all ${rows.length} rows`}
+        </button>
+      )}
+    </>
   );
 }
 
@@ -134,8 +205,44 @@ function RecordTable({ entries }) {
   );
 }
 
+/**
+ * The four checks whose shape says more than their rows do.
+ *
+ * Each builds from the whole record rather than from the list alone, so a chart
+ * can reach for a second field — the day name beside the date, the executions
+ * beside the elapsed time — without the card having to pass it in.
+ */
+const CHARTS = {
+  top_sql_elapsed: (record) => (
+    <RankedBars
+      items={topSqlByTime(record)}
+      caption="Where the database spent its time. Hover a row for the statement."
+    />
+  ),
+  top_sql_executions: (record) => (
+    <RankedBars
+      items={topSqlByRuns(record)}
+      caption="Run most often — cheap individually, and the reason the cache matters."
+    />
+  ),
+  top_segments: (record) => (
+    <RankedBars items={topSegments(record)} caption="The objects holding the bytes." />
+  ),
+  archive_log_daily: (record) => (
+    <DayColumns
+      points={archiveSeries(record)}
+      caption="Redo written per day, in date order — only the days that archived anything."
+    />
+  ),
+};
+
+function chartFor(name, record) {
+  const build = CHARTS[name];
+  return build ? build(record) : null;
+}
+
 /** One check: its scalars first, then each nested list as its own table. */
-function CheckCard({ name, value }) {
+function CheckCard({ name, value, chart }) {
   if (isRowArray(value)) {
     return (
       <section className="dbh-card">
@@ -143,6 +250,11 @@ function CheckCard({ name, value }) {
           {titleOf(name)}
           <span className="dbh-card-count">{value.length}</span>
         </h3>
+
+        {/* The picture is the summary and the table underneath it is the
+            detail — the same list once, not twice in two places. */}
+        {chart}
+
         <RowTable rows={value} />
       </section>
     );
@@ -194,6 +306,251 @@ function CheckCard({ name, value }) {
   );
 }
 
+/* ───────────────────────────────────────────────────────────────
+   Measured figures: a ratio against a limit is a meter, not a table
+   ─────────────────────────────────────────────────────────────── */
+
+/** The state in words. Colour alone is not a reading. */
+const RATIO_WORD = { ok: "healthy", warn: "low", bad: "very low", muted: "unknown" };
+const USAGE_WORD = { ok: "ok", warn: "filling up", bad: "nearly full", muted: "unknown" };
+
+/** Megabytes as the size they are — `max_mb` runs to eight figures. */
+function formatMb(mb) {
+  const n = Number(mb);
+  if (!Number.isFinite(n)) return "—";
+  return formatBytes(n * 1024 * 1024);
+}
+
+/**
+ * One ratio against its limit.
+ *
+ * The track is a pale step of the same ramp as the fill, so a near-empty bar
+ * still reads as a bar; the fill carries the severity. The percentage and the
+ * state are both written out, because a reader who cannot separate the hues
+ * still has to be able to read the number.
+ */
+function Meter({ label, value, hint, level, word = RATIO_WORD }) {
+  const pct = Math.max(0, Math.min(100, Number(value) || 0));
+  return (
+    <div className="dbh-meter">
+      <div className="dbh-meter-head">
+        <span className="dbh-meter-label">{label}</span>
+        <strong className="dbh-meter-value">{value}%</strong>
+      </div>
+
+      <div
+        className="dbh-meter-track"
+        role="img"
+        aria-label={`${label}: ${value} percent, ${word[level] || level}`}
+      >
+        <span className={`dbh-meter-fill dbh-meter-fill--${level}`} style={{ width: `${pct}%` }} />
+      </div>
+
+      <div className="dbh-meter-foot">
+        <span className={`dbh-level dbh-level--${level}`}>{word[level] || level}</span>
+        {hint && <span className="dbh-meter-hint">{hint}</span>}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Sessions that are waiting on another session.
+ *
+ * Put above the figures because it is the only thing on this page that is
+ * somebody stuck right now, rather than a measurement of how things have been.
+ */
+function BlockedList({ rows }) {
+  return (
+    <ul className="dbh-block-list">
+      {rows.map((row, i) => (
+        <li className="dbh-block" key={`${row.blocked}-${i}`}>
+          <span className={`dbh-level dbh-level--${row.level}`}>
+            {formatDuration(row.seconds)}
+          </span>
+
+          <div className="dbh-block-body">
+            <p className="dbh-block-who">
+              <span className="dbh-mono">SID {row.blocked}</span>
+              {row.username && <span className="dbh-block-user">{row.username}</span>}
+              <span className="dbh-block-arrow" aria-label="is blocked by">
+                ← blocked by
+              </span>
+              <span className="dbh-mono">SID {row.blocker}</span>
+            </p>
+
+            {row.event && (
+              <p className="dbh-block-event">
+                {row.event}
+                {row.waitClass && <span className="dbh-block-class">{row.waitClass}</span>}
+              </p>
+            )}
+          </div>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+/**
+ * How close each resource is to its configured limit.
+ *
+ * The bar is where it is now; the notch is the highest it has ever reached. An
+ * instance at 30% that peaked at 95% is one busy afternoon from refusing
+ * connections, and the notch is the only thing on the page that says so.
+ */
+function LimitList({ rows }) {
+  return (
+    <ul className="dbh-limit-list">
+      {rows.map((row) => (
+        <li className="dbh-limit" key={row.name}>
+          <div className="dbh-limit-head">
+            <span className="dbh-limit-name">{titleOf(row.name)}</span>
+            <span className="dbh-limit-figure">
+              {row.current.toLocaleString()} <span className="dbh-ts-of">of</span>{" "}
+              {row.limit.toLocaleString()}
+            </span>
+          </div>
+
+          <div
+            className="dbh-limit-track"
+            role="img"
+            aria-label={`${row.name}: ${row.current} of ${row.limit} in use, peak ${row.peak}`}
+          >
+            <span
+              className={`dbh-limit-fill dbh-limit-fill--${row.level}`}
+              style={{ width: `${Math.max(0, Math.min(100, row.pct || 0))}%` }}
+            />
+            {row.peakPct != null && (
+              <span
+                className="dbh-limit-peak"
+                style={{ left: `${Math.max(0, Math.min(100, row.peakPct))}%` }}
+                title={`peak ${row.peak.toLocaleString()}`}
+              />
+            )}
+          </div>
+
+          <div className="dbh-limit-foot">
+            <span className={`dbh-level dbh-level--${row.level}`}>
+              {row.pct == null ? "unknown" : `${Math.round(row.pct)}% in use`}
+            </span>
+            {row.peakPct != null && (
+              <span className="dbh-ts-note">
+                peak {row.peak.toLocaleString()} — {Math.round(row.peakPct)}% of the limit
+              </span>
+            )}
+          </div>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+/** The instance's memory, as a whole and its parts. */
+function MemoryPanel({ memory }) {
+  return (
+    <>
+      <div className="dbh-mem-totals">
+        {memory.sga != null && (
+          <div className="dbh-mem-total">
+            <span className="dbh-stat-label">SGA</span>
+            <strong className="dbh-stat-value">{formatBytes(memory.sga)}</strong>
+          </div>
+        )}
+        {memory.pgaAllocated != null && (
+          <div className="dbh-mem-total">
+            <span className="dbh-stat-label">PGA allocated</span>
+            <strong className="dbh-stat-value">{formatBytes(memory.pgaAllocated)}</strong>
+          </div>
+        )}
+      </div>
+
+      <ul className="dbh-ts-list">
+        {memory.parts.map((part) => (
+          <li className="dbh-ts" key={part.label}>
+            <div className="dbh-ts-head">
+              <span className="dbh-ts-name">{part.label}</span>
+              <span className="dbh-ts-figure">
+                {formatBytes(part.bytes)} <span className="dbh-ts-of">of</span>{" "}
+                {formatBytes(part.of)}
+              </span>
+            </div>
+
+            <div
+              className="dbh-ts-track"
+              role="img"
+              aria-label={`${part.label}: ${Math.round(part.pct)} percent`}
+            >
+              <span
+                className="dbh-ts-fill dbh-ts-fill--neutral"
+                style={{ width: `${Math.max(0, Math.min(100, part.pct))}%` }}
+              />
+            </div>
+
+            <div className="dbh-ts-foot">
+              <span className="dbh-ts-note">
+                {Math.round(part.pct)}% of {part.ofLabel}
+              </span>
+            </div>
+          </li>
+        ))}
+      </ul>
+    </>
+  );
+}
+
+/**
+ * Tablespace pressure.
+ *
+ * The bar is how full the space is *today*; the colour is whether that matters.
+ * Those are different questions on Oracle, where a datafile at 99% of 300 MB
+ * with 32 TB of autoextend left is simply a datafile doing its job. Both
+ * numbers are spelled out under the bar so the colour is never a mystery.
+ */
+function TablespaceList({ items }) {
+  return (
+    <ul className="dbh-ts-list">
+      {items.map((ts) => (
+        <li className="dbh-ts" key={ts.name}>
+          <div className="dbh-ts-head">
+            <span className="dbh-ts-name">{ts.name}</span>
+            {ts.type && <span className="dbh-ts-type">{ts.type.toLowerCase()}</span>}
+            <span className="dbh-ts-figure">
+              {formatMb(ts.usedMb)} <span className="dbh-ts-of">of</span> {formatMb(ts.totalMb)}
+            </span>
+          </div>
+
+          <div
+            className="dbh-ts-track"
+            role="img"
+            aria-label={`${ts.name}: ${ts.pctUsed} percent of allocated space used, ${
+              USAGE_WORD[ts.level] || ts.level
+            }`}
+          >
+            <span
+              className={`dbh-ts-fill dbh-ts-fill--${ts.level}`}
+              style={{ width: `${Math.max(0, Math.min(100, ts.pctUsed || 0))}%` }}
+            />
+          </div>
+
+          <div className="dbh-ts-foot">
+            <span className={`dbh-level dbh-level--${ts.level}`}>
+              {USAGE_WORD[ts.level] || ts.level}
+            </span>
+
+            <span className="dbh-ts-note">
+              {ts.pctUsed}% of allocated
+              {ts.canGrow
+                ? ` · can extend to ${formatMb(ts.maxMb)}, ${ts.pctOfMax}% of that used`
+                : " · fixed size, cannot extend"}
+            </span>
+          </div>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 export default function DbHealthPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -211,6 +568,25 @@ export default function DbHealthPage() {
   const [showRaw, setShowRaw] = useState(false);
   const [showEmptyFields, setShowEmptyFields] = useState(false);
   const [fieldFilter, setFieldFilter] = useState("");
+  const [tab, setTab] = useState("overview");
+  const tabsRef = useRef(null);
+
+  /**
+   * Open a group, and bring its tabs back with it.
+   *
+   * A tab deep in a long page would otherwise leave the reader looking at the
+   * middle of a group they did not choose, with no way back in sight.
+   */
+  const openGroup = (id) => {
+    setTab(id);
+    // Guarded: scrollIntoView is a convenience, and not every renderer the
+    // component runs in has one — jsdom does not. Losing the scroll must never
+    // cost the reader the tab they asked for.
+    const bar = tabsRef.current;
+    if (bar && typeof bar.scrollIntoView === "function") {
+      bar.scrollIntoView({ block: "start", behavior: "smooth" });
+    }
+  };
 
   const load = useCallback(
     async (nextLimit, nextCompact) => {
@@ -256,25 +632,42 @@ export default function DbHealthPage() {
     load(DEFAULT_LIMIT, false);
   }, [load]);
 
-  const rows = useMemo(() => (payload && payload.rows) || [], [payload]);
+  // Not payload.rows: that is sometimes another envelope rather than a list.
+  const rows = useMemo(() => unwrapRows(payload), [payload]);
   const record = rows[selected] || null;
 
   const { checks, fields } = useMemo(() => splitRecord(record), [record]);
 
+  // Only the figures this record actually carries, and the reason there are
+  // none when a database was detected but never connected to.
+  const stats = useMemo(() => pickStats(record), [record]);
+  const ratios = useMemo(() => hitRatios(record), [record]);
+  const spaces = useMemo(() => tablespaces(record), [record]);
+  const expiring = useMemo(() => expiringAccounts(record), [record]);
+  const blocked = useMemo(() => blockedSessions(record), [record]);
+  const limits = useMemo(() => resourceLimits(record), [record]);
+  const memory = useMemo(() => memoryBreakdown(record), [record]);
+  const unusable = useMemo(() => unusableIndexes(record), [record]);
+
   // Lead checks first, the rest in the order the API sent them.
   const orderedChecks = useMemo(() => {
+    const drawn = ownSection({ ratios, spaces, blocked, limits, memory });
     const lead = [];
     const rest = [];
     checks.forEach((entry) => {
+      if (drawn.includes(entry[0])) return;
       (LEAD_CHECKS.includes(entry[0]) ? lead : rest).push(entry);
     });
     lead.sort((a, b) => LEAD_CHECKS.indexOf(a[0]) - LEAD_CHECKS.indexOf(b[0]));
     return [...lead, ...rest];
-  }, [checks]);
+  }, [checks, ratios, spaces, blocked, limits, memory]);
 
-  // Only the figures this record actually carries, and the reason there are
-  // none when a database was detected but never connected to.
-  const stats = useMemo(() => pickStats(record), [record]);
+  // Forty-three cards is not a page; the same cards behind six named tabs are.
+  const groups = useMemo(() => groupChecks(orderedChecks), [orderedChecks]);
+
+  // A record from another engine may not have the group the last one did.
+  const activeGroup = groups.find((g) => g.id === tab) || groups[0] || null;
+
   const notice = useMemo(() => inspectionNotice(record), [record]);
   const { present: liveFields, empty: emptyFields } = useMemo(
     () => partitionFields(fields),
@@ -360,6 +753,26 @@ export default function DbHealthPage() {
               </span>
             )}
 
+            {record && record.database_role && (
+              <span className="dbh-meta">
+                <span className="dbh-meta-key">role</span>
+                {record.database_role}
+              </span>
+            )}
+
+            {record && record.open_mode && (
+              <span className="dbh-meta">
+                <span className="dbh-meta-key">open mode</span>
+                {record.open_mode}
+              </span>
+            )}
+
+            {record && record.is_cdb != null && (
+              <span className="dbh-meta dbh-meta--soft">
+                {record.is_cdb ? "container database" : "not a container database"}
+              </span>
+            )}
+
             {record && record.timestamp && (
               <span className="dbh-meta">
                 <span className="dbh-meta-key">read</span>
@@ -375,33 +788,56 @@ export default function DbHealthPage() {
           </div>
         </div>
 
+        {/* The two things the endpoint lets a reader change. Said in the
+            reader's words rather than the API's: "limit" is how many stored
+            readings to fetch, and "compact" asks it to leave out the columns
+            that are empty in every one of them. */}
         <form className="dbh-controls" onSubmit={onSubmit}>
-          <label className="dbh-field-ctl">
-            <span>Limit</span>
+          <div className="dbh-ctl">
+            <label className="dbh-ctl-label" htmlFor="dbh-limit">
+              Readings
+            </label>
+
             <input
+              id="dbh-limit"
+              className="dbh-ctl-input"
               type="number"
               value={limit}
               min={LIMIT_MIN}
               max={LIMIT_MAX}
+              aria-describedby="dbh-limit-hint"
               onChange={(e) => setLimit(e.target.value)}
               disabled={status === "loading"}
             />
-            <span className="dbh-hint">1–500</span>
-          </label>
 
-          <label className="dbh-check-ctl">
+            <span className="dbh-ctl-hint" id="dbh-limit-hint">
+              {LIMIT_MIN}–{LIMIT_MAX}
+            </span>
+          </div>
+
+          <label className="dbh-ctl-check">
             <input
               type="checkbox"
               checked={compact}
               onChange={(e) => setCompact(e.target.checked)}
               disabled={status === "loading"}
             />
-            <span>Compact</span>
-            <span className="dbh-hint">drop null columns</span>
+            <span>Hide empty columns</span>
           </label>
 
-          <button type="submit" className="dbh-load phi-btn phi-btn--sm" disabled={status === "loading"}>
-            {status === "loading" ? "Loading…" : "Load"}
+          <button
+            type="submit"
+            className="dbh-load phi-btn phi-btn--sm"
+            disabled={status === "loading"}
+          >
+            {status === "loading" ? (
+              <>
+                <span className="phi-spinner" aria-hidden="true" />
+                Loading…
+              </>
+            ) : (
+              "Load"
+            )}
           </button>
         </form>
       </header>
@@ -522,11 +958,182 @@ export default function DbHealthPage() {
             </div>
           )}
 
-          <div className="dbh-cards">
-            {orderedChecks.map(([name, value]) => (
-              <CheckCard key={name} name={name} value={value} />
-            ))}
-          </div>
+          {blocked.length > 0 && (
+            <section className="dbh-card dbh-card--blocked">
+              <h3 className="dbh-card-title">
+                Sessions blocked
+                <span className="dbh-card-count">{blocked.length}</span>
+              </h3>
+              <p className="dbh-card-lead">
+                Someone is waiting on someone else's lock right now. Everything else on
+                this page is a measurement; this is a queue.
+              </p>
+
+              <BlockedList rows={blocked} />
+            </section>
+          )}
+
+          {unusable.length > 0 && (
+            <section className="dbh-card dbh-card--unusable">
+              <h3 className="dbh-card-title">
+                Unusable indexes
+                <span className="dbh-card-count">{unusable.length}</span>
+              </h3>
+              <p className="dbh-card-lead">
+                The optimiser cannot use these until they are rebuilt, so queries that
+                depend on them are scanning instead.
+              </p>
+
+              <ul className="dbh-expiry-list">
+                {unusable.map((index) => (
+                  <li className="dbh-expiry" key={`${index.owner}.${index.name}`}>
+                    <span className="dbh-level dbh-level--bad">{index.status.toLowerCase()}</span>
+                    <span className="dbh-expiry-user">{index.name}</span>
+                    <span className="dbh-expiry-status">{index.owner}</span>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+
+          {/* The quiet one. An expiring password breaks a running application
+              at a moment nobody chose, so it is said before the figures. */}
+          {expiring.length > 0 && (
+            <section className="dbh-card dbh-card--expiring">
+              <h3 className="dbh-card-title">Passwords expiring</h3>
+
+              <ul className="dbh-expiry-list">
+                {expiring.map((account) => (
+                  <li className="dbh-expiry" key={account.username}>
+                    <span className={`dbh-level dbh-level--${account.level}`}>
+                      {account.days <= 0
+                        ? "expired"
+                        : `${account.days} day${account.days === 1 ? "" : "s"}`}
+                    </span>
+
+                    <span className="dbh-expiry-user">{account.username}</span>
+
+                    {account.status && (
+                      <span className="dbh-expiry-status">{account.status.toLowerCase()}</span>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+
+          {/* Two readings that are ratios against a limit, so they are drawn
+              as meters rather than buried as numbers in the field table. */}
+          {ratios.length > 0 && (
+            <section className="dbh-card dbh-card--meters">
+              <h3 className="dbh-card-title">Cache hit ratios</h3>
+              <p className="dbh-card-lead">
+                How often the database answered from memory instead of going to disk.
+                Sustained figures under 90% usually mean it needs more memory.
+              </p>
+
+              <div className="dbh-meters">
+                {ratios.map((r) => (
+                  <Meter
+                    key={r.label}
+                    label={r.label}
+                    value={r.value}
+                    hint={r.hint}
+                    level={r.level}
+                  />
+                ))}
+              </div>
+            </section>
+          )}
+
+          {limits.length > 0 && (
+            <section className="dbh-card dbh-card--limits">
+              <h3 className="dbh-card-title">
+                Resource limits
+                <span className="dbh-card-count">{limits.length}</span>
+              </h3>
+              <p className="dbh-card-lead">
+                The bar is where each resource is now; the notch is the highest it has
+                reached since startup. The notch is what decides whether a busy afternoon
+                starts refusing connections.
+              </p>
+
+              <LimitList rows={limits} />
+            </section>
+          )}
+
+          {memory && (
+            <section className="dbh-card dbh-card--memory">
+              <h3 className="dbh-card-title">Memory</h3>
+              <p className="dbh-card-lead">
+                What the instance has, and what it is spent on — the buffer cache and the
+                shared pool are both inside the SGA, not beside it.
+              </p>
+
+              <MemoryPanel memory={memory} />
+            </section>
+          )}
+
+          {spaces.length > 0 && (
+            <section className="dbh-card dbh-card--spaces">
+              <h3 className="dbh-card-title">
+                Tablespaces
+                <span className="dbh-card-count">{spaces.length}</span>
+              </h3>
+              <p className="dbh-card-lead">
+                Most pressed first. A tablespace that can still autoextend is judged on
+                the room it can still take, not on how full its current datafiles are.
+              </p>
+
+              <TablespaceList items={spaces} />
+            </section>
+          )}
+
+          {/* Everything above this line is either an alarm or a figure, and
+              stays put. Below it is the detail, which is where the length was:
+              one tab at a time instead of thirteen thousand pixels at once. */}
+          {groups.length > 0 && (
+            <>
+              <div className="dbh-tabs" ref={tabsRef} role="tablist" aria-label="Checks">
+                {groups.map((group) => (
+                  <button
+                    key={group.id}
+                    type="button"
+                    role="tab"
+                    id={`dbh-tab-${group.id}`}
+                    aria-selected={activeGroup && group.id === activeGroup.id}
+                    aria-controls={`dbh-panel-${group.id}`}
+                    className={`dbh-tab ${
+                      activeGroup && group.id === activeGroup.id ? "active" : ""
+                    }`}
+                    onClick={() => openGroup(group.id)}
+                  >
+                    {group.label}
+                    {/* the count is what makes a closed tab legible */}
+                    <span className="dbh-tab-count">{group.entries.length}</span>
+                  </button>
+                ))}
+              </div>
+
+              {activeGroup && (
+                <div
+                  className="dbh-cards"
+                  role="tabpanel"
+                  id={`dbh-panel-${activeGroup.id}`}
+                  aria-labelledby={`dbh-tab-${activeGroup.id}`}
+                >
+                  {activeGroup.entries.map(([name, value]) => (
+                    <CheckCard
+                      key={name}
+                      name={name}
+                      value={value}
+                      chart={chartFor(name, record)}
+                    />
+                  ))}
+                </div>
+              )}
+            </>
+          )}
 
           {/* The record itself is a flat list of ~50 named values, which is
               what a table is for: one row each, one column of names to scan

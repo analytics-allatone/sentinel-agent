@@ -29,6 +29,9 @@
   padding: 22px 22px 56px;
   box-sizing: border-box;
   background: var(--bg);
+  /* App.css still carries Create React App's starter `.App { text-align:
+     center }`, which centres every paragraph this page writes. */
+  text-align: left;
   font-family: var(--font-body);
   color: var(--dbh-ink);
 }
@@ -65,6 +68,9 @@
 }
 
 .dbh-head-main {
+  /* Takes the room it needs and gives the rest back, so the controls beside
+     it get a full row instead of a column they have to stack inside. */
+  flex: 1 1 420px;
   min-width: 0;
 }
 
@@ -172,60 +178,118 @@
 
 /* ── the two query options ──────────────────────────────────── */
 
+/* ─────────────────────────────────────────────────────────────
+   The two query controls
+
+   They used to sit in a bordered, filled box of their own inside the header
+   card — a box inside a box — which made a pair of small inputs look like a
+   panel and pushed the Load button onto a line by itself. They are controls,
+   not a section: a single row on the header's baseline, no container.
+   ───────────────────────────────────────────────────────────── */
+
 .dbh-controls {
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 12px;
-  padding: 10px 12px;
-  border: 1px solid var(--dbh-line);
-  border-radius: 12px;
-  background: var(--surface);
+  /* Login.css, Register.css and forgot-page.css each declare a bare
+     `form { display: flex; flex-direction: column }`, and CRA bundles every
+     stylesheet into one cascade — so every form in the app is a column,
+     including this toolbar. Said explicitly here rather than inherited.
+     A wrapping flex item can also be squeezed to its widest single child,
+     which is the other half of why these three stacked. */
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: flex-end;
+  gap: var(--s4);
+  flex: 0 0 auto;
+  margin-left: auto;
 }
 
-.dbh-field-ctl,
-.dbh-check-ctl {
+/* Below this the header is a column anyway, and so are the controls. */
+@media (max-width: 760px) {
+  .dbh-controls {
+    flex-wrap: wrap;
+    margin-left: 0;
+  }
+}
+
+.dbh-ctl {
+  display: grid;
+  grid-template-areas:
+    "label label"
+    "input hint";
+  grid-template-columns: auto auto;
+  align-items: center;
+  gap: var(--s2);
+}
+
+/* Matches the uppercase keys on the fact pills just above it. */
+.dbh-ctl-label {
+  grid-area: label;
+  color: var(--muted);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.dbh-ctl-input {
+  grid-area: input;
+  width: 78px;
+  height: 36px;
+  padding: 0 var(--s3);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  color: var(--text);
+  font-family: inherit;
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+  transition: border-color var(--t-hover) var(--ease), box-shadow var(--t-hover) var(--ease);
+}
+
+.dbh-ctl-input:hover:not(:disabled) {
+  border-color: var(--border-strong);
+}
+
+.dbh-ctl-input:focus-visible {
+  border-color: var(--accent);
+  /* the shared focus token, not a hardcoded purple that ignores the theme */
+  box-shadow: 0 0 0 3px var(--focus);
+  outline: none;
+}
+
+.dbh-ctl-hint {
+  grid-area: hint;
+  color: var(--muted);
+  font-size: var(--text-xs);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Given the height of the field beside it, so the row shares one baseline. */
+.dbh-ctl-check {
   display: inline-flex;
   align-items: center;
-  gap: 7px;
-  font-size: 11.5px;
-  font-weight: 600;
-  color: var(--dbh-text);
-}
-
-.dbh-field-ctl input {
-  width: 74px;
-  height: 34px;
-  padding: 0 9px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--surface);
-  font-family: inherit;
-  font-size: 12px;
-  outline: none;
-  transition: border-color 0.15s ease, box-shadow 0.15s ease;
-}
-
-.dbh-field-ctl input:focus {
-  border-color: var(--dbh-accent);
-  box-shadow: 0 0 0 3px rgba(102, 84, 232, 0.14);
-}
-
-.dbh-check-ctl input {
-  width: 15px;
-  height: 15px;
-  accent-color: var(--dbh-accent);
+  gap: var(--s2);
+  min-height: 36px;
+  color: var(--text);
+  font-size: var(--text-sm);
   cursor: pointer;
 }
 
-.dbh-hint {
-  color: var(--dbh-faint);
-  font-size: 10.5px;
-  font-weight: 500;
+.dbh-ctl-check input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--accent);
+  cursor: pointer;
 }
 
+.dbh-ctl-check:has(input:disabled) {
+  color: var(--muted);
+  cursor: not-allowed;
+}
 
-
+.dbh-load {
+  min-height: 36px;
+}
 
 
 /* ── states ─────────────────────────────────────────────────── */
@@ -491,6 +555,7 @@
 }
 
 .dbh-card {
+  margin: 10px 0;     
   padding: 15px 17px 17px;
   border: 1px solid var(--dbh-line);
   border-radius: var(--dbh-radius);
@@ -787,5 +852,670 @@
 
   .dbh-stat:hover {
     transform: none;
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Meters — a ratio against a limit
+
+   The track is a pale step of the same ramp as the fill, so an almost-empty
+   bar still reads as a bar rather than as a missing one. Severity lives in the
+   fill, and is written out beside it as well: the colour is a second channel,
+   never the only one.
+   ───────────────────────────────────────────────────────────── */
+
+.dbh-card-lead {
+  margin: -4px 0 var(--s4);
+  max-width: 68ch;
+  color: var(--muted);
+  font-size: var(--text-sm);
+  line-height: 1.6;
+}
+
+.dbh-meters {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: var(--s5);
+}
+
+.dbh-meter-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s3);
+  margin-bottom: var(--s2);
+}
+
+.dbh-meter-label {
+  color: var(--text);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.dbh-meter-value {
+  /* a standalone figure, so proportional digits — tabular is for columns */
+  color: var(--text);
+  font-size: var(--text-lg);
+  font-weight: 700;
+}
+
+.dbh-meter-track,
+.dbh-ts-track {
+  overflow: hidden;
+  height: 8px;
+  border-radius: var(--r-full);
+  background: var(--sunken);
+}
+
+.dbh-meter-fill,
+.dbh-ts-fill {
+  display: block;
+  height: 100%;
+  /* 4px rounded data-end, anchored flat against the baseline it grows from */
+  border-radius: 0 var(--r-sm) var(--r-sm) 0;
+  background: var(--accent);
+  transition: width var(--t-menu) var(--ease);
+}
+
+.dbh-meter-fill--ok,
+.dbh-ts-fill--ok {
+  background: var(--success);
+}
+
+.dbh-meter-fill--warn,
+.dbh-ts-fill--warn {
+  background: var(--warning);
+}
+
+.dbh-meter-fill--bad,
+.dbh-ts-fill--bad {
+  background: var(--danger);
+}
+
+.dbh-meter-foot,
+.dbh-ts-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s2) var(--s3);
+  margin-top: var(--s2);
+}
+
+.dbh-meter-hint,
+.dbh-ts-note {
+  color: var(--muted);
+  font-size: var(--text-xs);
+  line-height: 1.5;
+}
+
+/* The state in words, so the reading survives without colour. */
+.dbh-level {
+  padding: 1px var(--s2);
+  border-radius: var(--r-sm);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  text-transform: lowercase;
+}
+
+.dbh-level--ok {
+  background: var(--success-soft);
+  color: var(--success);
+}
+
+.dbh-level--warn {
+  background: var(--warning-soft);
+  color: var(--warning);
+}
+
+.dbh-level--bad {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+.dbh-level--muted {
+  background: var(--sunken);
+  color: var(--muted);
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Tablespaces
+   ───────────────────────────────────────────────────────────── */
+
+.dbh-ts-list {
+  display: grid;
+  gap: var(--s5);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.dbh-ts-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--s2) var(--s3);
+  margin-bottom: var(--s2);
+}
+
+.dbh-ts-name {
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.dbh-ts-type {
+  padding: 1px var(--s2);
+  border-radius: var(--r-sm);
+  background: var(--sunken);
+  color: var(--muted);
+  font-size: var(--text-xs);
+}
+
+.dbh-ts-figure {
+  margin-left: auto;
+  color: var(--text);
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+.dbh-ts-of {
+  color: var(--muted);
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Long tables: a folded tail and a clamped cell
+   ───────────────────────────────────────────────────────────── */
+
+.dbh-more {
+  margin-top: var(--s3);
+}
+
+/* SQL text arrives 400 characters long; it gets three lines and a tooltip
+   rather than a row tall enough to need its own scrollbar. */
+.dbh-cell--long {
+  display: -webkit-box;
+  max-width: 46ch;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  line-height: 1.5;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dbh-meter-fill,
+  .dbh-ts-fill {
+    transition: none;
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Rankings and a small series
+
+   One hue throughout: these are magnitudes, not identities, and a ranking
+   painted in eight colours invites a reading the colours do not carry. The
+   leader keeps full strength and the tail steps back, so the shape of the
+   distribution lands before any single number does.
+   ───────────────────────────────────────────────────────────── */
+
+.dbh-rank {
+  margin-bottom: var(--s5);
+}
+
+.dbh-rank-caption {
+  margin: 0 0 var(--s4);
+  color: var(--muted);
+  font-size: var(--text-xs);
+  line-height: 1.6;
+}
+
+.dbh-rank-list {
+  display: grid;
+  gap: var(--s4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: none;
+}
+
+.dbh-rank-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s3);
+  margin-bottom: 3px;
+}
+
+.dbh-rank-label {
+  overflow: hidden;
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The value rides the bar, so it is never the thing a tooltip hides. */
+.dbh-rank-value {
+  flex: 0 0 auto;
+  color: var(--text);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.dbh-rank-track {
+  /* 8px of bar: thin enough that the column of them reads as a shape */
+  overflow: hidden;
+  height: 8px;
+  border-radius: var(--r-full);
+  background: var(--sunken);
+}
+
+.dbh-rank-fill {
+  display: block;
+  height: 100%;
+  border-radius: 0 var(--r-sm) var(--r-sm) 0;
+  /* The tail is the same hue stepped back — but by opacity, not by the
+     soft token: that step is so close to the track that a bar at 90%
+     looked the same as an empty one. */
+  background: var(--accent);
+  opacity: 0.45;
+  transition: width var(--t-menu) var(--ease);
+}
+
+.dbh-rank-fill--lead {
+  background: var(--accent);
+  opacity: 1;
+}
+
+.dbh-rank-sub {
+  display: block;
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: var(--text-xs);
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Archive volume per day
+   ───────────────────────────────────────────────────────────── */
+
+.dbh-days {
+  margin-bottom: var(--s5);
+}
+
+.dbh-days-plot {
+  display: flex;
+  align-items: flex-end;
+  /* No gap between the columns: their label borders meet and read as one
+     axis line instead of four disconnected dashes under the bars. */
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.dbh-day {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--s2);
+  min-width: 56px;
+  padding-inline: var(--s2);
+}
+
+.dbh-day-value {
+  color: var(--text);
+  font-size: var(--text-xs);
+  font-weight: 600;
+}
+
+.dbh-day-track {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  width: 100%;
+  /* a fixed plot height, so the columns are comparable between readings */
+  height: 108px;
+}
+
+.dbh-day-fill {
+  /* capped rather than filling its slot: the leftover is the air */
+  width: min(24px, 60%);
+  border-radius: var(--r-sm) var(--r-sm) 0 0;
+  background: var(--accent);
+  transition: height var(--t-menu) var(--ease);
+}
+
+.dbh-day-label {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  padding-top: var(--s2);
+  border-top: 1px solid var(--border);
+  width: 100%;
+  justify-content: center;
+  color: var(--text);
+  font-size: var(--text-xs);
+  font-variant-numeric: tabular-nums;
+}
+
+.dbh-day-name {
+  color: var(--muted);
+}
+
+.dbh-day-count {
+  color: var(--muted);
+  font-size: var(--text-xs);
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Expiring passwords
+   ───────────────────────────────────────────────────────────── */
+
+.dbh-expiry-list {
+  display: grid;
+  gap: var(--s3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.dbh-expiry {
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+}
+
+.dbh-expiry-user {
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.dbh-expiry-status {
+  color: var(--muted);
+  font-size: var(--text-xs);
+}
+
+/* ─────────────────────────────────────────────────────────────
+   The headline tiles carry their context now
+   ───────────────────────────────────────────────────────────── */
+
+.dbh-stat-sub {
+  display: block;
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: var(--text-xs);
+  line-height: 1.5;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dbh-rank-fill,
+  .dbh-day-fill {
+    transition: none;
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Sessions blocked
+
+   The one card on the page about somebody waiting, rather than about how
+   things have been. It gets the danger edge every other card refuses.
+   ───────────────────────────────────────────────────────────── */
+
+.dbh-card--blocked {
+  border-color: var(--danger);
+}
+
+.dbh-block-list {
+  display: grid;
+  gap: var(--s4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.dbh-block {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--s3);
+}
+
+.dbh-block-body {
+  min-width: 0;
+}
+
+.dbh-block-who {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--s2);
+  margin: 0;
+  color: var(--text);
+  font-size: var(--text-sm);
+}
+
+.dbh-block-user {
+  color: var(--muted);
+  font-size: var(--text-xs);
+}
+
+.dbh-block-arrow {
+  color: var(--muted);
+  font-size: var(--text-xs);
+}
+
+.dbh-block-event {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--s2);
+  margin: 3px 0 0;
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+}
+
+.dbh-block-class {
+  padding: 1px var(--s2);
+  border-radius: var(--r-sm);
+  background: var(--sunken);
+  font-family: var(--font-body);
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Resource limits — a bar for now, a notch for the high-water mark
+   ───────────────────────────────────────────────────────────── */
+
+.dbh-limit-list {
+  display: grid;
+  gap: var(--s5);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.dbh-limit-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s3);
+  margin-bottom: var(--s2);
+}
+
+.dbh-limit-name {
+  color: var(--text);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.dbh-limit-figure {
+  color: var(--text);
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+.dbh-limit-track {
+  position: relative;
+  overflow: visible;
+  height: 8px;
+  border-radius: var(--r-full);
+  background: var(--sunken);
+}
+
+.dbh-limit-fill {
+  display: block;
+  height: 100%;
+  border-radius: var(--r-full) var(--r-sm) var(--r-sm) var(--r-full);
+  background: var(--accent);
+  transition: width var(--t-menu) var(--ease);
+}
+
+.dbh-limit-fill--ok {
+  background: var(--success);
+}
+
+.dbh-limit-fill--warn {
+  background: var(--warning);
+}
+
+.dbh-limit-fill--bad {
+  background: var(--danger);
+}
+
+/* A hairline across the track, in ink rather than in the fill's colour: it
+   marks a position, it is not another quantity. */
+.dbh-limit-peak {
+  position: absolute;
+  top: -3px;
+  width: 2px;
+  height: 14px;
+  margin-left: -1px;
+  border-radius: 1px;
+  background: var(--text);
+}
+
+.dbh-limit-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s2) var(--s3);
+  margin-top: var(--s3);
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Memory
+   ───────────────────────────────────────────────────────────── */
+
+.dbh-mem-totals {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s6);
+  margin-bottom: var(--s5);
+  padding-bottom: var(--s4);
+  border-bottom: 1px solid var(--dbh-line-soft);
+}
+
+.dbh-mem-total {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+/* A share of something, not a severity: the accent, not the status ramp. */
+.dbh-ts-fill--neutral {
+  background: var(--accent);
+}
+
+.dbh-card--unusable {
+  border-color: var(--warning);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dbh-limit-fill {
+    transition: none;
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Tabs over the checks
+
+   The alarms and the figures above stay put; this is only the detail. Sticky,
+   because the page inside a tab is still long and losing the way back to the
+   other five is what makes a tabbed page worse than a list.
+   ───────────────────────────────────────────────────────────── */
+
+.dbh-tabs {
+  /* Not sticky, and deliberately so: .layout sets overflow-x: hidden, and the
+     spec turns the other axis into a scroll container when one is clipped —
+     which kills position: sticky for anything inside it. Rather than leave CSS
+     that quietly does nothing, choosing a tab scrolls the bar back into view. */
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s2);
+  margin: var(--s6) 0 var(--s4);
+  padding: var(--s2) 0;
+  /* the page shows through a sticky bar unless it carries its own ground */
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+}
+
+.dbh-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s2);
+  min-height: 36px;
+  padding: 0 var(--s4);
+  border: 1px solid transparent;
+  border-radius: var(--r-md);
+  background: transparent;
+  color: var(--muted);
+  font-family: inherit;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  cursor: pointer;
+  transition: background var(--t-hover) var(--ease), color var(--t-hover) var(--ease);
+}
+
+.dbh-tab:hover:not(.active) {
+  background: var(--sunken);
+  color: var(--text);
+}
+
+.dbh-tab:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--focus);
+}
+
+.dbh-tab.active {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+/* What is inside a tab that is not open — the thing a plain tab bar hides. */
+.dbh-tab-count {
+  padding: 0 6px;
+  border-radius: var(--r-full);
+  background: var(--sunken);
+  color: var(--muted);
+  font-size: var(--text-xs);
+  font-variant-numeric: tabular-nums;
+}
+
+.dbh-tab.active .dbh-tab-count {
+  background: var(--surface);
+  color: var(--accent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dbh-tab {
+    transition: none;
   }
 }

@@ -26,6 +26,7 @@ import AgentInfoDashboard from "./Reports/AgentInfoDashboard";
 import Unauthorized from "./pages/Unauthorized/Unauthorized";
 import NotFound from "./pages/NotFound/NotFound";
 import DbHealthPage from "./DbHealth/DbHealthPage";
+import AlertsPage from "./Alerts/AlertsPage";
 import DesignSystemPage from "./DesignSystem/DesignSystemPage";
 import {
   RequireSession,
@@ -182,6 +183,12 @@ function AppContent() {
                 }
               />
             }
+          />
+
+          {/* Every detection the agents raised, newest first. */}
+          <Route
+            path="/app/alerts"
+            element={<ProtectedRoute element={<AlertsPage />} />}
           />
 
           {/* One database's stored health record. The services panel hands

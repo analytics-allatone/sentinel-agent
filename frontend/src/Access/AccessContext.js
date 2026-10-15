@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
 import api from "../api/api";
+import { once, requestKey } from "../api/inflight";
 
 /**
  * Frontend-only RBAC store.
@@ -207,7 +208,9 @@ export function AccessProvider({ children }) {
   // Merges by e-mail so frontend-only fields (id, status, permissions) survive.
   const fetchUsers = async () => {
     try {
-      const res = await api.get("/get-users");
+      // The provider mounts once per app, but an effect re-run still asks
+      // twice; the same answer is shared rather than fetched again.
+      const res = await once(requestKey("/get-users", {}), () => api.get("/get-users"));
       const apiUsers = res?.data?.data?.users;
       if (!Array.isArray(apiUsers)) return;
       setUsers((prev) => {
