@@ -1,5 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import logo from "./logo.svg";
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import "./App.css";
 import Login from "./Login/Login";
 import Register from "./Register/Register";
@@ -18,7 +17,6 @@ import { useEffect, useState } from "react";
 import { registerLoaderCallbacks } from "./api/api";
 import AgentCardGrid from "./Dashboard/AgentDashboard/AgentCardGrid";
 import SOC2Report from "./Reports/SOC2Report";
-import CapacityDashboard1 from "./Reports/CapacityDashboard1";
 import { AccessProvider } from "./Access/AccessContext";
 import AccessManagement from "./Access/AccessManagement";
 import CapacityDashboard from "./Reports/CapacityDashboard";
@@ -26,7 +24,7 @@ import AgentInfoDashboard from "./Reports/AgentInfoDashboard";
 import Unauthorized from "./pages/Unauthorized/Unauthorized";
 import NotFound from "./pages/NotFound/NotFound";
 import DbHealthPage from "./DbHealth/DbHealthPage";
-import AlertsPage from "./Alerts/AlertsPage";
+import EventsPage from "./Events/EventsPage";
 import DesignSystemPage from "./DesignSystem/DesignSystemPage";
 import {
   RequireSession,
@@ -39,6 +37,19 @@ import TwoFactorVerify from "./TwoFactor/TwoFactorVerify";
 import EmailOtpVerify from "./TwoFactor/EmailOtpVerify";
 import Messaging from "./Messaging/Messaging";
 import ChannelsManager from "./Channels/ChannelsManager";
+
+/**
+ * The old address for what is now /app/events.
+ *
+ * Plain <Navigate to="/app/events"> would drop the query string, and this
+ * page keeps its whole view in it — severity, agent, window, page. A link
+ * somebody shared last week would arrive stripped of everything it was sent
+ * to show, which is worse than a 404 because it looks like it worked.
+ */
+function RenamedToEvents() {
+  const { search } = useLocation();
+  return <Navigate to={{ pathname: "/app/events", search }} replace />;
+}
 
 function AppContent() {
   const [isLoading, setIsLoading] = useState(false);
@@ -187,9 +198,12 @@ function AppContent() {
 
           {/* Every detection the agents raised, newest first. */}
           <Route
-            path="/app/alerts"
-            element={<ProtectedRoute element={<AlertsPage />} />}
+            path="/app/events"
+            element={<ProtectedRoute element={<EventsPage />} />}
           />
+
+          {/* The section was called Alerts until recently. */}
+          <Route path="/app/alerts" element={<RenamedToEvents />} />
 
           {/* One database's stored health record. The services panel hands
               over ?agent=…&engine=…&service=… */}

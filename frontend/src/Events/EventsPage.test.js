@@ -11,7 +11,7 @@ import React from "react";
 import { render, screen, fireEvent, waitFor, within } from "@testing-library/react";
 import { MemoryRouter, useLocation } from "react-router-dom";
 
-import AlertsPage from "./AlertsPage";
+import EventsPage from "./EventsPage";
 import api from "../api/api";
 import {
   burstSpan,
@@ -32,7 +32,7 @@ import {
   safePageSize,
   technique,
   TIME_RANGES,
-} from "./alertsFormat";
+} from "./eventsFormat";
 
 jest.mock("../api/api", () => ({
   __esModule: true,
@@ -67,10 +67,33 @@ function renderPage(initial = "/app/alerts") {
   lastSearch = "";
   return render(
     <MemoryRouter initialEntries={[initial]}>
-      <AlertsPage />
+      <EventsPage />
       <Address />
     </MemoryRouter>
   );
+}
+
+/** Severity is a dropdown now, and like every filter it waits for Apply. */
+const LEVEL = { critical: 5, high: 4, medium: 3, low: 2, info: 1 };
+
+function chooseSeverity(label) {
+  fireEvent.change(screen.getByLabelText("Severity"), {
+    target: { value: String(LEVEL[label] ?? 0) },
+  });
+}
+
+function chooseMode(mode) {
+  fireEvent.change(screen.getByLabelText("Match"), { target: { value: mode } });
+}
+
+/** One option's text in the Severity dropdown, counts and all. */
+function severityOption(label) {
+  const select = screen.getByLabelText("Severity");
+  return [...select.options].find((o) => o.textContent.toLowerCase().startsWith(label));
+}
+
+function pressApply() {
+  fireEvent.click(screen.getByRole("button", { name: "Apply" }));
 }
 
 const hero = () =>
@@ -92,6 +115,7 @@ const alert = (over = {}) => ({
   severity: 3,
   severity_label: "medium",
   agent_name: "agent_david",
+  agent_ip: "10.0.0.194",
   entity: "WINDOWS-EP8PIFQ$",
   event_count: 9,
   first_seen: "2026-10-07T06:10:21.029064Z",
@@ -103,13 +127,14 @@ const alert = (over = {}) => ({
 
 const PAGE = [
   alert(),
-  alert({ id: 370257, agent_name: "shiv1", entity: "DESKTOP-4G26IBD$", event_count: 6 }),
+  alert({ id: 370257, agent_name: "shiv1", agent_ip: "127.0.0.1", entity: "DESKTOP-4G26IBD$", event_count: 6 }),
   alert({
     id: 370264,
     rule_id: "SIGMA_a238b5d0-ce2d-4414-a676-7a531b3d13d6",
     severity: 4,
     severity_label: "high",
     agent_name: "shiv1",
+    agent_ip: "127.0.0.1",
     entity: "chrome.exe",
     event_count: 2,
     detail: "ETW Trace Evasion Activity",
@@ -316,16 +341,19 @@ describe("the page", () => {
     expect(typeof params.page_size).toBe("number");
   });
 
-  it("keeps anything that is not a digit out of the paging fields", async () => {
+  it("keeps anything that is not a digit out of the page field", async () => {
+    // page size is a dropdown now; the page number is still typed, and
+    // type="number" is not the guard it looks like
+    mockApi({ total: 500 });
     renderPage();
     await hero();
 
-    const size = screen.getByLabelText("Per page");
-    fireEvent.change(size, { target: { value: "1e3" } });
-    expect(size.value).toBe("13");
+    const page = screen.getByLabelText("Page");
+    fireEvent.change(page, { target: { value: "1e3" } });
+    expect(page.value).toBe("13");
 
-    fireEvent.change(size, { target: { value: "-25abc" } });
-    expect(size.value).toBe("25");
+    fireEvent.change(page, { target: { value: "-25abc" } });
+    expect(page.value).toBe("25");
   });
 
   it("takes a page size and starts again from the first page", async () => {
@@ -338,16 +366,15 @@ describe("the page", () => {
     await waitFor(() => expect(lastListParams()).toMatchObject({ page: 1, page_size: 100 }));
   });
 
-  it("clamps a page size past the endpoint's ceiling instead of earning a 422", async () => {
+  it("offers only page sizes the endpoint accepts", async () => {
+    // a dropdown cannot ask for 900 in the first place, which is the point of
+    // it; safePageSize still guards the URL, where a number can be typed
     renderPage();
     await hero();
 
-    const size = screen.getByLabelText("Per page");
-    fireEvent.change(size, { target: { value: "900" } });
-    fireEvent.click(screen.getByRole("button", { name: "Apply" }));
-
-    expect(size.value).toBe("200");
-    await waitFor(() => expect(lastListParams()).toMatchObject({ page_size: 200 }));
+    const sizes = [...screen.getByLabelText("Per page").options].map((o) => Number(o.value));
+    expect(sizes.every((n) => n >= 1 && n <= 200)).toBe(true);
+    expect(sizes).toContain(50);
   });
 
   it("jumps to a page that is typed rather than clicked to", async () => {
@@ -383,7 +410,8 @@ describe("the page", () => {
     fireEvent.submit(field.closest("form"));
     await waitFor(() => expect(lastListParams()).toMatchObject({ page: 40 }));
 
-    fireEvent.click(screen.getByRole("button", { name: /high/i }));
+    chooseSeverity("high");
+    pressApply();
     await waitFor(() => expect(lastListParams()).toMatchObject({ page: 1 }));
     expect(screen.getByLabelText("Page").value).toBe("1");
   });
@@ -405,13 +433,17 @@ describe("the page", () => {
 
   it("counts each severity across everything the other filters match", async () => {
     renderPage();
-    const critical = await screen.findByRole("button", { name: /critical/i });
-    await waitFor(() => expect(within(critical).getByText((140).toLocaleString())).toBeInTheDocument());
+    await hero();
+    // the count rides the option, so picking a level is an informed click
+    await waitFor(() =>
+      expect(severityOption("critical").textContent).toContain((140).toLocaleString())
+    );
   });
 
   it("filters on severity_min, because a level means it and everything above", async () => {
     renderPage();
-    fireEvent.click(await screen.findByRole("button", { name: /high/i }));
+    chooseSeverity("high");
+    pressApply();
     await waitFor(() => expect(lastListParams()).toMatchObject({ severity_min: 4 }));
   });
 
@@ -422,7 +454,8 @@ describe("the page", () => {
     fireEvent.click(screen.getByRole("button", { name: /Older/ }));
     await waitFor(() => expect(lastListParams()).toMatchObject({ page: 2 }));
 
-    fireEvent.click(screen.getByRole("button", { name: /medium/i }));
+    chooseSeverity("medium");
+    pressApply();
     await waitFor(() => expect(lastListParams()).toMatchObject({ page: 1, severity_min: 3 }));
   });
 
@@ -450,7 +483,7 @@ describe("the page", () => {
     fireEvent.change(screen.getByLabelText("From"), { target: { value: "2026-10-01T09:00" } });
     fireEvent.change(screen.getByLabelText("To"), { target: { value: "2026-10-02T17:30" } });
     fireEvent.change(screen.getByLabelText("Agent"), { target: { value: "shiv1" } });
-    fireEvent.change(screen.getByLabelText("Per page"), { target: { value: "75" } });
+    fireEvent.change(screen.getByLabelText("Per page"), { target: { value: "100" } });
 
     const before = api.get.mock.calls.filter(([, c]) => (c.params || {}).page_size !== 1).length;
     fireEvent.click(screen.getByRole("button", { name: "Apply" }));
@@ -458,7 +491,7 @@ describe("the page", () => {
     await waitFor(() =>
       expect(lastListParams()).toMatchObject({
         agent_name: "shiv1",
-        page_size: 75,
+        page_size: 100,
         page: 1,
         from_dt: new Date("2026-10-01T09:00").toISOString(),
         to_dt: new Date("2026-10-02T17:30").toISOString(),
@@ -551,8 +584,9 @@ describe("the page", () => {
   it("offers a way out when a filter matches nothing", async () => {
     mockApi({ total: 0, alerts: [] });
     renderPage();
-    fireEvent.click(await screen.findByRole("button", { name: /critical/i }));
-    expect(await screen.findByText("No alert matches these filters.")).toBeInTheDocument();
+    chooseSeverity("critical");
+    pressApply();
+    expect(await screen.findByText("No event matches these filters.")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Clear the filters" })).toBeInTheDocument();
   });
 
@@ -786,14 +820,15 @@ describe("category, and which severity question is being asked", () => {
   it("includes the info level the API documents", async () => {
     renderPage();
     await hero();
-    expect(screen.getByRole("button", { name: /info/i })).toBeInTheDocument();
+    expect(severityOption("info")).toBeTruthy();
   });
 
   it("asks for a level and above by default", async () => {
     renderPage();
     await hero();
 
-    fireEvent.click(screen.getByRole("button", { name: /high/i }));
+    chooseSeverity("high");
+    pressApply();
     await waitFor(() => {
       const p = lastListParams();
       expect(p.severity_min).toBe(4);
@@ -805,10 +840,12 @@ describe("category, and which severity question is being asked", () => {
     renderPage();
     await hero();
 
-    fireEvent.click(screen.getByRole("button", { name: /high/i }));
+    chooseSeverity("high");
+    pressApply();
     await waitFor(() => expect(lastListParams().severity_min).toBe(4));
 
-    fireEvent.click(screen.getByRole("button", { name: "exactly" }));
+    chooseMode("exact");
+    pressApply();
     await waitFor(() => {
       const p = lastListParams();
       expect(p.severity).toBe(4);
@@ -820,7 +857,8 @@ describe("category, and which severity question is being asked", () => {
     renderPage();
     await hero();
 
-    fireEvent.click(screen.getByRole("button", { name: "exactly" }));
+    chooseMode("exact");
+    pressApply();
     await waitFor(() => {
       const p = lastListParams();
       expect(p.severity).toBeUndefined();
@@ -833,7 +871,8 @@ describe("category, and which severity question is being asked", () => {
     await hero();
     expect(screen.getByText(/and everything above it/)).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: "exactly" }));
+    chooseMode("exact");
+    pressApply();
     expect(screen.getByText(/that level only/)).toBeInTheDocument();
   });
 });
@@ -852,8 +891,8 @@ describe("counts that could not be read", () => {
     });
 
     renderPage();
-    const any = await screen.findByRole("button", { name: /^any/i });
-    await waitFor(() => expect(within(any).getByText("—")).toBeInTheDocument());
+    await hero();
+    await waitFor(() => expect(severityOption("any severity").textContent).toContain("—"));
   });
 });
 
@@ -962,7 +1001,8 @@ describe("the view lives in the address bar", () => {
     // an untouched page keeps a clean address
     expect(lastSearch).toBe("");
 
-    fireEvent.click(screen.getByRole("button", { name: /high/i }));
+    chooseSeverity("high");
+    pressApply();
     await waitFor(() => expect(lastSearch).toContain("sev=4"));
     expect(lastSearch).not.toContain("mode=");
   });
@@ -971,8 +1011,10 @@ describe("the view lives in the address bar", () => {
     renderPage();
     await hero();
 
-    fireEvent.click(screen.getByRole("button", { name: /critical/i }));
-    fireEvent.click(screen.getByRole("button", { name: "exactly" }));
+    chooseSeverity("critical");
+    pressApply();
+    chooseMode("exact");
+    pressApply();
     fireEvent.change(screen.getByLabelText("Agent"), { target: { value: "shiv1" } });
     fireEvent.change(screen.getByLabelText("Category"), { target: { value: "process" } });
     fireEvent.change(screen.getByLabelText("Seen"), { target: { value: "1h" } });
@@ -1003,10 +1045,8 @@ describe("the view lives in the address bar", () => {
     );
     expect(screen.getByLabelText("Agent").value).toBe("shiv1");
     expect(screen.getByLabelText("Per page").value).toBe("100");
-    expect(screen.getByRole("button", { name: "exactly" })).toHaveAttribute(
-      "aria-pressed",
-      "true"
-    );
+    expect(screen.getByLabelText("Severity").value).toBe("4");
+    expect(screen.getByLabelText("Match").value).toBe("exact");
   });
 
   it("restores a hand-typed window from a link", async () => {
@@ -1036,56 +1076,6 @@ describe("the view lives in the address bar", () => {
   });
 });
 
-describe("a live list", () => {
-  beforeEach(() => jest.useFakeTimers());
-  afterEach(() => jest.useRealTimers());
-
-  const liveBox = () => screen.getByLabelText("Live");
-
-  it("re-reads on a timer once asked to", async () => {
-    renderPage();
-    await waitFor(() => expect(api.get).toHaveBeenCalled());
-
-    fireEvent.click(liveBox());
-    const before = api.get.mock.calls.length;
-    jest.advanceTimersByTime(30000);
-    expect(api.get.mock.calls.length).toBeGreaterThan(before);
-  });
-
-  it("does nothing until it is asked", async () => {
-    renderPage();
-    await waitFor(() => expect(api.get).toHaveBeenCalled());
-
-    const before = api.get.mock.calls.length;
-    jest.advanceTimersByTime(90000);
-    expect(api.get.mock.calls.length).toBe(before);
-  });
-
-  it("pauses past page one, where new alerts would shift the rows", async () => {
-    renderPage("/app/alerts?page=2");
-    await waitFor(() => expect(api.get).toHaveBeenCalled());
-
-    fireEvent.click(liveBox());
-    const before = api.get.mock.calls.length;
-    jest.advanceTimersByTime(60000);
-    expect(api.get.mock.calls.length).toBe(before);
-  });
-
-  it("pauses while a row filter is being used, so the search is not lost", async () => {
-    renderPage();
-    await waitFor(() => expect(api.get).toHaveBeenCalled());
-
-    fireEvent.click(liveBox());
-    fireEvent.change(screen.getByLabelText("Filter the rows on this page"), {
-      target: { value: "ETW" },
-    });
-
-    const before = api.get.mock.calls.length;
-    jest.advanceTimersByTime(60000);
-    expect(api.get.mock.calls.length).toBe(before);
-  });
-});
-
 describe("taking the rows away as a file", () => {
   it("writes a header and a row for each alert on screen", () => {
     const csv = alertsToCsv(PAGE);
@@ -1108,7 +1098,7 @@ describe("taking the rows away as a file", () => {
   });
 
   it("names the file by the moment it was taken", () => {
-    expect(csvFilename(new Date("2026-10-14T08:12:42Z"))).toBe("alerts-2026-10-14-08-12-42.csv");
+    expect(csvFilename(new Date("2026-10-14T08:12:42Z"))).toBe("events-2026-10-14-08-12-42.csv");
   });
 
   it("offers only what is on screen, and counts it", async () => {
@@ -1120,5 +1110,77 @@ describe("taking the rows away as a file", () => {
       target: { value: "ETW" },
     });
     expect(screen.getByRole("button", { name: /Export 1 rows/ })).toBeInTheDocument();
+  });
+});
+
+describe("the section is called Events", () => {
+  it("says so at the top", async () => {
+    renderPage();
+    await hero();
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Events");
+  });
+
+  it("counts a row's own events as occurrences, so the word means one thing", async () => {
+    // the page is Events; a row holding "10 events" would make the same word
+    // mean both the detection and the raw log lines inside it
+    renderPage();
+    await hero();
+    expect(screen.getAllByText(/\d+ occurrences?/).length).toBeGreaterThan(0);
+    expect(screen.queryByText(/^\d+ events?$/)).not.toBeInTheDocument();
+  });
+
+  it("names the export after the section", () => {
+    expect(csvFilename(new Date("2026-10-14T08:12:42Z"))).toMatch(/^events-/);
+  });
+});
+
+describe("the agent's address", () => {
+  it("shows it beside the agent on every row", async () => {
+    renderPage();
+    await hero();
+
+    const addresses = [...document.querySelectorAll(".al-row .al-agent-ip")].map(
+      (e) => e.textContent
+    );
+    expect(addresses).toEqual(["10.0.0.194", "127.0.0.1", "127.0.0.1"]);
+  });
+
+  it("shows nothing rather than an empty box on a record that predates it", async () => {
+    mockApi({ alerts: [alert({ id: 1, agent_ip: undefined })] });
+    renderPage();
+    await hero();
+    expect(document.querySelector(".al-agent-ip")).toBeNull();
+  });
+
+  it("is searchable, because an address is what people have to hand", async () => {
+    renderPage();
+    await hero();
+
+    fireEvent.change(screen.getByLabelText("Filter the rows on this page"), {
+      target: { value: "10.0.0.194" },
+    });
+    expect(screen.getAllByText("Rclone Config File Creation").length).toBe(1);
+    expect(screen.queryByText("ETW Trace Evasion Activity")).not.toBeInTheDocument();
+  });
+
+  it("goes into the export", () => {
+    const csv = alertsToCsv(PAGE);
+    expect(csv.split("\r\n")[0]).toContain('"agent_ip"');
+    expect(csv.split("\r\n")[1]).toContain('"10.0.0.194"');
+  });
+
+  it("shows on a folded row only when one agent sits at one address", async () => {
+    renderPage();
+    await hero();
+    fireEvent.click(screen.getByLabelText("Fold repeats on this page"));
+
+    await waitFor(() => expect(screen.getByText("×2")).toBeInTheDocument());
+    // the folded Rclone row covers two agents, so no single address fits it
+    const folded = screen.getByText("×2").closest(".al-row");
+    expect(folded.querySelector(".al-agent-ip")).toBeNull();
+
+    // the ETW row is one agent, so its address stands
+    const single = screen.getByText("ETW Trace Evasion Activity").closest(".al-row");
+    expect(single.querySelector(".al-agent-ip").textContent).toBe("127.0.0.1");
   });
 });

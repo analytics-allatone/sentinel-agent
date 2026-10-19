@@ -252,9 +252,14 @@ const InstallationProcess = () => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Clear notification when user edits the agent name
+  // Clear notification when user edits the agent name.
+  //
+  // Written as a functional update so the effect reads nothing from the render
+  // scope: listing `notification` as a dependency — which is what reading it
+  // would require — makes the effect run the moment a notification is set, and
+  // clear it again before anyone sees it.
   useEffect(() => {
-    if (notification) setNotification("");
+    setNotification((current) => (current ? "" : current));
   }, [agentName]);
 
   // Validate server IP

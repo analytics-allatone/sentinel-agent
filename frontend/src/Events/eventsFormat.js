@@ -187,6 +187,7 @@ export function groupByRule(alerts) {
         alerts: 1,
         events: Number(alert.event_count) || 0,
         agents: new Set([alert.agent_name]),
+        addresses: new Set([alert.agent_ip].filter(Boolean)),
         entities: new Set([alert.entity]),
         first_seen: alert.first_seen,
         last_seen: alert.last_seen,
@@ -197,6 +198,7 @@ export function groupByRule(alerts) {
     existing.alerts += 1;
     existing.events += Number(alert.event_count) || 0;
     existing.agents.add(alert.agent_name);
+    if (alert.agent_ip) existing.addresses.add(alert.agent_ip);
     existing.entities.add(alert.entity);
     // the window the group covers, not the window of whichever row came first
     if (Date.parse(alert.first_seen) < Date.parse(existing.first_seen)) {
@@ -211,6 +213,7 @@ export function groupByRule(alerts) {
     .map((group) => ({
       ...group,
       agents: [...group.agents].filter(Boolean),
+      addresses: [...group.addresses],
       entities: [...group.entities].filter(Boolean),
     }))
     .sort(
@@ -388,12 +391,14 @@ export function filterRows(rows, needle) {
       row.detail,
       row.category,
       row.agent_name,
+      row.agent_ip,
       row.entity,
       row.technique,
       row.severity_label,
       ruleId(row.rule_id),
       // the folded rows carry lists instead of single values
       Array.isArray(row.agents) ? row.agents.join(" ") : "",
+      Array.isArray(row.addresses) ? row.addresses.join(" ") : "",
       Array.isArray(row.entities) ? row.entities.join(" ") : "",
     ];
     return haystack.some((field) => String(field || "").toLowerCase().includes(wanted));
@@ -476,8 +481,9 @@ export function alertsToCsv(rows) {
     ["detail", (r) => r.detail],
     ["technique", (r) => (technique(r.technique) || {}).id || ""],
     ["agent", (r) => r.agent_name],
+    ["agent_ip", (r) => r.agent_ip],
     ["entity", (r) => r.entity],
-    ["events", (r) => r.event_count],
+    ["occurrences", (r) => r.event_count],
     ["first_seen", (r) => r.first_seen],
     ["last_seen", (r) => r.last_seen],
     ["rule_id", (r) => ruleId(r.rule_id)],
@@ -496,5 +502,5 @@ export function alertsToCsv(rows) {
 /** What to call the file, so a folder of them stays sortable. */
 export function csvFilename(now = new Date()) {
   const stamp = new Date(now).toISOString().slice(0, 19).replace(/[:T]/g, "-");
-  return `alerts-${stamp}.csv`;
+  return `events-${stamp}.csv`;
 }

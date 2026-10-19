@@ -217,138 +217,6 @@
 
 /* ── segmented buttons ──────────────────────────────────────── */
 
-/* The ladder and the question it is asking, on one line. */
-.al-sev-head {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--s3);
-}
-
-.al-mode {
-  display: inline-flex;
-  padding: 2px;
-  border: 1px solid var(--border);
-  border-radius: var(--r-md);
-  background: var(--sunken);
-}
-
-.al-mode-btn {
-  padding: 2px var(--s3);
-  border: 0;
-  border-radius: var(--r-sm);
-  background: transparent;
-  color: var(--muted);
-  font-family: inherit;
-  font-size: var(--text-xs);
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.al-mode-btn.is-on {
-  background: var(--surface);
-  color: var(--text);
-  box-shadow: var(--sh1);
-}
-
-.al-mode-btn:focus-visible {
-  outline: none;
-  box-shadow: 0 0 0 3px var(--focus);
-}
-
-.al-seg {
-  /* The six levels share the full width rather than huddling at the left with
-     half the card empty beside them. A grid, not a flex row, so every button
-     is the same size — six targets of six different widths read as six
-     different kinds of thing. */
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: var(--s2);
-}
-
-.al-seg-btn {
-  display: flex;
-  align-items: baseline;
-  gap: var(--s2);
-  min-height: 40px;
-  padding: 0 var(--s4);
-  border: 1px solid var(--border);
-  border-radius: var(--r-md);
-  background: var(--surface);
-  color: var(--text);
-  font-family: inherit;
-  font-size: var(--text-sm);
-  font-weight: 600;
-  text-transform: capitalize;
-  cursor: pointer;
-  transition: background var(--t-hover) var(--ease), border-color var(--t-hover) var(--ease);
-}
-
-.al-seg-btn:hover:not(.is-on) {
-  border-color: var(--border-strong);
-  background: var(--sunken);
-}
-
-.al-seg-btn:focus-visible {
-  outline: none;
-  box-shadow: 0 0 0 3px var(--focus);
-}
-
-.al-seg-btn.is-on {
-  border-color: var(--accent);
-  background: var(--accent-soft);
-  color: var(--accent);
-}
-
-/* The count rides the button it would make you click. */
-.al-seg-count {
-  /* pushed to the right edge, so the numbers form a column down the row
-     instead of each one sitting wherever its word happened to end */
-  margin-left: auto;
-  color: var(--muted);
-  font-size: var(--text-xs);
-  font-weight: 500;
-  font-variant-numeric: tabular-nums;
-}
-
-.al-seg-btn.is-on .al-seg-count {
-  color: var(--accent);
-}
-
-/* A dot of the level's own colour, so the ladder is visible before reading. */
-.al-seg-btn--critical::before,
-.al-seg-btn--high::before,
-.al-seg-btn--medium::before,
-.al-seg-btn--low::before,
-.al-seg-btn--info::before {
-  content: "";
-  align-self: center;
-  flex: 0 0 auto;
-  width: 8px;
-  height: 8px;
-  border-radius: var(--r-full);
-}
-
-/* Each dot is the colour its chip wears, down to the filled/outlined
-   distinction that keeps critical and high apart without relying on hue. */
-.al-seg-btn--critical::before {
-  background: var(--danger);
-}
-
-.al-seg-btn--high::before {
-  border: 2px solid var(--danger);
-  background: var(--danger-soft);
-}
-
-.al-seg-btn--medium::before {
-  background: var(--warning);
-}
-
-.al-seg-btn--low::before,
-.al-seg-btn--info::before {
-  background: var(--border-strong);
-}
-
 /* ── fields ─────────────────────────────────────────────────── */
 
 .al-agent-field {
@@ -691,7 +559,6 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .al-seg-btn,
   .al-row,
   .al-input {
     transition: none;
@@ -759,42 +626,77 @@
 }
 
 /* ─────────────────────────────────────────────────────────────
-   Live
+   The filter row
+
+   Every filter is a dropdown now, so they want to look like one set rather
+   than like whatever width each one's longest option happens to be.
    ───────────────────────────────────────────────────────────── */
 
-.al-live {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--s2);
+.al-filter-row .al-select {
+  min-width: 150px;
 }
 
-/* Unlit while paused, which is the state the reader needs to notice: ticked
-   but not refreshing (page two, or a filter mid-type) looks identical
-   otherwise. */
-.al-live-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: var(--r-full);
-  background: var(--border-strong);
+/* Severity carries a count in each option, so it needs more room. */
+#al-sev {
+  min-width: 190px;
 }
 
-.al-live-dot.is-on {
-  background: var(--success);
-  animation: al-pulse 2s var(--ease) infinite;
+/* Match only means something once a level is chosen, and says so. */
+#al-mode:disabled {
+  background: var(--sunken);
+  color: var(--muted);
+  cursor: not-allowed;
 }
 
-@keyframes al-pulse {
-  0%,
-  100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.35;
-  }
+/* No rule above it: the hint is capped at 72ch, so a border drawn on it
+   stops halfway across the card and reads as a line someone forgot to
+   finish. Space does the separating instead. */
+.al-filters .al-filter-hint {
+  margin-top: var(--s3);
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .al-live-dot.is-on {
-    animation: none;
-  }
+/* ─────────────────────────────────────────────────────────────
+   Keeping the row a row
+   ───────────────────────────────────────────────────────────── */
+
+/* The agent field is the only one with a note under it. Left in the flow it
+   makes that column taller than the rest, and a row aligned on its bottom
+   edge then lifts the agent input above its neighbours. */
+.al-combo {
+  position: relative;
+}
+
+.al-combo-note {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  padding-top: 3px;
+  white-space: nowrap;
+}
+
+/* Six controls and a button do not fit a card at every width, so the row
+   wraps — and when it does, the button stays at the end of the line rather
+   than starting a new one at the left. */
+.al-apply {
+  margin-left: auto;
+}
+
+.al-filter-row .al-select {
+  min-width: 140px;
+}
+
+.al-input--agent {
+  min-width: 160px;
+}
+
+/* The agent's address, set against its name rather than beside it as a
+   separate fact — monospace, because an address is read digit by digit. */
+.al-agent-ip {
+  margin-left: var(--s2);
+  padding: 0 5px;
+  border-radius: var(--r-sm);
+  background: var(--sunken);
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
 }

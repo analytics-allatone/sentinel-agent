@@ -81,7 +81,6 @@ export default function AccessManagement() {
     users,
     currentUser,
     can,
-    signOut,
     inviteUser,
     updateUser,
     setUserStatus,

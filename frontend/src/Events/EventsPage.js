@@ -9,8 +9,6 @@ import {
   CUSTOM_RANGE,
   DEFAULT_PAGE_SIZE,
   DEFAULT_RANGE,
-  PAGE_SIZE_MAX,
-  PAGE_SIZE_MIN,
   SEVERITIES,
   SEVERITY_MODES,
   burstSpan,
@@ -37,8 +35,8 @@ import {
   severityOf,
   technique,
   TIME_RANGES,
-} from "./alertsFormat";
-import "./AlertsPage.css";
+} from "./eventsFormat";
+import "./EventsPage.css";
 
 /**
  * Detections, from GET /get-alerts.
@@ -53,10 +51,10 @@ import "./AlertsPage.css";
  * throughout — the figure at the top is the whole result set, the rows are the
  * fifty in hand, and the grouping toggle says plainly that it folds this page.
  */
-/** How often a live list re-reads. Long enough not to fight the reader. */
-const REFRESH_MS = 30000;
+/** The page sizes the dropdown offers, all inside what the endpoint accepts. */
+const PAGE_SIZES = [25, 50, 100, 200];
 
-/** Everything numeric is clamped in alertsFormat; this is only the default. */
+/** Everything numeric is clamped in eventsFormat; this is only the default. */
 
 /** One severity's chip, carrying its own name as well as its colour. */
 function SeverityChip({ alert }) {
@@ -110,6 +108,11 @@ function AlertRow({ alert, now }) {
           <span className="al-meta">
             <span className="al-meta-key">agent</span>
             {alert.agent_name || "—"}
+            {/* The address qualifies the agent rather than standing beside it
+                as a fact of its own — one name can move between hosts, and the
+                two are read together or not at all. Older records predate the
+                field, and an empty address would read as one. */}
+            {alert.agent_ip && <span className="al-agent-ip">{alert.agent_ip}</span>}
           </span>
 
           <span className="al-meta">
@@ -127,7 +130,7 @@ function AlertRow({ alert, now }) {
         {/* An alert is a run of events, so both the count and the window it
             covers: nine at once is not nine over an hour. */}
         <span className="al-events">
-          {count(alert.event_count)} event{Number(alert.event_count) === 1 ? "" : "s"}
+          {count(alert.event_count)} occurrence{Number(alert.event_count) === 1 ? "" : "s"}
         </span>
         <span className="al-span">{burstSpan(alert)}</span>
       </div>
@@ -162,6 +165,12 @@ function GroupRow({ group, now }) {
             </span>
             {group.agents.slice(0, 3).join(", ")}
             {group.agents.length > 3 && ` +${group.agents.length - 3}`}
+            {/* Only when the group is one agent at one address: a list of
+                three names against two addresses says nothing about which
+                belongs to which. */}
+            {group.agents.length === 1 && group.addresses.length === 1 && (
+              <span className="al-agent-ip">{group.addresses[0]}</span>
+            )}
           </span>
 
           <span className="al-meta">
@@ -175,7 +184,7 @@ function GroupRow({ group, now }) {
       </div>
 
       <div className="al-row-figures">
-        <span className="al-events">{count(group.events)} events</span>
+        <span className="al-events">{count(group.events)} occurrences</span>
         <span className="al-span">{burstSpan(group)}</span>
       </div>
 
@@ -186,17 +195,13 @@ function GroupRow({ group, now }) {
   );
 }
 
-export default function AlertsPage() {
+export default function EventsPage() {
   const [search, setSearch] = useSearchParams();
   // Read once, at mount: after that the page owns the view and writes it back.
   const opening = useRef(paramsToView(search)).current;
 
-  const [severity, setSeverity] = useState(opening.severity); // 0 = every severity
-  // Which question the chosen level asks: severity_min, or severity exactly.
-  const [severityMode, setSeverityMode] = useState(opening.severityMode);
   const [grouped, setGrouped] = useState(false);
   const [rowFilter, setRowFilter] = useState("");
-  const [live, setLive] = useState(false);
   const [page, setPage] = useState(opening.page);
   const [pageDraft, setPageDraft] = useState(String(opening.page));
 
@@ -210,6 +215,9 @@ export default function AlertsPage() {
    * waiting for nothing.
    */
   const [draft, setDraft] = useState({
+    severity: opening.severity,
+    // Which question the chosen level asks: severity_min, or severity exactly.
+    severityMode: opening.severityMode,
     agent: opening.applied.agent,
     category: opening.applied.category,
     range: opening.applied.range,
@@ -221,7 +229,11 @@ export default function AlertsPage() {
   });
 
   /** What the last Apply committed. Every request is drawn from this. */
-  const [applied, setApplied] = useState(opening.applied);
+  const [applied, setApplied] = useState({
+    ...opening.applied,
+    severity: opening.severity,
+    severityMode: opening.severityMode,
+  });
 
   const [rangeError, setRangeError] = useState("");
 
@@ -265,8 +277,11 @@ export default function AlertsPage() {
         ...baseParams,
         // One level, two possible questions — and only one of the two
         // parameters is ever sent.
-        ...(severity
-          ? { [severityMode === "exact" ? "severity" : "severity_min"]: severity }
+        ...(applied.severity
+          ? {
+              [applied.severityMode === "exact" ? "severity" : "severity_min"]:
+                applied.severity,
+            }
           : {}),
         // Numbers, never the strings the fields hold them as.
         page: Number(page),
@@ -295,37 +310,20 @@ export default function AlertsPage() {
       if (applied.category && (code === 500 || code === undefined)) {
         setError(
           `The server could not answer with the category "${applied.category}". ` +
-            "Clearing the category should bring the alerts back; the other filters are unaffected."
+            "Clearing the category should bring the events back; the other filters are unaffected."
         );
       } else {
         setError(
-          typeof detail === "string" ? detail : "Could not read the alerts. Please try again."
+          typeof detail === "string" ? detail : "Could not read the events. Please try again."
         );
       }
       setStatus("error");
     }
-  }, [baseParams, severity, severityMode, page, applied.pageSize]);
+  }, [baseParams, applied, page]);
 
   useEffect(() => {
     load();
   }, [load]);
-
-  /**
-   * Re-read on a timer, while that still means anything.
-   *
-   * Alerts arrive constantly — tens of thousands a day — so a list left open is
-   * stale within a minute. But refreshing underneath someone who is reading is
-   * worse than stale: only page one refreshes, because every other page would
-   * shift as new alerts push rows down it, and a row filter in progress pauses
-   * it, because replacing the rows being searched loses the search.
-   */
-  const refreshing = live && page === 1 && !rowFilter.trim();
-
-  useEffect(() => {
-    if (!refreshing) return undefined;
-    const timer = setInterval(() => load(), REFRESH_MS);
-    return () => clearInterval(timer);
-  }, [refreshing, load]);
 
   /**
    * Keep the address bar showing what is on screen.
@@ -336,10 +334,14 @@ export default function AlertsPage() {
    * which is what the address bar is for here.
    */
   useEffect(() => {
-    const params = viewToParams({ severity, severityMode, applied });
+    const params = viewToParams({
+      severity: applied.severity,
+      severityMode: applied.severityMode,
+      applied,
+    });
     if (page > 1) params.page = String(page);
     setSearch(params, { replace: true });
-  }, [severity, severityMode, applied, page, setSearch]);
+  }, [applied, page, setSearch]);
 
   /**
    * How many alerts sit at each severity, across everything the other filters
@@ -423,19 +425,6 @@ export default function AlertsPage() {
     URL.revokeObjectURL(url);
   };
 
-  /** A different question is a different first page. */
-  const chooseSeverity = (level) => {
-    setSeverity(level);
-    setPage(1);
-    setPageDraft("1");
-  };
-
-  const chooseMode = (id) => {
-    setSeverityMode(id);
-    setPage(1);
-    setPageDraft("1");
-  };
-
   /**
    * The one Apply. It commits every field on the row and the request follows.
    *
@@ -463,6 +452,8 @@ export default function AlertsPage() {
     setPage(1);
     setPageDraft("1");
     setApplied({
+      severity: draft.severity,
+      severityMode: draft.severityMode,
       agent: draft.agent,
       category: draft.category,
       range: draft.range,
@@ -473,10 +464,10 @@ export default function AlertsPage() {
 
   /** Back to the window and the filters the page opens with. */
   const clearFilters = () => {
-    setSeverity(0);
-    setSeverityMode("min");
     setRangeError("");
     setDraft({
+      severity: 0,
+      severityMode: "min",
       agent: "",
       category: "",
       range: DEFAULT_RANGE,
@@ -487,6 +478,8 @@ export default function AlertsPage() {
     setPage(1);
     setPageDraft("1");
     setApplied({
+      severity: 0,
+      severityMode: "min",
       agent: "",
       category: "",
       range: DEFAULT_RANGE,
@@ -499,7 +492,7 @@ export default function AlertsPage() {
     <div className="al-page">
       <header className="al-head">
         <div className="al-head-main">
-          <h1 className="al-title">Alerts</h1>
+          <h1 className="al-title">Events</h1>
           <p className="al-lead">
             Detections raised by the Sigma rules the agents run. Newest first.
           </p>
@@ -514,79 +507,59 @@ export default function AlertsPage() {
       </header>
 
       {/* ── what to look at ─────────────────────────────────────── */}
+      {/*
+        One row of dropdowns and one Apply. Severity used to be a row of
+        buttons that filtered the moment it was clicked, which made it the one
+        control on the page that behaved differently from its neighbours —
+        every other filter waited for Apply. Now they all do.
+      */}
       <section className="al-filters" aria-label="Filters">
-        <div className="al-filter">
-          <div className="al-sev-head">
-            <span className="al-filter-label" id="al-sev-label">
-              Severity
-            </span>
-
-            {/* Which of the two parameters a chosen level sends. */}
-            <div className="al-mode" role="group" aria-label="How the level is matched">
-              {SEVERITY_MODES.map((m) => (
-                <button
-                  key={m.id}
-                  type="button"
-                  className={`al-mode-btn ${severityMode === m.id ? "is-on" : ""}`}
-                  aria-pressed={severityMode === m.id}
-                  onClick={() => chooseMode(m.id)}
-                  title={`sends ${m.param}`}
-                >
-                  {m.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="al-seg" role="group" aria-labelledby="al-sev-label">
-            <button
-              type="button"
-              className={`al-seg-btn ${severity === 0 ? "is-on" : ""}`}
-              aria-pressed={severity === 0}
-              onClick={() => chooseSeverity(0)}
-            >
-              Any
-              <span className="al-seg-count">
-                {!tallies ? "…" : tallyTotal == null ? "—" : count(tallyTotal)}
-              </span>
-            </button>
-
-            {SEVERITIES.map((s) => (
-              <button
-                key={s.level}
-                type="button"
-                className={`al-seg-btn al-seg-btn--${s.tone} ${
-                  severity === s.level ? "is-on" : ""
-                }`}
-                aria-pressed={severity === s.level}
-                onClick={() => chooseSeverity(s.level)}
-                title={severityMode === "exact" ? s.label : `${s.label} and above`}
-              >
-                {s.label}
-                <span className="al-seg-count">
-                  {tallies ? (tallies[s.level] == null ? "—" : count(tallies[s.level])) : "…"}
-                </span>
-              </button>
-            ))}
-          </div>
-
-          <p className="al-filter-hint">
-            {severityMode === "exact" ? (
-              <>
-                A level selects <em>that level only</em>, so each count beside a level is
-                exactly what picking it will show.
-              </>
-            ) : (
-              <>
-                A level selects it <em>and everything above it</em>; the counts are for that
-                level alone, across every alert the other filters match.
-              </>
-            )}
-          </p>
-        </div>
-
-        {/* One row, one Apply: nothing here reaches the API until it is pressed. */}
         <form className="al-filter-row" onSubmit={apply}>
+          <div className="al-filter">
+            <label className="al-filter-label" htmlFor="al-sev">
+              Severity
+            </label>
+            <select
+              id="al-sev"
+              className="al-input al-select"
+              value={draft.severity}
+              onChange={(e) => setField("severity", Number(e.target.value))}
+            >
+              {/* the count rides each option, so picking a level is an
+                  informed click rather than a guess */}
+              <option value={0}>
+                Any severity{tallies ? ` — ${tallyTotal == null ? "—" : count(tallyTotal)}` : ""}
+              </option>
+              {SEVERITIES.map((s) => (
+                <option key={s.level} value={s.level}>
+                  {s.label}
+                  {tallies
+                    ? ` — ${tallies[s.level] == null ? "—" : count(tallies[s.level])}`
+                    : ""}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="al-filter">
+            <label className="al-filter-label" htmlFor="al-mode">
+              Match
+            </label>
+            <select
+              id="al-mode"
+              className="al-input al-select"
+              value={draft.severityMode}
+              onChange={(e) => setField("severityMode", e.target.value)}
+              disabled={!draft.severity}
+            >
+              {SEVERITY_MODES.map((m) => (
+                <option key={m.id} value={m.id}>
+                  {m.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
           <div className="al-filter">
             <label className="al-filter-label" htmlFor="al-agent">
               Agent
@@ -684,23 +657,18 @@ export default function AlertsPage() {
             <label className="al-filter-label" htmlFor="al-size">
               Per page
             </label>
-            <div className="al-num-field">
-              <input
-                id="al-size"
-                className="al-input al-num"
-                type="text"
-                inputMode="numeric"
-                autoComplete="off"
-                value={draft.size}
-                aria-describedby="al-size-hint"
-                /* Only digits ever reach the field, so only a number can ever
-                   leave it; "" stays legal while someone is still typing. */
-                onChange={(e) => setField("size", digitsOnly(e.target.value))}
-              />
-              <span className="al-num-hint" id="al-size-hint">
-                {PAGE_SIZE_MIN}–{PAGE_SIZE_MAX}
-              </span>
-            </div>
+            <select
+              id="al-size"
+              className="al-input al-select"
+              value={draft.size}
+              onChange={(e) => setField("size", e.target.value)}
+            >
+              {PAGE_SIZES.map((size) => (
+                <option key={size} value={String(size)}>
+                  {size}
+                </option>
+              ))}
+            </select>
           </div>
 
           <button type="submit" className="phi-btn phi-btn--sm al-apply">
@@ -713,10 +681,25 @@ export default function AlertsPage() {
             </p>
           )}
         </form>
+
+        <p className="al-filter-hint">
+          {draft.severityMode === "exact" ? (
+            <>
+              A severity matches <em>that level only</em>, so the count beside a level is
+              exactly what picking it will show.
+            </>
+          ) : (
+            <>
+              A severity matches it <em>and everything above it</em>; the counts are for that
+              level alone.
+            </>
+          )}{" "}
+          Counts are for the filters last applied, not the ones being edited.
+        </p>
       </section>
 
       {/* ── the rows ────────────────────────────────────────────── */}
-      <section className="al-results" aria-label="Alerts">
+      <section className="al-results" aria-label="Events">
         <div className="al-results-head">
           <p className="al-showing">
             {status !== "ready"
@@ -740,23 +723,6 @@ export default function AlertsPage() {
               value={rowFilter}
               onChange={(e) => setRowFilter(e.target.value)}
             />
-
-            <label className="al-group-toggle">
-              <input
-                type="checkbox"
-                checked={live}
-                onChange={(e) => setLive(e.target.checked)}
-              />
-              {/* the dot is lit only while it is really refreshing, which is
-                  not the same as the box being ticked */}
-              <span className="al-live">
-                <span
-                  className={`al-live-dot ${refreshing ? "is-on" : ""}`}
-                  aria-hidden="true"
-                />
-                Live
-              </span>
-            </label>
 
             <button
               type="button"
@@ -800,9 +766,10 @@ export default function AlertsPage() {
 
         {status === "ready" && result.alerts.length === 0 && (
           <div className="al-empty">
-            <p>No alert matches these filters.</p>
-            {(severity ||
+            <p>No event matches these filters.</p>
+            {(applied.severity ||
               applied.agent ||
+              applied.category ||
               applied.range !== DEFAULT_RANGE ||
               applied.pageSize !== DEFAULT_PAGE_SIZE) && (
               <button

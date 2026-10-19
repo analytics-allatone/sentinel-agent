@@ -3,30 +3,21 @@ import GrafanaDashboard from "../components/GrafanaDashboard/GrafanaDashboard";
 import "./AgentInfoDashboard.css";
 
 // Grafana's relative-time syntax, so the frame re-queries on every load.
-const RANGES = [
-  { label: "Last 1 hour", from: "now-1h" },
-  { label: "Last 6 hours", from: "now-6h" },
-  { label: "Last 24 hours", from: "now-24h" },
-  { label: "Last 7 days", from: "now-7d" },
-];
 
 // `$__all` is Grafana's own "All" value for a template variable — it selects
 // every option the variable's query returns, rather than a literal named one.
 const ALL = "$__all";
 
-const OPERATING_SYSTEMS = [ALL, "linux", "windows", "darwin"];
 
-const osLabel = (value) => (value === ALL ? "All" : value);
 
 // Which tab of the dashboard to open (`&dtab=` in the Grafana URL).
 const DASHBOARD_TAB = "Full-Analysis-Dashboard";
 
 export default function AgentInfoDashboard() {
-  const [agentName, setAgentName] = useState(ALL);
-  const [agentInput, setAgentInput] = useState("");
-  const [os, setOs] = useState(ALL);
-  const [from, setFrom] = useState("now-6h");
-  const [theme, setTheme] = useState("auto");
+  const [agentName] = useState(ALL);
+  const [os] = useState(ALL);
+  const [from] = useState("now-6h");
+  const [theme] = useState("auto");
 
   return (
     <div className="agent-info-page">
