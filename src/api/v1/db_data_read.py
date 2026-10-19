@@ -5,7 +5,8 @@ import json
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-
+from models.web_server_events_model import WebServerEvents
+from models.appserver_events_model import AppServerEvents
 from db.db import get_async_db
 from models.db_events_models import (
     PostgresDbEvents, MysqlDbEvents, OracleDbEvents, RedisDbEvents, MongoDbEvents,

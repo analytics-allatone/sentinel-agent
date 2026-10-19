@@ -37,7 +37,7 @@ class WebServerEvents(Base):
     running = Column(Boolean)
     process_pid = Column(Integer)
     exe_path = Column(String)
-    service_name = Column(String)
+    service_name = Column(String, nullable=False, index=True)
     auth_method = Column(String)
     inspect_error = Column(String)
     system_resources = Column(JSONB)
