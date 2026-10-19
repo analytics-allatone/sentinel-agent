@@ -28,11 +28,11 @@ log = logging.getLogger("db_data_read")
 router = APIRouter(prefix="/api/db", tags=["db-data"])
 
 ENGINE_MODEL = {"postgresql": PostgresDbEvents, "mysql": MysqlDbEvents, "mariadb": MysqlDbEvents,
-                "oracle": OracleDbEvents, "redis": RedisDbEvents, "mongodb": MongoDbEvents}
+                "oracle": OracleDbEvents, "redis": RedisDbEvents, "mongodb": MongoDbEvents, "apache" : WebServerEvents, "ngnix": WebServerEvents , "wildfly" : AppServerEvents}
 ALIASES = {"postgres": "postgresql", "postgre": "postgresql", "pg": "postgresql",
            "psql": "postgresql", "mongo": "mongodb", "maria": "mariadb"}
 UNIQUE = [("postgresql", PostgresDbEvents), ("mysql", MysqlDbEvents), ("oracle", OracleDbEvents),
-          ("redis", RedisDbEvents), ("mongodb", MongoDbEvents)]
+          ("redis", RedisDbEvents), ("mongodb", MongoDbEvents),("apache",WebServerEvents), ("ngnix", WebServerEvents ), ("wildfly",AppServerEvents)]
 
 
 def _canon(engine):
