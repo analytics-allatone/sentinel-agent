@@ -11,7 +11,6 @@ function permSummary(user) {
   const p = effectivePerms(user);
   if (user.status !== "active") return "—";
   if (p.manageUsers) return "Full access";
-  const parts = [];
   if (p.view && p.create && p.edit && p.delete)  return "Admin access";
   
   else if (p.view) return "View only";

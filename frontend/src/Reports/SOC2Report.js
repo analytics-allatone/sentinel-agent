@@ -33,11 +33,7 @@ import {
 import "./CapacityDashboard.css";
 
 import {
-  LuShieldCheck,
-  LuUserRound,
-  LuClock3,
   LuPlay,
-  LuFileDown,
 } from "react-icons/lu";
 
 // ─── controls ──────────────────────────────────────────────────

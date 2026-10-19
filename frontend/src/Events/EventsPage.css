@@ -1,0 +1,702 @@
+/* ─────────────────────────────────────────────────────────────
+   Alerts — the detections the agents raised.
+
+   A list this long is read by narrowing, not by scrolling, so the filters get
+   the top of the page and the severity ladder gets the loudest treatment on
+   it. Severity is the one place colour is allowed to carry meaning here, and
+   every chip is still labelled: the four levels differ by fill as well as hue,
+   so critical and high stay apart in grayscale and under full CVD.
+   ───────────────────────────────────────────────────────────── */
+
+.al-page {
+  min-height: 100vh;
+  padding: var(--s6) var(--s6) var(--s8);
+  box-sizing: border-box;
+  background: var(--bg);
+  /* App.css still carries Create React App's starter `.App { text-align:
+     center }`, which would centre every paragraph on this page. */
+  text-align: left;
+  font-family: var(--font-body);
+  color: var(--text);
+}
+
+.al-mono {
+  font-family: var(--font-mono);
+  font-size: 0.95em;
+}
+
+/* ── header ─────────────────────────────────────────────────── */
+
+.al-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--s5);
+  margin-bottom: var(--s6);
+}
+
+.al-title {
+  margin: 0;
+  /* --text-3xl is 110px, a display size: it buried the figure beside it, and
+     a view gets one hero number, which here is the count. Sized to match the
+     other pages' headings instead. */
+  font-size: 25px;
+  letter-spacing: -0.02em;
+}
+
+.al-lead {
+  margin: var(--s2) 0 0;
+  max-width: 60ch;
+  color: var(--muted);
+  font-size: var(--text-sm);
+  line-height: 1.6;
+}
+
+.al-head-figure {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  text-align: right;
+}
+
+/* The one number the page leads with. */
+.al-hero {
+  font-size: 48px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.03em;
+}
+
+.al-hero-label {
+  margin-top: var(--s2);
+  color: var(--muted);
+  font-size: var(--text-xs);
+}
+
+/* ── filters ────────────────────────────────────────────────── */
+
+.al-filters {
+  display: grid;
+  gap: var(--s5);
+  margin-bottom: var(--s6);
+  padding: var(--s5);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+  box-shadow: var(--sh1);
+}
+
+.al-filter-row {
+  display: flex;
+  /* Login.css, Register.css and forgot-page.css each declare a bare
+     `form { display: flex; flex-direction: column }`, and CRA bundles every
+     stylesheet into one cascade — so every form in the app is a column unless
+     it says otherwise. This one is a row of fields and one button. */
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--s4);
+  padding-top: var(--s4);
+  border-top: 1px solid var(--border);
+}
+
+.al-input--agent {
+  min-width: 190px;
+}
+
+/* ── the agent combobox ─────────────────────────────────────── */
+
+.al-combo {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+.al-combo-list {
+  position: absolute;
+  z-index: var(--z-dropdown);
+  top: calc(100% + 4px);
+  left: 0;
+  /* wider than the field, because hostnames are longer than agent names */
+  min-width: 100%;
+  max-width: 320px;
+  max-height: 264px;
+  overflow-y: auto;
+  margin: 0;
+  padding: var(--s2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  box-shadow: var(--sh3);
+  list-style: none;
+}
+
+.al-combo-opt {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s3);
+  padding: var(--s2) var(--s3);
+  border-radius: var(--r-sm);
+  color: var(--text);
+  font-size: var(--text-sm);
+  cursor: pointer;
+}
+
+/* One highlight, driven by the keyboard and by the pointer alike, so there is
+   never a second row that also looks chosen. */
+.al-combo-opt.is-active {
+  background: var(--sunken);
+}
+
+.al-combo-opt.is-picked {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.al-combo-opt--any {
+  border-bottom: 1px solid var(--border);
+  border-radius: var(--r-sm) var(--r-sm) 0 0;
+  margin-bottom: var(--s2);
+  color: var(--muted);
+}
+
+.al-combo-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.al-combo-host {
+  flex: 0 0 auto;
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+}
+
+.al-combo-empty,
+.al-combo-note {
+  padding: var(--s2) var(--s3);
+  color: var(--muted);
+  font-size: var(--text-xs);
+  line-height: 1.5;
+}
+
+.al-combo-note {
+  padding: 3px 0 0;
+}
+
+/* Last on the row, and the only thing here that reaches the API. */
+.al-apply {
+  min-height: 36px;
+}
+
+.al-filter {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s2);
+  min-width: 0;
+}
+
+.al-filter-label {
+  color: var(--muted);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.al-filter-hint {
+  margin: 0;
+  max-width: 72ch;
+  color: var(--muted);
+  font-size: var(--text-xs);
+  line-height: 1.6;
+}
+
+/* ── segmented buttons ──────────────────────────────────────── */
+
+/* ── fields ─────────────────────────────────────────────────── */
+
+.al-agent-field {
+  display: flex;
+  gap: var(--s2);
+}
+
+.al-input {
+  min-height: 36px;
+  padding: 0 var(--s3);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  color: var(--text);
+  font-family: inherit;
+  font-size: var(--text-sm);
+  transition: border-color var(--t-hover) var(--ease);
+}
+
+.al-input:hover {
+  border-color: var(--border-strong);
+}
+
+.al-input:focus-visible {
+  border-color: var(--accent);
+  outline: none;
+  box-shadow: 0 0 0 3px var(--focus);
+}
+
+.al-select {
+  min-width: 84px;
+  cursor: pointer;
+}
+
+.al-select--range {
+  min-width: 160px;
+}
+
+/* The whole row, so the message is never squeezed beside a field. */
+.al-range-error {
+  flex-basis: 100%;
+  margin: 0;
+  color: var(--danger);
+  font-size: var(--text-xs);
+}
+
+/* The root already carries color-scheme, so Chrome paints the calendar
+   glyph in the right ink for the theme on its own — it only needs to look
+   clickable. */
+.al-input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+}
+
+/* ── the list ───────────────────────────────────────────────── */
+
+.al-results-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s3);
+  margin-bottom: var(--s3);
+}
+
+.al-showing {
+  margin: 0;
+  color: var(--muted);
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+.al-group-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s2);
+  color: var(--text);
+  font-size: var(--text-sm);
+  cursor: pointer;
+}
+
+.al-group-toggle input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.al-list {
+  display: grid;
+  gap: var(--s2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.al-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: var(--s4);
+  padding: var(--s4);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  transition: border-color var(--t-hover) var(--ease);
+}
+
+.al-row:hover {
+  border-color: var(--border-strong);
+}
+
+.al-row--skeleton {
+  grid-template-columns: 1fr;
+  min-height: 62px;
+}
+
+.al-detail {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s2);
+  margin: 0;
+  font-size: var(--text-base);
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.al-group-count {
+  color: var(--muted);
+  font-size: var(--text-xs);
+  font-variant-numeric: tabular-nums;
+}
+
+.al-row-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s2) var(--s3);
+  margin-top: var(--s2);
+}
+
+.al-meta {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 5px;
+  color: var(--text);
+  font-size: var(--text-xs);
+}
+
+.al-meta-key {
+  color: var(--muted);
+  font-size: var(--text-xs);
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.al-meta--soft {
+  color: var(--muted);
+  font-family: var(--font-mono);
+}
+
+.al-technique {
+  padding: 1px var(--s2);
+  border-radius: var(--r-sm);
+  background: var(--sunken);
+  color: var(--accent);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.al-technique:hover {
+  background: var(--accent-soft);
+  text-decoration: underline;
+}
+
+.al-row-figures {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  text-align: right;
+}
+
+.al-events {
+  color: var(--text);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.al-span,
+.al-when {
+  color: var(--muted);
+  font-size: var(--text-xs);
+}
+
+.al-when {
+  min-width: 82px;
+  text-align: right;
+}
+
+/* ── severity chips ─────────────────────────────────────────── */
+
+.al-sev {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 68px;
+  padding: 3px var(--s2);
+  border: 1px solid transparent;
+  border-radius: var(--r-sm);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+/* Critical is filled and high is tinted: two levels of the same warm hue stay
+   apart by weight as well as colour, which survives grayscale and CVD. */
+.al-sev--critical {
+  background: var(--danger);
+  color: var(--on-primary);
+}
+
+.al-sev--high {
+  border-color: var(--danger);
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+.al-sev--medium {
+  background: var(--warning-soft);
+  color: var(--warning);
+}
+
+.al-sev--low,
+.al-sev--info,
+.al-sev--unknown {
+  background: var(--sunken);
+  color: var(--muted);
+}
+
+/* ── empty and error ────────────────────────────────────────── */
+
+.al-empty {
+  display: grid;
+  gap: var(--s4);
+  justify-items: center;
+  padding: var(--s7) var(--s5);
+  border: 1px dashed var(--border);
+  border-radius: var(--r-lg);
+  color: var(--muted);
+  text-align: center;
+}
+
+.al-empty p {
+  margin: 0;
+}
+
+.al-empty--error {
+  border-style: solid;
+  border-color: var(--danger);
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+/* ── pager ──────────────────────────────────────────────────── */
+
+.al-pager {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--s4);
+  margin-top: var(--s5);
+}
+
+/* ── numeric fields ─────────────────────────────────────────── */
+
+.al-num-field {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s2);
+}
+
+.al-num {
+  width: 72px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.al-num-hint {
+  color: var(--muted);
+  font-size: var(--text-xs);
+  font-variant-numeric: tabular-nums;
+}
+
+.al-pager-jump {
+  display: flex;
+  /* the bare `form { flex-direction: column }` in the auth pages’ stylesheets
+     reaches every form in the bundle, including this one */
+  flex-direction: row;
+  align-items: center;
+  gap: var(--s2);
+}
+
+.al-pager-label {
+  color: var(--muted);
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+.al-pager-jump .al-num {
+  width: 68px;
+  min-height: 32px;
+}
+
+/* ── narrow ─────────────────────────────────────────────────── */
+
+@media (max-width: 760px) {
+  .al-page {
+    padding: var(--s4) var(--s4) var(--s7);
+  }
+
+  .al-head-figure {
+    align-items: flex-start;
+    text-align: left;
+  }
+
+  /* The figures and the time move under the detail rather than squeezing it. */
+  .al-row {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .al-row-figures,
+  .al-when {
+    grid-column: 2;
+    align-items: flex-start;
+    text-align: left;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .al-row,
+  .al-input {
+    transition: none;
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────
+   The category a rule watched
+   ───────────────────────────────────────────────────────────── */
+
+.al-category {
+  padding: 1px var(--s2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  background: var(--surface);
+  color: var(--muted);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  text-transform: lowercase;
+}
+
+/* A quiet tint per kind — enough to group a scrolling list by eye, never
+   enough to compete with the severity chip, which is the one that matters. */
+.al-category--file {
+  border-color: var(--accent-soft);
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.al-category--process {
+  border-color: var(--warning-soft);
+  background: var(--warning-soft);
+  color: var(--warning);
+}
+
+.al-category--network,
+.al-category--authentication,
+.al-category--usb,
+.al-category--database {
+  border-color: var(--border);
+  background: var(--sunken);
+  color: var(--text);
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Narrowing the rows in hand
+   ───────────────────────────────────────────────────────────── */
+
+.al-results-tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s4);
+}
+
+.al-row-filter {
+  min-width: 190px;
+}
+
+.al-empty-note {
+  max-width: 54ch;
+  color: var(--muted);
+  font-size: var(--text-xs);
+  line-height: 1.6;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   The filter row
+
+   Every filter is a dropdown now, so they want to look like one set rather
+   than like whatever width each one's longest option happens to be.
+   ───────────────────────────────────────────────────────────── */
+
+.al-filter-row .al-select {
+  min-width: 150px;
+}
+
+/* Severity carries a count in each option, so it needs more room. */
+#al-sev {
+  min-width: 190px;
+}
+
+/* Match only means something once a level is chosen, and says so. */
+#al-mode:disabled {
+  background: var(--sunken);
+  color: var(--muted);
+  cursor: not-allowed;
+}
+
+/* No rule above it: the hint is capped at 72ch, so a border drawn on it
+   stops halfway across the card and reads as a line someone forgot to
+   finish. Space does the separating instead. */
+.al-filters .al-filter-hint {
+  margin-top: var(--s3);
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Keeping the row a row
+   ───────────────────────────────────────────────────────────── */
+
+/* The agent field is the only one with a note under it. Left in the flow it
+   makes that column taller than the rest, and a row aligned on its bottom
+   edge then lifts the agent input above its neighbours. */
+.al-combo {
+  position: relative;
+}
+
+.al-combo-note {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  padding-top: 3px;
+  white-space: nowrap;
+}
+
+/* Six controls and a button do not fit a card at every width, so the row
+   wraps — and when it does, the button stays at the end of the line rather
+   than starting a new one at the left. */
+.al-apply {
+  margin-left: auto;
+}
+
+.al-filter-row .al-select {
+  min-width: 140px;
+}
+
+.al-input--agent {
+  min-width: 160px;
+}
+
+/* The agent's address, set against its name rather than beside it as a
+   separate fact — monospace, because an address is read digit by digit. */
+.al-agent-ip {
+  margin-left: var(--s2);
+  padding: 0 5px;
+  border-radius: var(--r-sm);
+  background: var(--sunken);
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+}

@@ -8,7 +8,6 @@ import {
   LuFolderTree,
   LuMonitor,
   LuMonitorCog,
-  LuBell,
   LuMessageSquare,
   LuShieldCheck,
   LuChartNoAxesColumn,
@@ -21,6 +20,7 @@ import {
   LuChevronDown,
   LuChevronsLeft,
 } from "react-icons/lu";
+import { MdOutlineEmojiEvents } from "react-icons/md";
 
 /**
  * The menu below names every section the product will have; only some of them
@@ -29,7 +29,7 @@ import {
  */
 const ROUTED_PATHS = new Set([
   "/dashboard",
-  "/alerts",
+  "/events",
   "/grafanaDashboard",
   "/messages",
   "/reports/soc2",
@@ -48,7 +48,7 @@ function hrefFor(item) {
 /** The menu, grouped by what someone came to do. */
 const NAV_SECTIONS = [
   { title: "Overview", items: ["dashboard", "agents", "groups", "endpoints"] },
-  { title: "Monitoring", items: ["agent-details", "alerts", "messages", "activity"] },
+  { title: "Monitoring", items: ["agent-details", "events", "messages", "activity"] },
   { title: "Reports", items: ["reports"] },
   { title: "Administration", items: ["policies", "integrations", "users", "design-system", "settings"] },
 ];
@@ -101,10 +101,10 @@ const Sidebar = ({ isOpen, onClose }) => {
       href: "/endpoints",
     },
     {
-      id: "alerts",
-      label: "Alerts",
-      icon: LuBell,
-      href: "/alerts",
+      id: "events",
+      label: "Events",
+      icon: MdOutlineEmojiEvents,
+      href: "/events",
       badge: 3,
     },
     {
@@ -269,7 +269,7 @@ const Sidebar = ({ isOpen, onClose }) => {
 
             <p>
               Unlock advanced features,
-              custom alerts, insights and more.
+              custom events, insights and more.
             </p>
 
             <button className="upgrade-button">

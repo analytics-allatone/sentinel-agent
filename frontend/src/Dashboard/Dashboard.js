@@ -13,10 +13,7 @@ import {
 } from "react-icons/lu";
 
 import {
-  LuMonitor,
-  LuUsers,
   LuActivity,
-  LuMoreHorizontal,
 } from "react-icons/lu";
 
 const ROWS_PER_PAGE_OPTIONS = [10, 25, 50, 100];
@@ -131,7 +128,6 @@ const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
 
 function Dashboard() {
   const [agents, setAgents] = useState([]);
-  const [selectedAgents, setSelectedAgents] = useState(new Set());
   // Chart data — kept as the API's own aggregate counts, not recomputed
   // from the (possibly filtered/paginated) agents table, since these
   // represent the full account-wide picture regardless of what's on screen.
@@ -231,32 +227,6 @@ function Dashboard() {
     fetchAgents();
   }, []);
 
-  const formatLastSeen = (value) => {
-    if (!value) {
-      return {
-        date: "—",
-        time: "",
-      };
-    }
-
-    const text = String(value).trim();
-
-    const match = text.match(
-      /^(.*?\d{4})\s+(\d{1,2}:\d{2}(?::\d{2})?\s*[AP]M.*)?$/i,
-    );
-
-    if (!match) {
-      return {
-        date: text,
-        time: "",
-      };
-    }
-
-    return {
-      date: match[1],
-      time: match[2] || "",
-    };
-  };
 
   const parseAgentDate = (value) => {
     if (!value) return null;
@@ -631,9 +601,6 @@ function Dashboard() {
     filteredAgents.length === 0 ? 0 : (safePage - 1) * rowsPerPage + 1;
   const rangeEnd = Math.min(safePage * rowsPerPage, filteredAgents.length);
 
-  const selectAll =
-    paginatedAgents.length > 0 &&
-    paginatedAgents.every((agent) => selectedAgents.has(agent.id));
 
   const handleDeployAgent = () => {
     navigate("/app/installation");
@@ -690,10 +657,6 @@ function Dashboard() {
     )}`;
   };
 
-  const getPercentage = (count) => {
-    if (!totalAgents) return 0;
-    return Math.round((count / totalAgents) * 100);
-  };
 
   const handleExportFormatted = () => {
     if (filteredAgents.length === 0) return;
@@ -737,25 +700,7 @@ function Dashboard() {
     URL.revokeObjectURL(url);
   };
 
-  const handleSelectAll = (e) => {
-    const newSelected = new Set(selectedAgents);
-    if (e.target.checked) {
-      paginatedAgents.forEach((agent) => newSelected.add(agent.id));
-    } else {
-      paginatedAgents.forEach((agent) => newSelected.delete(agent.id));
-    }
-    setSelectedAgents(newSelected);
-  };
 
-  const handleSelectAgent = (agentId) => {
-    const newSelected = new Set(selectedAgents);
-    if (newSelected.has(agentId)) {
-      newSelected.delete(agentId);
-    } else {
-      newSelected.add(agentId);
-    }
-    setSelectedAgents(newSelected);
-  };
 
   /**
    * Pause or resume an agent's collection.
@@ -1246,14 +1191,6 @@ function Dashboard() {
 
   // Clicking an engine (e.g. "mongodb") in the services panel: fetch that
   // engine's credentials for the agent and show them in a popup.
-  const handleEngineClick = (agentName, engine) => {
-    setEditCred(null);
-    setSaveError("");
-    setSaveMsg("");
-    setConfirmDeleteId(null);
-    setCredModal({ agentName, engine, loading: true, error: "", data: null });
-    fetchCredentials(agentName, engine);
-  };
 
   // "+ Add credential" in the services panel: opens the very same popup, but
   // straight in form mode with empty fields, so the form below can POST a
