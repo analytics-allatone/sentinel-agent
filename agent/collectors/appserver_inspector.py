@@ -123,6 +123,7 @@ class AppServerInspector:
         ev.outcome = EventOutcome.SUCCESS
         ev.detected = True
         ev.app_host = params.get("host")
+        ev.service_name = params.get("service_name")
         ev.app_port = params.get("port")
         ev.exe_path = params.get("cli_path")     # show which jboss-cli was auto-resolved
         ev.target_name = f"{server}@{params.get('host')}:{params.get('port')}"
