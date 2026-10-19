@@ -165,10 +165,11 @@ class AppServerInspector:
         self._dispatch(ev.to_dict(), self._machine_info)
 
     def stop(self, args):
-        if isinstance(source, (list, tuple)):
-            return [self._stop_one(s) for s in source]
         source = args.get("source")
         service_name = args.get("service_name")
+        if isinstance(source, (list, tuple)):
+            return [self._stop_one(s,source) for s in source]
+
         return self._stop_one(source , service_name)
 
     def _stop_one(self, source , service_name):
