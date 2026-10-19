@@ -13,6 +13,7 @@ import {
   healthTone,
   hitRatios,
   inspectionNotice,
+  isProseNote,
   isRowArray,
   memoryBreakdown,
   partitionFields,

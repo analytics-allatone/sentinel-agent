@@ -90,19 +90,21 @@ async def run_sigma_on_batch(session, category: str, rows: List[Dict[str, Any]],
         for r in rows:
             try:
                 if rule.matches(r):                      # <-- MEMORY match, no DB
-                    agent = r.get("agent_name") or r.get("agent_id")
+                    agent = r.get("agent_name")
+                    agent_ip= r.get("agent_ip")
                     entity = (r.get("process_name") or r.get("user_name")
                               or r.get("network_src_ip") or agent)
-                    groups[(agent, entity)].append(r)
+                    groups[(agent, entity,agent_ip)].append(r)
             except Exception:
                 continue
         technique = next((t for t in rule.tags if str(t).startswith("attack.t")), "")
-        for (agent, entity), matched in groups.items():
+        for (agent, entity,agent_ip), matched in groups.items():
             dts = sorted(d for d in (_to_dt(m.get("timestamp")) for m in matched) if d)
             alerts.append({
                 "rule_id": f"SIGMA_{(rule.id or rule.title)[:40]}",
                 "severity": int(rule.severity),          # int pakka karo
                 "agent_name": agent,
+                "agent_ip": agent_ip,
                 "category": TABLE_TO_CATEGORY.get(table, table),
                 "entity": str(entity) if entity is not None else None,
                 "event_count": len(matched),             # int
@@ -117,15 +119,16 @@ async def run_sigma_on_batch(session, category: str, rows: List[Dict[str, Any]],
         try:
             await session.execute(text("""
                 INSERT INTO security_alerts
-                  (rule_id, severity, category, agent_name, entity, event_count,
+                  (rule_id, severity, category, agent_name, agent_ip, entity, event_count,
                    first_seen, last_seen, detail, technique, phase)
                 VALUES
-                  (:rule_id, :severity, :category, :agent_name, :entity, :event_count,
+                  (:rule_id, :severity, :category, :agent_name, :agent_ip, :entity, :event_count,
                    :first_seen, :last_seen, :detail, :technique, :phase)
                 ON CONFLICT (rule_id, agent_name, entity, first_seen)
                 DO UPDATE SET event_count = EXCLUDED.event_count,
                               last_seen   = EXCLUDED.last_seen,
-                              category    = EXCLUDED.category
+                              category    = EXCLUDED.category,
+                              agent_ip    = EXCLUDED.agent_ip
             """), alerts)
             await session.commit()
         except Exception as e:

@@ -125,12 +125,14 @@ def _group_by_category(data_to_push):
     meta_data   = data_to_push.get("meta_data") or {}
     events_data = data_to_push.get("event_data") or []
     agent_name  = meta_data.get("agent_name")
+    agent_ip = meta_data.get("main_ip")
     category_wise_data = {}
     for ed in events_data:
         cat = ed.get("category")
         if not cat:
             continue
         ed["agent_name"] = agent_name
+        ed["agent_ip"]= agent_ip
         if cat not in category_wise_data:
             category_wise_data[cat] = []
             if isinstance(ed.get("tags"), str):
