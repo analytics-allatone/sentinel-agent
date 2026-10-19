@@ -19,7 +19,7 @@ class AppServerEvents(Base):
 
     id = Column(BigInteger, primary_key=True, autoincrement=True, index=True)
     agent_name = Column(String, nullable=False, index=True)
-
+    service_name = Column(String, nullable=False, index=True)
     category = Column(String)
     engine = Column(String)                 # "appserver"
     server = Column(String, index=True)     # wildfly | jboss | tomcat
