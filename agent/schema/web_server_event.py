@@ -19,7 +19,7 @@ WEB_SECTIONS = [
 
 @dataclass
 class WebServerEvent(BaseWebEvent):
-    engine: str = "webserver"                 # generic; `server` holds nginx/apache
+    engine: Optional[str] = None                 # generic; `server` holds nginx/apache
     category: str = "web_server_health"
     server: Optional[str] = None              # nginx | apache
 
