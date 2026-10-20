@@ -1,12 +1,3 @@
-"""
-schema/web_server_event.py
-==========================
-One consolidated web-server health event per server per poll, mirroring the DB
-per-engine events. Reuses BaseDbEvent so detect fields, apply_inspect, rollup and
-to_dict behave identically. category="web_server_health" -> web_server_events.
-
-`server` ('nginx' | 'apache') is the discriminator (like `engine` for DBs).
-"""
 from dataclasses import dataclass
 from typing import Optional, Any, ClassVar, List
 from schema.web_event_base import BaseWebEvent
