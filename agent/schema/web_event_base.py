@@ -1,24 +1,3 @@
-"""
-schema/web_event_base.py
-========================
-Shared base for the per-server web health events, mirroring db_event_base.
-
-Each web server gets its OWN event class (nginx_web_event, apache_web_event, ...)
-and its OWN table, so a column is never NULL just because another server lacks it.
-This base holds only the fields every web server has (identity + roll-up) and the
-generic mapper/serializer; each subclass adds its own section + metric fields and
-declares SECTIONS / METRICS so `from_inspect` knows how to fill them.
-
-IMPORTANT (same trap as the DB base): every field the collector sets MUST be a
-declared dataclass field. `to_dict()` -> `dataclasses.asdict()` only serializes
-declared fields, so anything set dynamically is silently dropped from the emitted
-dict / API / table.
-
-Probe-contract tolerant: reads either the rich `{version, metrics, sections}`
-shape or a flat `{server_version, points}` shape returned by
-collectors/webprobe/<server>.py.
-"""
-
 from datetime import datetime, timezone
 from dataclasses import dataclass, field, asdict
 from typing import Optional, List, Dict, Any, ClassVar

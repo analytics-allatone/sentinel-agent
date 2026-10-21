@@ -2,7 +2,8 @@ import sys
 import time
 import threading
 import importlib
-
+import collectors.webprobe.apache
+import collectors.webprobe.nginx
 from schema.web_event_base import EventOutcome, Severity
 from schema.web_server_event import WebServerEvent
 
@@ -137,11 +138,13 @@ class WebInspector:
         host = params.get("host")
         ev = WebServerEvent()
         ev.server = server
+        ev.engine = server
         ev.action = "web_detected"
         ev.outcome = EventOutcome.SUCCESS
         ev.detected = True
         ev.db_host = host
         ev.db_port = params.get("port")
+        ev.service_name = params.get("service_name")
         ev.target_name = f"{server}@{host}"
         ev.tags = ["webserver", "inspect", server]
 

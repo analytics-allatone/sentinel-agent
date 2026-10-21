@@ -2,7 +2,8 @@ import sys
 import time
 import threading
 import importlib
-
+from collectors.appprobe._util import find_cli
+import collectors.appprobe.wildfly
 from schema.appserver_event import AppServerEvent, EventOutcome, Severity
 
 PROBES = {"wildfly": "wildfly", "jboss": "wildfly"}   # both use the wildfly probe
@@ -44,25 +45,31 @@ def _build_params(detail):
     params = {k: v for k, v in (detail or {}).items() if k not in _CONTROL_KEYS}
     params.setdefault("host", "127.0.0.1")
     params.setdefault("port", _DEFAULT_PORT)
-    backend = (detail.get("backend") or "auto").lower()
-
-    if backend in ("auto", "cli"):
-        cli_path = detail.get("cli_path")
-        if cli_path == "string" or cli_path=="":
-            try:
-                from collectors.appprobe._util import find_cli
-                cli_path = find_cli()          # PATH -> env -> running process/service exe
-            except Exception:
-                cli_path = None
-        if cli_path:
-            params["backend"] = "cli"
-            params["cli_path"] = cli_path      # auto-filled -> also ends up in the event
-        elif backend == "cli":
-            params["backend"] = "cli"          # user forced cli; let probe report the miss
-        else:
-            params["backend"] = "api"          # auto + no cli -> api fallback
+    if detail.get('user_name') and detail.get('user_name')!='string' :
+        
+        params["backend"] = "api"
+        params["cli_path"] = find_cli()
     else:
-        params["backend"] = backend            # explicit api / cli-docker etc.
+        params["backend"]= "cli"
+    # backend = (detail.get("backend") or "auto").lower()
+
+    # if backend in ("auto", "cli"):
+    #     cli_path = detail.get("cli_path")
+    #     if cli_path == "string" or cli_path=="":
+    #         try:
+    #             from collectors.appprobe._util import find_cli
+    #             cli_path = find_cli()          # PATH -> env -> running process/service exe
+    #         except Exception:
+    #             cli_path = None
+    #     if cli_path:
+    #         params["backend"] = "cli"
+    #         params["cli_path"] = cli_path      # auto-filled -> also ends up in the event
+    #     elif backend == "cli":
+    #         params["backend"] = "cli"          # user forced cli; let probe report the miss
+    #     else:
+    #         params["backend"] = "api"          # auto + no cli -> api fallback
+    # else:
+    #     params["backend"] = backend            # explicit api / cli-docker etc.
     return params
 
 
@@ -123,6 +130,7 @@ class AppServerInspector:
         ev.outcome = EventOutcome.SUCCESS
         ev.detected = True
         ev.app_host = params.get("host")
+        ev.service_name = params.get("service_name")
         ev.app_port = params.get("port")
         ev.exe_path = params.get("cli_path")     # show which jboss-cli was auto-resolved
         ev.target_name = f"{server}@{params.get('host')}:{params.get('port')}"
@@ -164,10 +172,11 @@ class AppServerInspector:
         self._dispatch(ev.to_dict(), self._machine_info)
 
     def stop(self, args):
-        if isinstance(source, (list, tuple)):
-            return [self._stop_one(s) for s in source]
         source = args.get("source")
         service_name = args.get("service_name")
+        if isinstance(source, (list, tuple)):
+            return [self._stop_one(s,source) for s in source]
+
         return self._stop_one(source , service_name)
 
     def _stop_one(self, source , service_name):

@@ -30,7 +30,7 @@ class _Backend:
         self.mode = (p.get("backend") or "api").lower()
         self.host = _clean_host(p.get("host"))
         self.port = int(p.get("port") or 9990)
-        self.user = p.get("user")
+        self.user = p.get("user_name")
         self.password = p.get("password")
         # only look for jboss-cli when this backend actually needs it.
         # api backend never touches the CLI, so don't waste a process scan.

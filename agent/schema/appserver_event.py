@@ -37,6 +37,7 @@ class AppServerEvent:
     action: str = "appserver_detected"
     outcome: str = EventOutcome.SUCCESS
     severity: str = Severity.INFO
+    service_name: Optional[str] = None
     collector: str = "appserver_inspect"
     tags: List[str] = field(default_factory=list)
     notes: Optional[str] = None

@@ -5,6 +5,8 @@ import shutil
 import subprocess
 import urllib.request
 from typing import Any, Dict, List, Optional, Tuple
+import requests
+from requests.auth import HTTPDigestAuth
 
 
 def jsonable(o: Any) -> Any:
@@ -29,41 +31,56 @@ def na(reason: str) -> Dict[str, Any]:
 
 
 # ── management API (HTTP :9990) — local or remote ───────────────────────────
-def mgmt_call(host: str, port: int, op: Dict[str, Any],
-              user: Optional[str] = None, password: Optional[str] = None,
-              timeout: float = 8.0, scheme: str = "http") -> Any:
-    """POST a management operation to WildFly/JBoss :9990/management.
-
-    WildFly management uses HTTP Digest auth. urllib handles it via an opener
-    with an HTTPDigestAuthHandler when user/password are given.
-    """
+def mgmt_call(host, port, op, user=None, password=None, timeout=8.0, scheme="http"):
     url = f"{scheme}://{host}:{port}/management"
-    data = json.dumps(op).encode("utf-8")
-    headers = {"Content-Type": "application/json"}
-
-    if user:
-        mgr = urllib.request.HTTPPasswordMgrWithDefaultRealm()
-        mgr.add_password(None, url, user, password or "")
-        opener = urllib.request.build_opener(
-            urllib.request.HTTPDigestAuthHandler(mgr),
-            urllib.request.HTTPBasicAuthHandler(mgr))
-    else:
-        opener = urllib.request.build_opener()
-
-    req = urllib.request.Request(url, data=data, headers=headers, method="POST")
+    auth = HTTPDigestAuth(user, password or "") if user else None
     try:
-        with opener.open(req, timeout=timeout) as resp:
-            body = resp.read().decode("utf-8", "ignore")
-    except urllib.error.HTTPError as e:
-        if e.code == 401:
-            raise RuntimeError("HTTP 401 Unauthorized — management user/password wrong "
-                               "or no management user created (run add-user)")
-        raise
-    parsed = json.loads(body) if body else {}
-    # WildFly wraps success as {"outcome":"success","result":...}
+        r = requests.post(url, json=op, auth=auth, timeout=timeout)
+    except requests.RequestException as e:
+        raise RuntimeError(f"management connect failed: {e}")
+    if r.status_code == 401:
+        raise RuntimeError("HTTP 401 — user/password galat, ya user ManagementRealm me nahi "
+                           "(add-user.sh me 'Management User' chuna tha ya nahi?)")
+    r.raise_for_status()
+    parsed = r.json() if r.text else {}
     if isinstance(parsed, dict) and parsed.get("outcome") == "failed":
         raise RuntimeError(parsed.get("failure-description") or "management op failed")
     return parsed.get("result", parsed) if isinstance(parsed, dict) else parsed
+# def mgmt_call(host: str, port: int, op: Dict[str, Any],
+#               user: Optional[str] = None, password: Optional[str] = None,
+#               timeout: float = 8.0, scheme: str = "http") -> Any:
+#     """POST a management operation to WildFly/JBoss :9990/management.
+
+#     WildFly management uses HTTP Digest auth. urllib handles it via an opener
+#     with an HTTPDigestAuthHandler when user/password are given.
+#     """
+#     url = f"{scheme}://{host}:{port}/management"
+#     data = json.dumps(op).encode("utf-8")
+#     headers = {"Content-Type": "application/json"}
+
+#     if user:
+#         mgr = urllib.request.HTTPPasswordMgrWithDefaultRealm()
+#         mgr.add_password(None, url, user, password or "")
+#         opener = urllib.request.build_opener(
+#             urllib.request.HTTPDigestAuthHandler(mgr),
+#             urllib.request.HTTPBasicAuthHandler(mgr))
+#     else:
+#         opener = urllib.request.build_opener()
+
+#     req = urllib.request.Request(url, data=data, headers=headers, method="POST")
+#     try:
+#         with opener.open(req, timeout=timeout) as resp:
+#             body = resp.read().decode("utf-8", "ignore")
+#     except urllib.error.HTTPError as e:
+#         if e.code == 401:
+#             raise RuntimeError("HTTP 401 Unauthorized — management user/password wrong "
+#                                "or no management user created (run add-user)")
+#         raise
+#     parsed = json.loads(body) if body else {}
+#     # WildFly wraps success as {"outcome":"success","result":...}
+#     if isinstance(parsed, dict) and parsed.get("outcome") == "failed":
+#         raise RuntimeError(parsed.get("failure-description") or "management op failed")
+#     return parsed.get("result", parsed) if isinstance(parsed, dict) else parsed
 
 
 def read_resource(host, port, address: List[Any], user=None, password=None,
