@@ -212,9 +212,9 @@ class USBEvents(Base):
     usb_vendor = Column(String)
     usb_model = Column(String)
     usb_serial_number = Column(String)
-    usb_size_bytes = Column(Integer)
-    usb_used_bytes = Column(Integer)
-    usb_transfer_delta_bytes = Column(Integer)
+    usb_size_bytes = Column(BigInteger)
+    usb_used_bytes = Column(BigInteger)
+    usb_transfer_delta_bytes = Column(BigInteger)
 
     # --- Accompanying File/Target Context (e.g., for Autorun Alerts) ---
     file_path = Column(String)
